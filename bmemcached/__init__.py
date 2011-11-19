@@ -22,6 +22,10 @@ class Client(object):
             if value:
                 return value
 
+    def set(self, key, value, time=100):
+        for server in self.servers:
+            server.set(key, value, time)
+
 
 class Server(object):
     HEADER_STRUCT = '!BBHBBHLLQ'
@@ -35,7 +39,7 @@ class Server(object):
     # All structures will be appended to HEADER_STRUCT
     COMMANDS = {
         'get': {'command': 0x00, 'struct': '%ds'},
-        'set': {'command': 0x01},
+        'set': {'command': 0x01, 'struct': 'LL%ds%ds'},
         'auth_negotiation': {'command': 0x20},
         'auth_request': {'command': 0x21, 'struct': '%ds%ds'}
     }
@@ -120,6 +124,11 @@ class Server(object):
 
             raise MemcachedException('Code: %d Message: %s' % (status,
                 self.connection.recv(bodylen)))
+
+    def set(self, key, value, time):
+        # TODO: this :)
+        logger.info('Setting key %s with %d bytes.' % (key, len(value)))
+        raise NotImplementedError('In progress')
 
 
 class AuthenticationNotSupported(Exception):
