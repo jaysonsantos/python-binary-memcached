@@ -5,7 +5,8 @@ import os
 
 class MainTests(unittest.TestCase):
     def setUp(self):
-        self.client = bmemcached.Client(('127.0.0.1:11211', ))
+        self.client = bmemcached.Client(('127.0.0.1:11211', ), 'user',
+            'password')
 
     def testSet(self):
         self.assertEqual(0, self.client.set('test', 'test'))

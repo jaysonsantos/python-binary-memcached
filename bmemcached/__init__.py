@@ -7,11 +7,20 @@ logger = logging.getLogger('bmemcached')
 
 
 class Client(object):
-    def __init__(self, servers):
+    def __init__(self, servers, username=None, password=None):
+        self.username = username
+        self.password = password
         self.set_servers(servers)
 
     def set_servers(self, servers):
-        self.servers = [Server(server) for server in servers]
+        self.servers = [Server(server, self.username,
+            self.password) for server in servers]
+
+    def get(self, key):
+        for server in self.servers:
+            value = server.get(key)
+            if value:
+                return value
 
 
 class Server(object):
@@ -33,6 +42,7 @@ class Server(object):
 
     STATUS = {
         'success': 0x00,
+        'key_not_found': 0x01,
         'unknown_command': 0x81
     }
 
@@ -78,9 +88,9 @@ class Server(object):
             self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
             self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
             len(method), 0, 0, 0, len(method) + len(auth), 0, 0, method, auth))
-        headers = self.connection.recv(self.HEADER_SIZE)
+        header = self.connection.recv(self.HEADER_SIZE)
         (magic, opcode, keylen, extlen, datatype, status, bodylen,
-            opaque, cas) = struct.unpack(self.HEADER_STRUCT, headers)
+            opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
 
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status,
@@ -90,6 +100,26 @@ class Server(object):
             self.connection.recv(bodylen)))
 
         return True
+
+    def get(self, key):
+        logger.info('Getting key %s' % key)
+        self.connection.send(struct.pack(self.HEADER_STRUCT + \
+            self.COMMANDS['get']['struct'] % (len(key)),
+            self.MAGIC['request'],
+            self.COMMANDS['get']['command'],
+            len(key), 0, 0, 0, len(key), 0, 0, key))
+        header = self.connection.recv(self.HEADER_SIZE)
+        (magic, opcode, keylen, extlen, datatype, status, bodylen,
+            opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
+
+        if status != self.STATUS['success']:
+            if status == self.STATUS['key_not_found']:
+                logger.debug('Key not found. Message: %s' \
+                    % self.connection.recv(bodylen))
+                return None
+
+            raise MemcachedException('Code: %d Message: %s' % (status,
+                self.connection.recv(bodylen)))
 
 
 class AuthenticationNotSupported(Exception):
