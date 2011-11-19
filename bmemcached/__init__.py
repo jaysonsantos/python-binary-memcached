@@ -35,7 +35,7 @@ class Server(object):
         if len(server) >1:
             try:
                 port = int(server[1])
-            except (ValuError, TypeError):
+            except (ValueError, TypeError):
                 port = 11211
         else:
             port = 11211
