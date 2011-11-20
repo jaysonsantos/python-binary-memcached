@@ -59,10 +59,10 @@ class Server(object):
     }
 
     FLAGS = {
-        'pickle': 1<<0,
-        'integer': 1<<1,
-        'long': 1<<2,
-        'compressed': 1<<3
+        'pickle': 1 << 0,
+        'integer': 1 << 1,
+        'long': 1 << 2,
+        'compressed': 1 << 3
     }
 
     def __init__(self, server, username=None, password=None):
@@ -176,7 +176,6 @@ class Server(object):
         logger.debug('Value "%s"' % value)
 
         return self.deserialize(value, flags)
-
 
     def set(self, key, value, time):
         logger.info('Setting key %s.' % key)
