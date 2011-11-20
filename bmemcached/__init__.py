@@ -159,7 +159,8 @@ class Server(object):
         (magic, opcode, keylen, extlen, datatype, status, bodylen,
             opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
 
-        logger.debug('Len: %d. Data type: %d' % (extlen, datatype))
+        logger.debug('Value Length: %d. Body length: %d. Data type: %d' % (
+            extlen, bodylen, datatype))
 
         if status != self.STATUS['success']:
             if status == self.STATUS['key_not_found']:
@@ -170,8 +171,9 @@ class Server(object):
             raise MemcachedException('Code: %d Message: %s' % (status,
                 self.connection.recv(bodylen)))
 
-        flags, value = struct.unpack('!L%ds' % extlen,
-            self.connection.recv(bodylen))
+        body = self.connection.recv(bodylen)
+        print repr(body)
+        flags, value = struct.unpack('!L%ds' % extlen, body)
 
         logger.debug('Value "%s"' % value)
 

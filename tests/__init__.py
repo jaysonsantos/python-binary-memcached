@@ -15,6 +15,18 @@ class MainTests(unittest.TestCase):
         self.client.set('test_key', 'test')
         self.assertEqual('test', self.client.get('test_key'))
 
+    def testGetLong(self):
+        self.client.set('test_key', 1L)
+        value = self.client.get('test_key')
+        self.assertEqual(1L, value)
+        self.assertTrue(isinstance(value, long))
+
+    def testGetInteger(self):
+        self.client.set('test_key', 1)
+        value = self.client.get('test_key')
+        self.assertEqual(1, value)
+        self.assertTrue(isinstance(value, integer))
+
 
 class TestAuthentication(unittest.TestCase):
     def setUp(self):
