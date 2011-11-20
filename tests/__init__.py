@@ -9,11 +9,11 @@ class MainTests(unittest.TestCase):
             'password')
 
     def testSet(self):
-        self.assertEqual(0, self.client.set('test', 'test'))
+        self.assertEqual(True, self.client.set('test_key', 'test'))
 
     def testGet(self):
-        self.client.set('test', 'test')
-        self.assertEqual('test', self.client.get('test'))
+        self.client.set('test_key', 'test')
+        self.assertEqual('test', self.client.get('test_key'))
 
 
 class TestAuthentication(unittest.TestCase):

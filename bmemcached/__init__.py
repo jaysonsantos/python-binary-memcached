@@ -2,6 +2,11 @@ import struct
 import socket
 import logging
 
+try:
+    from cPickle import loads, dumps
+except ImportError:
+    from Pickle import loads, dumps
+
 __all__ = ['Client']
 logger = logging.getLogger('bmemcached')
 
@@ -23,8 +28,11 @@ class Client(object):
                 return value
 
     def set(self, key, value, time=100):
+        returns = []
         for server in self.servers:
-            server.set(key, value, time)
+            returns.append(server.set(key, value, time))
+
+        return any(returns)
 
 
 class Server(object):
@@ -48,6 +56,13 @@ class Server(object):
         'success': 0x00,
         'key_not_found': 0x01,
         'unknown_command': 0x81
+    }
+
+    FLAGS = {
+        'pickle': 1<<0,
+        'integer': 1<<1,
+        'long': 1<<2,
+        'compressed': 1<<3
     }
 
     def __init__(self, server, username=None, password=None):
@@ -105,6 +120,33 @@ class Server(object):
 
         return True
 
+    def serialize(self, value):
+        flags = 0
+        if isinstance(value, str):
+            pass
+        elif isinstance(value, int):
+            flags |= self.FLAGS['integer']
+            value = str(value)
+        elif isinstance(value, long):
+            flags |= self.FLAGS['long']
+            value = str(value)
+        else:
+            flags |= self.FLAGS['pickle']
+            value = dumps(value)
+
+        # TODO: Compression
+        return (flags, value)
+
+    def deserialize(self, value, flags):
+        if flags == 0:
+            return value
+        elif flags & self.FLAGS['integer']:
+            return int(value)
+        elif flags & self.FLAGS['long']:
+            return long(value)
+        elif flags & self.FLAGS['pickle']:
+            return loads(value)
+
     def get(self, key):
         logger.info('Getting key %s' % key)
         self.connection.send(struct.pack(self.HEADER_STRUCT + \
@@ -112,9 +154,12 @@ class Server(object):
             self.MAGIC['request'],
             self.COMMANDS['get']['command'],
             len(key), 0, 0, 0, len(key), 0, 0, key))
+
         header = self.connection.recv(self.HEADER_SIZE)
         (magic, opcode, keylen, extlen, datatype, status, bodylen,
             opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
+
+        logger.debug('Len: %d. Data type: %d' % (extlen, datatype))
 
         if status != self.STATUS['success']:
             if status == self.STATUS['key_not_found']:
@@ -125,10 +170,38 @@ class Server(object):
             raise MemcachedException('Code: %d Message: %s' % (status,
                 self.connection.recv(bodylen)))
 
+        flags, value = struct.unpack('!L%ds' % extlen,
+            self.connection.recv(bodylen))
+
+        logger.debug('Value "%s"' % value)
+
+        return self.deserialize(value, flags)
+
+
     def set(self, key, value, time):
-        # TODO: this :)
-        logger.info('Setting key %s with %d bytes.' % (key, len(value)))
-        raise NotImplementedError('In progress')
+        logger.info('Setting key %s.' % key)
+        flags, value = self.serialize(value)
+        logger.info('Value bytes %d.' % len(value))
+
+        self.connection.send(struct.pack(self.HEADER_STRUCT + \
+            self.COMMANDS['set']['struct'] % (len(key), len(value)),
+            self.MAGIC['request'],
+            self.COMMANDS['set']['command'],
+            len(key),
+            8, 0, 0, len(key) + len(value) + 8, 0, 0, flags, time, key, value))
+
+        header = self.connection.recv(self.HEADER_SIZE)
+        (magic, opcode, keylen, extlen, datatype, status, bodylen,
+            opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
+
+        logger.debug((magic, opcode, keylen, extlen, datatype, status, bodylen,
+            opaque, cas))
+
+        if status != self.STATUS['success']:
+            raise MemcachedError('Code: %d Message: %s' % (status,
+                self.connection.recv(bodylen)))
+
+        return True
 
 
 class AuthenticationNotSupported(Exception):
