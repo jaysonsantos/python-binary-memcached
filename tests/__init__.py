@@ -34,6 +34,11 @@ class MainTests(unittest.TestCase):
         self.assertTrue('a' in value)
         self.assertEqual(1, value['a'])
 
+    def testDelete(self):
+        self.client.set('test_key', 'test')
+        self.assertTrue(self.client.delete('test_key'))
+        self.assertEqual(None, self.client.get('test_key'))
+
 
 class TestAuthentication(unittest.TestCase):
     def setUp(self):
