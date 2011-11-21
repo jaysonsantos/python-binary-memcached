@@ -34,6 +34,13 @@ class Client(object):
 
         return any(returns)
 
+    def delete(self, key):
+        returns = []
+        for server in self.servers:
+            returns.append(server.delete(key))
+
+        return any(returns)
+
 
 class Server(object):
     HEADER_STRUCT = '!BBHBBHLLQ'
@@ -48,6 +55,7 @@ class Server(object):
     COMMANDS = {
         'get': {'command': 0x00, 'struct': '%ds'},
         'set': {'command': 0x01, 'struct': 'LL%ds%ds'},
+        'delete': {'command': 0x04, 'struct': '%ds'},
         'auth_negotiation': {'command': 0x20},
         'auth_request': {'command': 0x21, 'struct': '%ds%ds'}
     }
@@ -203,6 +211,27 @@ class Server(object):
                 self.connection.recv(bodylen)))
 
         return True
+
+    def delete(self, key):
+        logger.info('Deletting key %s' % key)
+        self.connection.send(struct.pack(self.HEADER_STRUCT + \
+            self.COMMANDS['delete']['struct'] % len(key),
+            self.MAGIC['request'],
+            self.COMMANDS['delete']['command'],
+            len(key), 0, 0, 0, len(key), 0, 0, key))
+
+        header = self.connection.recv(self.HEADER_SIZE)
+
+        (magic, opcode, keylen, extlen, datatype, status, bodylen,
+            opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
+
+        if status != self.STATUS['success']:
+            raise MemcachedError('Code: %d Message: %s' % (status,
+                self.connection.recv(bodylen)))
+
+        logger.debug('Key deleted %s' % key)
+        return True
+
 
 
 class AuthenticationNotSupported(Exception):
