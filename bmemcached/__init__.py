@@ -172,8 +172,8 @@ class Server(object):
                 self.connection.recv(bodylen)))
 
         body = self.connection.recv(bodylen)
-        print repr(body)
-        flags, value = struct.unpack('!L%ds' % extlen, body)
+
+        flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), body)
 
         logger.debug('Value "%s"' % value)
 

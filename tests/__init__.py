@@ -25,7 +25,7 @@ class MainTests(unittest.TestCase):
         self.client.set('test_key', 1)
         value = self.client.get('test_key')
         self.assertEqual(1, value)
-        self.assertTrue(isinstance(value, integer))
+        self.assertTrue(isinstance(value, int))
 
 
 class TestAuthentication(unittest.TestCase):
