@@ -5,7 +5,7 @@ setup(
     author='Jayson Reis',
     author_email='santosdosreis@gmail.com',
     description='A pure python module to access memcached via it\'s binary' + \
-        ' with SASL auth support',
+        ' protocol with SASL auth support',
     url='https://github.com/jaysonsantos/python-binary-memcached',
     packages=['bmemcached'],
     classifiers=[
