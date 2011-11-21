@@ -222,10 +222,15 @@ class Server(object):
 
         header = self.connection.recv(self.HEADER_SIZE)
 
+        # TODO: Why is this returning a string instead a real header?
+        if header == 'Not found':
+            return True
+
         (magic, opcode, keylen, extlen, datatype, status, bodylen,
             opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
 
-        if status != self.STATUS['success']:
+        if status != self.STATUS['success'] \
+            and status != self.STATUS['key_not_found']:
             raise MemcachedException('Code: %d Message: %s' % (status,
                 self.connection.recv(bodylen)))
 

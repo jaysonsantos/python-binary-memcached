@@ -8,6 +8,9 @@ class MainTests(unittest.TestCase):
         self.client = bmemcached.Client(('127.0.0.1:11211', ), 'user',
             'password')
 
+    def tearDown(self):
+        self.client.delete('test_key')
+
     def testSet(self):
         self.assertEqual(True, self.client.set('test_key', 'test'))
 
@@ -38,6 +41,9 @@ class MainTests(unittest.TestCase):
         self.client.set('test_key', 'test')
         self.assertTrue(self.client.delete('test_key'))
         self.assertEqual(None, self.client.get('test_key'))
+
+    def testDeleteUnknownKey(self):
+        self.assertTrue(self.client.delete('test_key'))
 
 
 class TestAuthentication(unittest.TestCase):
