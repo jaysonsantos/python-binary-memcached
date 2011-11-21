@@ -207,7 +207,7 @@ class Server(object):
             opaque, cas))
 
         if status != self.STATUS['success']:
-            raise MemcachedError('Code: %d Message: %s' % (status,
+            raise MemcachedException('Code: %d Message: %s' % (status,
                 self.connection.recv(bodylen)))
 
         return True
@@ -226,7 +226,7 @@ class Server(object):
             opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
 
         if status != self.STATUS['success']:
-            raise MemcachedError('Code: %d Message: %s' % (status,
+            raise MemcachedException('Code: %d Message: %s' % (status,
                 self.connection.recv(bodylen)))
 
         logger.debug('Key deleted %s' % key)
