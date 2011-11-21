@@ -233,7 +233,6 @@ class Server(object):
         return True
 
 
-
 class AuthenticationNotSupported(Exception):
     pass
 
