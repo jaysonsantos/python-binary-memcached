@@ -27,6 +27,13 @@ class MainTests(unittest.TestCase):
         self.assertEqual(1, value)
         self.assertTrue(isinstance(value, int))
 
+    def testGetObject(self):
+        self.client.set('test_key', {'a': 1})
+        value = self.client.get('test_key')
+        self.assertTrue(isinstance(value, dict))
+        self.assertTrue('a' in value)
+        self.assertEqual(1, value['a'])
+
 
 class TestAuthentication(unittest.TestCase):
     def setUp(self):
