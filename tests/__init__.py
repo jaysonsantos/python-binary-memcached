@@ -10,6 +10,7 @@ class MainTests(unittest.TestCase):
 
     def tearDown(self):
         self.client.delete('test_key')
+        self.client.disconnect_all()
 
     def testSet(self):
         self.assertEqual(True, self.client.set('test_key', 'test'))

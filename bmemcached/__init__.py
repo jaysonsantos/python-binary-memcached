@@ -41,6 +41,10 @@ class Client(object):
 
         return any(returns)
 
+    def disconnect_all(self):
+        for server in self.servers:
+            server.disconnect()
+
 
 class Server(object):
     HEADER_STRUCT = '!BBHBBHLLQ'
@@ -236,6 +240,9 @@ class Server(object):
 
         logger.debug('Key deleted %s' % key)
         return True
+
+    def disconnect(self):
+        self.connection.close()
 
 
 class AuthenticationNotSupported(Exception):
