@@ -1,6 +1,7 @@
 import struct
 import socket
 import logging
+import zlib
 
 try:
     from cPickle import loads, dumps
@@ -168,18 +169,22 @@ class Server(object):
             flags |= self.FLAGS['pickle']
             value = dumps(value)
 
-        # TODO: Compression
+        value = zlib.compress(value)
+        flags |= self.FLAGS['compressed']
         return (flags, value)
 
     def deserialize(self, value, flags):
-        if flags == 0:
-            return value
-        elif flags & self.FLAGS['integer']:
+        if flags & self.FLAGS['compressed']:
+            value = zlib.decompress(value)
+
+        if flags & self.FLAGS['integer']:
             return int(value)
         elif flags & self.FLAGS['long']:
             return long(value)
         elif flags & self.FLAGS['pickle']:
             return loads(value)
+
+        return value
 
     def get(self, key):
         logger.info('Getting key %s' % key)
@@ -207,8 +212,6 @@ class Server(object):
                 extra_content))
 
         flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
-
-        logger.debug('Value "%s"' % value)
 
         return self.deserialize(value, flags)
 
