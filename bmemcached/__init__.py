@@ -101,21 +101,35 @@ class Server(object):
             if len(value) == size:
                 return value
 
+    def _get_response(self):
+        header = self._read_socket(self.HEADER_SIZE)
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+            cas) = struct.unpack(self.HEADER_STRUCT, header)
+
+        assert magic == self.MAGIC['response']
+
+        extra_content = None
+        if bodylen:
+            extra_content = self._read_socket(bodylen)
+
+        return (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+            cas, extra_content)
+
     def authenticate(self, username, password):
         logger.info('Authenticating as %s' % username)
         self.connection.send(struct.pack(self.HEADER_STRUCT,
             self.MAGIC['request'],
             self.COMMANDS['auth_negotiation']['command'],
             0, 0, 0, 0, 0, 0, 0))
-        header = self._read_socket(self.HEADER_SIZE)
+
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-            cas) = struct.unpack(self.HEADER_STRUCT, header)
+            cas, extra_content) = self._get_response()
 
         if status == self.STATUS['unknown_command']:
             logger.debug('Server does not requires authentication.')
             return True
 
-        methods = self._read_socket(bodylen).split(' ')
+        methods = extra_content
 
         if not 'PLAIN' in methods:
             raise AuthenticationNotSupported('This module only supports ' + \
@@ -127,17 +141,16 @@ class Server(object):
             self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
             self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
             len(method), 0, 0, 0, len(method) + len(auth), 0, 0, method, auth))
-        header = self._read_socket(self.HEADER_SIZE)
-        (magic, opcode, keylen, extlen, datatype, status, bodylen,
-            opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
-        assert magic == self.MAGIC['response']
+
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+            cas, extra_content) = self._get_response()
 
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status,
-                self._read_socket(bodylen)))
+                extra_content))
 
         logger.debug('Auth OK. Code: %d Message: %s' % (status,
-            self._read_socket(bodylen)))
+            extra_content))
 
         return True
 
@@ -176,9 +189,8 @@ class Server(object):
             self.COMMANDS['get']['command'],
             len(key), 0, 0, 0, len(key), 0, 0, key))
 
-        header = self._read_socket(self.HEADER_SIZE)
-        (magic, opcode, keylen, extlen, datatype, status, bodylen,
-            opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+            cas, extra_content) = self._get_response()
 
         logger.debug('Value Length: %d. Body length: %d. Data type: %d' % (
             extlen, bodylen, datatype))
@@ -188,15 +200,13 @@ class Server(object):
         if status != self.STATUS['success']:
             if status == self.STATUS['key_not_found']:
                 logger.debug('Key not found. Message: %s' \
-                    % self._read_socket(bodylen))
+                    % extra_content)
                 return None
 
             raise MemcachedException('Code: %d Message: %s' % (status,
-                self._read_socket(bodylen)))
+                extra_content))
 
-        body = self._read_socket(bodylen)
-
-        flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), body)
+        flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
 
         logger.debug('Value "%s"' % value)
 
@@ -214,17 +224,12 @@ class Server(object):
             len(key),
             8, 0, 0, len(key) + len(value) + 8, 0, 0, flags, time, key, value))
 
-        header = self._read_socket(self.HEADER_SIZE)
-        (magic, opcode, keylen, extlen, datatype, status, bodylen,
-            opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
-        assert magic == self.MAGIC['response']
-
-        logger.debug((magic, opcode, keylen, extlen, datatype, status, bodylen,
-            opaque, cas))
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+            cas, extra_content) = self._get_response()
 
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status,
-                self._read_socket(bodylen)))
+               extra_content))
 
         return True
 
@@ -236,24 +241,13 @@ class Server(object):
             self.COMMANDS['delete']['command'],
             len(key), 0, 0, 0, len(key), 0, 0, key))
 
-        header = self._read_socket(self.HEADER_SIZE)
-
-        # TODO: Why is this returning a string instead a real header?
-        if header == 'Not found':
-            return True
-
-        (magic, opcode, keylen, extlen, datatype, status, bodylen,
-            opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
-
-        if bodylen:
-            response = self._read_socket(bodylen)
-            logger.debug('Extra body: %s' % response)
-
-        assert magic == self.MAGIC['response']
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+            cas, extra_content) = self._get_response()
 
         if status != self.STATUS['success'] \
             and status != self.STATUS['key_not_found']:
-            raise MemcachedException('Code: %d' % (status))
+            raise MemcachedException('Code: %d message: %d' % (status,
+                extra_content))
 
         logger.debug('Key deleted %s' % key)
         return True
