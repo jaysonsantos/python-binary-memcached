@@ -79,6 +79,7 @@ class Server(object):
 
     def __init__(self, server, username=None, password=None):
         self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connection.settimeout(5)
         server = server.split(':')
         host = server[0]
         if len(server) > 1:
@@ -129,6 +130,7 @@ class Server(object):
         header = self._read_socket(self.HEADER_SIZE)
         (magic, opcode, keylen, extlen, datatype, status, bodylen,
             opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
+        assert magic == self.MAGIC['response']
 
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status,
@@ -181,6 +183,8 @@ class Server(object):
         logger.debug('Value Length: %d. Body length: %d. Data type: %d' % (
             extlen, bodylen, datatype))
 
+        assert magic == self.MAGIC['response']
+
         if status != self.STATUS['success']:
             if status == self.STATUS['key_not_found']:
                 logger.debug('Key not found. Message: %s' \
@@ -213,6 +217,7 @@ class Server(object):
         header = self._read_socket(self.HEADER_SIZE)
         (magic, opcode, keylen, extlen, datatype, status, bodylen,
             opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
+        assert magic == self.MAGIC['response']
 
         logger.debug((magic, opcode, keylen, extlen, datatype, status, bodylen,
             opaque, cas))
@@ -239,6 +244,12 @@ class Server(object):
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen,
             opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
+
+        if bodylen:
+            response = self._read_socket(bodylen)
+            logger.debug('Extra body: %s' % response)
+
+        assert magic == self.MAGIC['response']
 
         if status != self.STATUS['success'] \
             and status != self.STATUS['key_not_found']:
