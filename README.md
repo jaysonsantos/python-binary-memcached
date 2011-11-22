@@ -33,3 +33,6 @@ Then, run the tests.
 cd src_dir/
 nosetests
 ```
+
+## Using with Django
+If you want to use it with Django, go to [django-bmemcached] (https://github.com/jaysonsantos/django-bmemcached) to get a Django backend.
