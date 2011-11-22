@@ -93,13 +93,20 @@ class Server(object):
         if username and password:
             self.authenticate(username, password)
 
+    def _read_socket(self, size):
+        value = ''
+        while True:
+            value += self.connection.recv(size - len(value))
+            if len(value) == size:
+                return value
+
     def authenticate(self, username, password):
         logger.info('Authenticating as %s' % username)
         self.connection.send(struct.pack(self.HEADER_STRUCT,
             self.MAGIC['request'],
             self.COMMANDS['auth_negotiation']['command'],
             0, 0, 0, 0, 0, 0, 0))
-        header = self.connection.recv(self.HEADER_SIZE)
+        header = self._read_socket(self.HEADER_SIZE)
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
             cas) = struct.unpack(self.HEADER_STRUCT, header)
 
@@ -107,7 +114,7 @@ class Server(object):
             logger.debug('Server does not requires authentication.')
             return True
 
-        methods = self.connection.recv(bodylen).split(' ')
+        methods = self._read_socket(bodylen).split(' ')
 
         if not 'PLAIN' in methods:
             raise AuthenticationNotSupported('This module only supports ' + \
@@ -119,16 +126,16 @@ class Server(object):
             self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
             self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
             len(method), 0, 0, 0, len(method) + len(auth), 0, 0, method, auth))
-        header = self.connection.recv(self.HEADER_SIZE)
+        header = self._read_socket(self.HEADER_SIZE)
         (magic, opcode, keylen, extlen, datatype, status, bodylen,
             opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
 
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status,
-                self.connection.recv(bodylen)))
+                self._read_socket(bodylen)))
 
         logger.debug('Auth OK. Code: %d Message: %s' % (status,
-            self.connection.recv(bodylen)))
+            self._read_socket(bodylen)))
 
         return True
 
@@ -167,7 +174,7 @@ class Server(object):
             self.COMMANDS['get']['command'],
             len(key), 0, 0, 0, len(key), 0, 0, key))
 
-        header = self.connection.recv(self.HEADER_SIZE)
+        header = self._read_socket(self.HEADER_SIZE)
         (magic, opcode, keylen, extlen, datatype, status, bodylen,
             opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
 
@@ -177,13 +184,13 @@ class Server(object):
         if status != self.STATUS['success']:
             if status == self.STATUS['key_not_found']:
                 logger.debug('Key not found. Message: %s' \
-                    % self.connection.recv(bodylen))
+                    % self._read_socket(bodylen))
                 return None
 
             raise MemcachedException('Code: %d Message: %s' % (status,
-                self.connection.recv(bodylen)))
+                self._read_socket(bodylen)))
 
-        body = self.connection.recv(bodylen)
+        body = self._read_socket(bodylen)
 
         flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), body)
 
@@ -203,7 +210,7 @@ class Server(object):
             len(key),
             8, 0, 0, len(key) + len(value) + 8, 0, 0, flags, time, key, value))
 
-        header = self.connection.recv(self.HEADER_SIZE)
+        header = self._read_socket(self.HEADER_SIZE)
         (magic, opcode, keylen, extlen, datatype, status, bodylen,
             opaque, cas) = struct.unpack(self.HEADER_STRUCT, header)
 
@@ -212,7 +219,7 @@ class Server(object):
 
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status,
-                self.connection.recv(bodylen)))
+                self._read_socket(bodylen)))
 
         return True
 
@@ -224,7 +231,7 @@ class Server(object):
             self.COMMANDS['delete']['command'],
             len(key), 0, 0, 0, len(key), 0, 0, key))
 
-        header = self.connection.recv(self.HEADER_SIZE)
+        header = self._read_socket(self.HEADER_SIZE)
 
         # TODO: Why is this returning a string instead a real header?
         if header == 'Not found':
@@ -235,8 +242,7 @@ class Server(object):
 
         if status != self.STATUS['success'] \
             and status != self.STATUS['key_not_found']:
-            raise MemcachedException('Code: %d Message: %s' % (status,
-                self.connection.recv(bodylen)))
+            raise MemcachedException('Code: %d' % (status))
 
         logger.debug('Key deleted %s' % key)
         return True
