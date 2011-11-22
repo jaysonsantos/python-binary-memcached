@@ -112,8 +112,8 @@ class Server(object):
         if bodylen:
             extra_content = self._read_socket(bodylen)
 
-        return (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-            cas, extra_content)
+        return (magic, opcode, keylen, extlen, datatype, status, bodylen,
+            opaque, cas, extra_content)
 
     def authenticate(self, username, password):
         logger.info('Authenticating as %s' % username)
