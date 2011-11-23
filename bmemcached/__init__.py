@@ -61,12 +61,16 @@ class Client(object):
         for server in self.servers:
             returns.append(server.incr(key, value))
 
+        if len(returns):
+            return returns[0]
+
     def decr(self, key, value):
         returns = []
         for server in self.servers:
             returns.append(server.decr(key, value))
 
-        return any(returns)
+        if len(returns):
+            return returns[0]
 
     def disconnect_all(self):
         for server in self.servers:
@@ -292,9 +296,10 @@ class Server(object):
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status,
                 extra_content))
-        return True
 
-    def incr(self, key, value, default=0, time=100):
+        return struct.unpack('!Q', extra_content)[0]
+
+    def incr(self, key, value, default=0, time=1000000):
         return self._incr_decr('incr', key, value, default,
             time)
 
