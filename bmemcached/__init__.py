@@ -61,6 +61,11 @@ class Client(object):
         for server in self.servers:
             returns.append(server.incr(key, value))
 
+    def decr(self, key, value):
+        returns = []
+        for server in self.servers:
+            returns.append(server.decr(key, value))
+
         return any(returns)
 
     def disconnect_all(self):
@@ -84,6 +89,8 @@ class Server(object):
         'add': {'command': 0x02, 'struct': 'LL%ds%ds'},
         'replace': {'command': 0x03, 'struct': 'LL%ds%ds'},
         'delete': {'command': 0x04, 'struct': '%ds'},
+        'incr': {'command': 0x05, 'struct': 'QQL%ds'},
+        'decr': {'command': 0x06, 'struct': 'QQL%ds'},
         'auth_negotiation': {'command': 0x20},
         'auth_request': {'command': 0x21, 'struct': '%ds%ds'}
     }
@@ -271,6 +278,30 @@ class Server(object):
     def replace(self, key, value, time):
         return self._set_add_replace('replace', key, value, time)
 
+    def _incr_decr(self, command, key, value, default, time):
+        self.connection.send(struct.pack(self.HEADER_STRUCT + \
+            self.COMMANDS[command]['struct'] % len(key),
+            self.MAGIC['request'],
+            self.COMMANDS[command]['command'],
+            len(key),
+            20, 0, 0, len(key) + 20, 0, 0, value, default, time, key))
+
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+            cas, extra_content) = self._get_response()
+
+        if status != self.STATUS['success']:
+            raise MemcachedException('Code: %d Message: %s' % (status,
+                extra_content))
+        return True
+
+    def incr(self, key, value, default=0, time=100):
+        return self._incr_decr('incr', key, value, default,
+            time)
+
+    def decr(self, key, value, default=0, time=100):
+        return self._incr_decr('decr', key, value, default,
+            time)
+
     def delete(self, key):
         logger.info('Deletting key %s' % key)
         self.connection.send(struct.pack(self.HEADER_STRUCT + \
@@ -284,7 +315,7 @@ class Server(object):
 
         if status != self.STATUS['success'] \
             and status != self.STATUS['key_not_found']:
-            raise MemcachedException('Code: %d message: %d' % (status,
+            raise MemcachedException('Code: %d message: %s' % (status,
                 extra_content))
 
         logger.debug('Key deleted %s' % key)

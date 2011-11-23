@@ -70,7 +70,7 @@ class MainTests(unittest.TestCase):
 
     def testIncrementFail(self):
         with self.assertRaises(ValueError) as exp:
-            self.client.increment('test_key', 1)
+            self.client.incr('test_key', 1)
 
     def testDecrementPass(self):
         self.client.set('test_key', 1)
@@ -79,7 +79,7 @@ class MainTests(unittest.TestCase):
 
     def testDecrementFail(self):
         with self.assertRaises(ValueError) as exp:
-            self.client.increment('test_key', 1)
+            self.client.decr('test_key', 1)
 
 
 class TestAuthentication(unittest.TestCase):
