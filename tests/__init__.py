@@ -63,6 +63,24 @@ class MainTests(unittest.TestCase):
         with self.assertRaises(ValueError) as exp:
             self.client.replace('test_key', 'value2')
 
+    def testIncrementPass(self):
+        self.client.set('test_key', 1)
+        self.assertTrue(self.client.incr('test_key', 1))
+        self.assertEqual(self.client.get('test_key', 2))
+
+    def testIncrementFail(self):
+        with self.assertRaises(ValueError) as exp:
+            self.client.increment('test_key', 1)
+
+    def testDecrementPass(self):
+        self.client.set('test_key', 1)
+        self.assertTrue(self.client.decr('test_key', 1))
+        self.assertEqual(self.client.get('test_key', 0))
+
+    def testDecrementFail(self):
+        with self.assertRaises(ValueError) as exp:
+            self.client.increment('test_key', 1)
+
 
 class TestAuthentication(unittest.TestCase):
     def setUp(self):
