@@ -35,10 +35,31 @@ class Client(object):
 
         return any(returns)
 
+    def add(self, key, value, time=100):
+        returns = []
+        for server in self.servers:
+            returns.append(server.add(key, value, time))
+
+        return any(returns)
+
+    def replace(self, key, value, time=100):
+        returns = []
+        for server in self.servers:
+            returns.append(server.replace(key, value, time))
+
+        return any(returns)
+
     def delete(self, key):
         returns = []
         for server in self.servers:
             returns.append(server.delete(key))
+
+        return any(returns)
+
+    def incr(self, key, value):
+        returns = []
+        for server in self.servers:
+            returns.append(server.incr(key, value))
 
         return any(returns)
 
@@ -60,6 +81,8 @@ class Server(object):
     COMMANDS = {
         'get': {'command': 0x00, 'struct': '%ds'},
         'set': {'command': 0x01, 'struct': 'LL%ds%ds'},
+        'add': {'command': 0x02, 'struct': 'LL%ds%ds'},
+        'replace': {'command': 0x03, 'struct': 'LL%ds%ds'},
         'delete': {'command': 0x04, 'struct': '%ds'},
         'auth_negotiation': {'command': 0x20},
         'auth_request': {'command': 0x21, 'struct': '%ds%ds'}
@@ -68,6 +91,7 @@ class Server(object):
     STATUS = {
         'success': 0x00,
         'key_not_found': 0x01,
+        'key_exists': 0x02,
         'unknown_command': 0x81
     }
 
@@ -200,8 +224,6 @@ class Server(object):
         logger.debug('Value Length: %d. Body length: %d. Data type: %d' % (
             extlen, bodylen, datatype))
 
-        assert magic == self.MAGIC['response']
-
         if status != self.STATUS['success']:
             if status == self.STATUS['key_not_found']:
                 logger.debug('Key not found. Message: %s' \
@@ -215,15 +237,15 @@ class Server(object):
 
         return self.deserialize(value, flags)
 
-    def set(self, key, value, time):
-        logger.info('Setting key %s.' % key)
+    def _set_add_replace(self, command, key, value, time):
+        logger.info('Setting/adding/replacing key %s.' % key)
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
 
         self.connection.send(struct.pack(self.HEADER_STRUCT + \
-            self.COMMANDS['set']['struct'] % (len(key), len(value)),
+            self.COMMANDS[command]['struct'] % (len(key), len(value)),
             self.MAGIC['request'],
-            self.COMMANDS['set']['command'],
+            self.COMMANDS[command]['command'],
             len(key),
             8, 0, 0, len(key) + len(value) + 8, 0, 0, flags, time, key, value))
 
@@ -231,10 +253,23 @@ class Server(object):
             cas, extra_content) = self._get_response()
 
         if status != self.STATUS['success']:
+            if status == self.STATUS['key_exists']:
+                raise ValueError('Key already exists')
+            elif status == self.STATUS['key_not_found']:
+                raise ValueError('Key not found')
             raise MemcachedException('Code: %d Message: %s' % (status,
-               extra_content))
+                extra_content))
 
         return True
+
+    def set(self, key, value, time):
+        return self._set_add_replace('set', key, value, time)
+
+    def add(self, key, value, time):
+        return self._set_add_replace('add', key, value, time)
+
+    def replace(self, key, value, time):
+        return self._set_add_replace('replace', key, value, time)
 
     def delete(self, key):
         logger.info('Deletting key %s' % key)
