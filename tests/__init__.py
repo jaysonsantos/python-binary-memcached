@@ -10,14 +10,25 @@ class MainTests(unittest.TestCase):
 
     def tearDown(self):
         self.client.delete('test_key')
+        self.client.delete('test_key2')
         self.client.disconnect_all()
 
     def testSet(self):
-        self.assertEqual(True, self.client.set('test_key', 'test'))
+        self.assertTrue(self.client.set('test_key', 'test'))
+
+    def testSetMulti(self):
+        self.assertTrue(self.client.set_multi({'test_key': 'value',
+            'test_key2': 'value2'}))
 
     def testGet(self):
         self.client.set('test_key', 'test')
         self.assertEqual('test', self.client.get('test_key'))
+
+    def testGetMulti(self):
+        self.assertTrue(self.client.set_multi({'test_key': 'value',
+            'test_key2': 'value2'}))
+        self.assertEqual({'test_key': 'value', 'test_key2': 'value2'},
+            self.client.get_multi(['test_key', 'test_key2']))
 
     def testGetLong(self):
         self.client.set('test_key', 1L)

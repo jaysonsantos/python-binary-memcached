@@ -28,12 +28,30 @@ class Client(object):
             if value:
                 return value
 
+    def get_multi(self, keys):
+        values = []
+        for key in keys:
+            for server in self.servers:
+                value = server.get(key)
+                if value:
+                    values.append((key, value))
+                    break
+
+        return dict(values)
+
     def set(self, key, value, time=100):
         returns = []
         for server in self.servers:
             returns.append(server.set(key, value, time))
 
         return any(returns)
+
+    def set_multi(self, mappings, time=100):
+        returns = []
+        for key, value in mappings.iteritems():
+            returns.append(self.set(key, value, time))
+
+        return all(returns)
 
     def add(self, key, value, time=100):
         returns = []
