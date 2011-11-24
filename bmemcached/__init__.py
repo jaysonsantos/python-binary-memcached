@@ -90,6 +90,13 @@ class Client(object):
         if len(returns):
             return returns[0]
 
+    def flush(self, time=0):
+        returns = []
+        for server in self.servers:
+            returns.append(server.flush(time))
+
+        return any(returns)
+
     def disconnect_all(self):
         for server in self.servers:
             server.disconnect()
@@ -113,6 +120,7 @@ class Server(object):
         'delete': {'command': 0x04, 'struct': '%ds'},
         'incr': {'command': 0x05, 'struct': 'QQL%ds'},
         'decr': {'command': 0x06, 'struct': 'QQL%ds'},
+        'flush': {'command': 0x08, 'struct': 'I'},
         'auth_negotiation': {'command': 0x20},
         'auth_request': {'command': 0x21, 'struct': '%ds%ds'}
     }
@@ -342,6 +350,24 @@ class Server(object):
                 extra_content))
 
         logger.debug('Key deleted %s' % key)
+        return True
+
+    def flush(self, time):
+        logger.info('Flushing memcached')
+        self.connection.send(struct.pack(self.HEADER_STRUCT + \
+            self.COMMANDS['flush']['struct'],
+            self.MAGIC['request'],
+            self.COMMANDS['flush']['command'],
+            0, 4, 0, 0, 4, 0, 0, time))
+
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+            cas, extra_content) = self._get_response()
+
+        if status != self.STATUS['success']:
+            raise MemcachedException('Code: %d message: %s' % (status,
+                extra_content))
+
+        logger.debug('Memcached flushed')
         return True
 
     def disconnect(self):

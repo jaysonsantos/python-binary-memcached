@@ -82,6 +82,11 @@ class MainTests(unittest.TestCase):
         self.assertEqual(0, self.client.decr('test_key', 1))
         self.assertEqual(0, self.client.decr('test_key', 1))
 
+    def testFlush(self):
+        self.client.set('test_key', 'test')
+        self.assertTrue(self.client.flush())
+        self.assertEqual(None, self.client.get('test_key'))
+
 
 class TestAuthentication(unittest.TestCase):
     def setUp(self):
