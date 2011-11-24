@@ -84,7 +84,7 @@ class MainTests(unittest.TestCase):
 
     def testFlush(self):
         self.client.set('test_key', 'test')
-        self.assertTrue(self.client.flush())
+        self.assertTrue(self.client.flush_all())
         self.assertEqual(None, self.client.get('test_key'))
 
 

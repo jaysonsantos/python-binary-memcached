@@ -90,10 +90,10 @@ class Client(object):
         if len(returns):
             return returns[0]
 
-    def flush(self, time=0):
+    def flush_all(self, time=0):
         returns = []
         for server in self.servers:
-            returns.append(server.flush(time))
+            returns.append(server.flush_all(time))
 
         return any(returns)
 
@@ -352,7 +352,7 @@ class Server(object):
         logger.debug('Key deleted %s' % key)
         return True
 
-    def flush(self, time):
+    def flush_all(self, time):
         logger.info('Flushing memcached')
         self.connection.send(struct.pack(self.HEADER_STRUCT + \
             self.COMMANDS['flush']['struct'],
