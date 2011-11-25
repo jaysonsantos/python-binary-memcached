@@ -100,6 +100,13 @@ class Client(object):
 
         return any(returns)
 
+    def stats(self):
+        returns = {}
+        for server in self.servers:
+            returns[server.server] = server.stat()
+
+        return returns
+
     def disconnect_all(self):
         for server in self.servers:
             server.disconnect()
@@ -124,6 +131,7 @@ class Server(object):
         'incr': {'command': 0x05, 'struct': 'QQL%ds'},
         'decr': {'command': 0x06, 'struct': 'QQL%ds'},
         'flush': {'command': 0x08, 'struct': 'I'},
+        'stat': {'command': 0x10},
         'auth_negotiation': {'command': 0x20},
         'auth_request': {'command': 0x21, 'struct': '%ds%ds'}
     }
@@ -143,6 +151,8 @@ class Server(object):
     }
 
     def __init__(self, server, username=None, password=None):
+        self.server = server
+
         if server.startswith('/'):
             self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.connection.connect(server)
@@ -377,6 +387,30 @@ class Server(object):
 
         logger.debug('Memcached flushed')
         return True
+
+    def stat(self):
+        self.connection.send(struct.pack(
+            self.HEADER_STRUCT,
+            self.MAGIC['request'],
+            self.COMMANDS['stat']['command'],
+            0, 0, 0, 0, 0, 0, 0))
+
+        value = {}
+
+        while True:
+            response = self._get_response()
+            keylen = response[2]
+            bodylen = response[6]
+
+            if keylen == 0 and bodylen == 0:
+                break
+
+            extra_content = response[-1]
+            key = extra_content[:keylen]
+            body = extra_content[keylen:bodylen]
+            value[key] = body
+
+        return value
 
     def disconnect(self):
         self.connection.close()
