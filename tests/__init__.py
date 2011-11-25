@@ -120,6 +120,41 @@ class TestServerParsing(unittest.TestCase):
         client = bmemcached.Client('127.0.0.1:11211')
         self.assertEqual(len(client.servers), 1)
 
+    def testAcceptIterableServer(self):
+        client = bmemcached.Client(['127.0.0.1:11211', '127.0.0.1:11211'])
+        self.assertEqual(len(client.servers), 2)
+
+    def testNoPortGiven(self):
+        server = bmemcached.Server('127.0.0.1')
+        self.assertEqual(server.host, '127.0.0.1')
+        self.assertEqual(server.port, 11211)
+
+    def testInvalidPort(self):
+        server = bmemcached.Server('127.0.0.1:blah')
+        self.assertEqual(server.host, '127.0.0.1')
+        self.assertEqual(server.port, 11211)
+
+    def testNonStandardPort(self):
+        server = bmemcached.Server('127.0.0.1:5000')
+        self.assertEqual(server.host, '127.0.0.1')
+        self.assertEqual(server.port, 5000)
+
     def testAcceptUnixSocket(self):
         client = bmemcached.Client('/tmp/memcached.sock')
         self.assertEqual(len(client.servers), 1)
+
+    def testPassCredentials(self):
+        """
+        If username/password passed to Client, auto-authenticate.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', username='user',
+                                   password='password')
+        server = client.servers[0]
+        self.assertTrue(server.authenticated)
+
+    def testNoCredentialsNoAuth(self):
+        client = bmemcached.Client('127.0.0.1:11211')
+        server = client.servers[0]
+        self.assertFalse(server.authenticated)
+
+

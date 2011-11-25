@@ -160,7 +160,7 @@ class Server(object):
             self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection.settimeout(5)
             server = server.split(':')
-            host = server[0]
+            self.host = server[0]
             if len(server) > 1:
                 try:
                     port = int(server[1])
@@ -169,7 +169,9 @@ class Server(object):
             else:
                 port = 11211
 
-            self.connection.connect((host, port))
+            self.port = port
+
+            self.connection.connect((self.host, self.port))
 
         if username and password:
             self.authenticate(username, password)
