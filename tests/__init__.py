@@ -87,10 +87,15 @@ class MainTests(unittest.TestCase):
         self.assertTrue(self.client.flush_all())
         self.assertEqual(None, self.client.get('test_key'))
 
-    def testStat(self):
-        stats = self.client.stats()
-        server_stats = stats['127.0.0.1:11211']
-        self.assertTrue('pid' in server_stats)
+    def testStats(self):
+        stats = self.client.stats()['127.0.0.1:11211']
+        self.assertTrue('pid' in stats)
+
+        stats = self.client.stats('settings')['127.0.0.1:11211']
+        self.assertTrue('verbosity' in stats)
+
+        stats = self.client.stats('slabs')['127.0.0.1:11211']
+        self.assertTrue('1:get_hits' in stats)
 
 
 class TestAuthentication(unittest.TestCase):

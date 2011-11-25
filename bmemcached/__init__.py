@@ -100,10 +100,10 @@ class Client(object):
 
         return any(returns)
 
-    def stats(self):
+    def stats(self, key=None):
         returns = {}
         for server in self.servers:
-            returns[server.server] = server.stat()
+            returns[server.server] = server.stat(key)
 
         return returns
 
@@ -388,12 +388,22 @@ class Server(object):
         logger.debug('Memcached flushed')
         return True
 
-    def stat(self):
-        self.connection.send(struct.pack(
-            self.HEADER_STRUCT,
-            self.MAGIC['request'],
-            self.COMMANDS['stat']['command'],
-            0, 0, 0, 0, 0, 0, 0))
+    def stat(self, key=None):
+        if key is not None:
+            keylen = len(key)
+            packed = struct.pack(
+                self.HEADER_STRUCT + '%ds' % keylen,
+                self.MAGIC['request'],
+                self.COMMANDS['stat']['command'],
+                keylen, 0, 0, 0, keylen, 0, 0, key)
+        else:
+            packed = struct.pack(
+                self.HEADER_STRUCT,
+                self.MAGIC['request'],
+                self.COMMANDS['stat']['command'],
+                0, 0, 0, 0, 0, 0, 0)
+
+        self.connection.send(packed)
 
         value = {}
 
