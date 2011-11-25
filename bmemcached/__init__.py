@@ -19,6 +19,9 @@ class Client(object):
         self.set_servers(servers)
 
     def set_servers(self, servers):
+        if isinstance(servers, basestring):
+            servers = [servers]
+
         self.servers = [Server(server, self.username,
             self.password) for server in servers]
 

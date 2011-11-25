@@ -103,3 +103,8 @@ class TestWrongPort(unittest.TestCase):
     def testWrongPortFail(self):
         bmemcached.Client(('127.0.0.1:bla', ), 'user',
             'password')
+
+
+class TestServerParsing(unittest.TestCase):
+    def testAcceptStringServer(self):
+        bmemcached.Client('127.0.0.1:11211')
