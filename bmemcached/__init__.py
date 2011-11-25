@@ -143,19 +143,24 @@ class Server(object):
     }
 
     def __init__(self, server, username=None, password=None):
-        self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connection.settimeout(5)
-        server = server.split(':')
-        host = server[0]
-        if len(server) > 1:
-            try:
-                port = int(server[1])
-            except (ValueError, TypeError):
-                port = 11211
+        if server.startswith('/'):
+            self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.connection.connect(server)
         else:
-            port = 11211
+            self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.connection.settimeout(5)
+            server = server.split(':')
+            host = server[0]
+            if len(server) > 1:
+                try:
+                    port = int(server[1])
+                except (ValueError, TypeError):
+                    port = 11211
+            else:
+                port = 11211
 
-        self.connection.connect((host, port))
+            self.connection.connect((host, port))
+
         if username and password:
             self.authenticate(username, password)
 
