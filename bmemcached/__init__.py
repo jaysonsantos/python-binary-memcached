@@ -140,6 +140,7 @@ class Server(object):
         'success': 0x00,
         'key_not_found': 0x01,
         'key_exists': 0x02,
+        'auth_error': 0x08,
         'unknown_command': 0x81
     }
 
@@ -152,6 +153,7 @@ class Server(object):
 
     def __init__(self, server, username=None, password=None):
         self.server = server
+        self.authenticated = False
 
         if server.startswith('/'):
             self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -227,6 +229,9 @@ class Server(object):
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
             cas, extra_content) = self._get_response()
 
+        if status == self.STATUS['auth_error']:
+            raise InvalidCredentials("Incorrect username or password")
+
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status,
                 extra_content))
@@ -234,6 +239,7 @@ class Server(object):
         logger.debug('Auth OK. Code: %d Message: %s' % (status,
             extra_content))
 
+        self.authenticated = True
         return True
 
     def serialize(self, value):
@@ -429,6 +435,10 @@ class Server(object):
 
 
 class AuthenticationNotSupported(Exception):
+    pass
+
+
+class InvalidCredentials(Exception):
     pass
 
 

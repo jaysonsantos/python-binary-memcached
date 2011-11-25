@@ -191,3 +191,21 @@ class TestServerAuth(unittest.TestCase):
         self.assertRaises(bmemcached.MemcachedException,
                           server.authenticate, 'user', 'password')
 
+    @patch.object(bmemcached.Server, '_get_response')
+    def testAuthSuccessful(self, mock):
+        """
+        Valid logins return True.
+        """
+        mock.return_value = (0, 0, 0, 0, 0, 0, 0, 0, 0, ['PLAIN'])
+        server = bmemcached.Server('127.0.0.1')
+        self.assertTrue(server.authenticate('user', 'password'))
+
+    @patch.object(bmemcached.Server, '_get_response')
+    def testAuthUnsuccessful(self, mock):
+        """
+        Invalid logins raise InvalidCredentials
+        """
+        mock.return_value = (0, 0, 0, 0, 0, 0x08, 0, 0, 0, ['PLAIN'])
+        server = bmemcached.Server('127.0.0.1')
+        self.assertRaises(bmemcached.InvalidCredentials, server.authenticate,
+                          'user', 'password2')
