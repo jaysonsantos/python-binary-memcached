@@ -103,7 +103,7 @@ class Client(object):
     def stats(self, key=None):
         returns = {}
         for server in self.servers:
-            returns[server.server] = server.stat(key)
+            returns[server.server] = server.stats(key)
 
         return returns
 
@@ -388,7 +388,7 @@ class Server(object):
         logger.debug('Memcached flushed')
         return True
 
-    def stat(self, key=None):
+    def stats(self, key=None):
         if key is not None:
             keylen = len(key)
             packed = struct.pack(
