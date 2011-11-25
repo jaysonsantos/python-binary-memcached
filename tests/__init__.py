@@ -107,7 +107,8 @@ class TestWrongPort(unittest.TestCase):
 
 class TestServerParsing(unittest.TestCase):
     def testAcceptStringServer(self):
-        bmemcached.Client('127.0.0.1:11211')
+        client = bmemcached.Client('127.0.0.1:11211')
+        self.assertEqual(len(client.servers), 1)
 
     def testAcceptUnixSocket(self):
         client = bmemcached.Client('/tmp/memcached.sock')
