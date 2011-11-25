@@ -13,7 +13,7 @@ logger = logging.getLogger('bmemcached')
 
 
 class Client(object):
-    def __init__(self, servers, username=None, password=None):
+    def __init__(self, servers=['127.0.0.1:11211'], username=None, password=None):
         self.username = username
         self.password = password
         self.set_servers(servers)
