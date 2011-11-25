@@ -1,3 +1,4 @@
+from mock import Mock, patch
 import unittest
 import bmemcached
 import os
@@ -157,4 +158,36 @@ class TestServerParsing(unittest.TestCase):
         server = client.servers[0]
         self.assertFalse(server.authenticated)
 
+
+class TestServerAuth(unittest.TestCase):
+    @patch.object(bmemcached.Server, '_get_response')
+    def testServerDoesntNeedAuth(self, mock):
+        """
+        If 0x81 ('unkown_command') comes back in the status field when
+        authenticating, it isn't needed.
+        """
+        mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
+        server = bmemcached.Server('127.0.0.1')
+        # can pass anything and it'll work
+        self.assertTrue(server.authenticate('user', 'badpassword'))
+
+    @patch.object(bmemcached.Server, '_get_response')
+    def testNotUsingPlainAuth(self, mock):
+        """
+        Raise AuthenticationNotSupported unless we're using PLAIN auth.
+        """
+        mock.return_value = (0, 0, 0, 0, 0, 0, 0, 0, 0, [])
+        server = bmemcached.Server('127.0.0.1')
+        self.assertRaises(bmemcached.AuthenticationNotSupported,
+                          server.authenticate, 'user', 'password')
+
+    @patch.object(bmemcached.Server, '_get_response')
+    def testAuthNotSuccessful(self, mock):
+        """
+        Raise MemcachedException for anything unsuccessful.
+        """
+        mock.return_value = (0, 0, 0, 0, 0, 0x01, 0, 0, 0, ['PLAIN'])
+        server = bmemcached.Server('127.0.0.1')
+        self.assertRaises(bmemcached.MemcachedException,
+                          server.authenticate, 'user', 'password')
 
