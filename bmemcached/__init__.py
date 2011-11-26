@@ -82,16 +82,14 @@ class Client(object):
         for server in self.servers:
             returns.append(server.incr(key, value))
 
-        if len(returns):
-            return returns[0]
+        return returns[0]
 
     def decr(self, key, value):
         returns = []
         for server in self.servers:
             returns.append(server.decr(key, value))
 
-        if len(returns):
-            return returns[0]
+        return returns[0]
 
     def flush_all(self, time=0):
         returns = []
