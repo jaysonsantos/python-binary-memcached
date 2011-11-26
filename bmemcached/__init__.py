@@ -22,6 +22,8 @@ class Client(object):
         if isinstance(servers, basestring):
             servers = [servers]
 
+        assert servers, "No memcached servers supplied"
+
         self.servers = [Server(server, self.username,
             self.password) for server in servers]
 

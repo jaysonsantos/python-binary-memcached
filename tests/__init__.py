@@ -195,6 +195,11 @@ class TestServerParsing(unittest.TestCase):
         server = client.servers[0]
         self.assertFalse(server.authenticated)
 
+    def testNoServersSupplied(self):
+        """
+        Raise assertion if the server list is empty.
+        """
+        self.assertRaises(AssertionError, bmemcached.Client, [])
 
 class TestServerAuth(unittest.TestCase):
     @patch.object(bmemcached.Server, '_get_response')
