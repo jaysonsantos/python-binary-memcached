@@ -180,10 +180,10 @@ class Server(object):
 
     def _read_socket(self, size):
         value = ''
-        while True:
+        while len(value) < size:
             value += self.connection.recv(size - len(value))
-            if len(value) == size:
-                return value
+        assert len(value) == size, "Asked for %d bytes, got %d" % (size, len(value))
+        return value
 
     def _get_response(self):
         header = self._read_socket(self.HEADER_SIZE)
