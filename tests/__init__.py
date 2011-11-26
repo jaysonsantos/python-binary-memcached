@@ -4,10 +4,10 @@ import bmemcached
 import os
 
 
-class MainTests(unittest.TestCase):
+class MemcachedTests(unittest.TestCase):
     def setUp(self):
-        self.client = bmemcached.Client(('127.0.0.1:11211', ), 'user',
-            'password')
+        self.server = '127.0.0.1:11211'
+        self.client = bmemcached.Client(self.server, 'user', 'password')
 
     def tearDown(self):
         self.client.delete('test_key')
@@ -91,14 +91,23 @@ class MainTests(unittest.TestCase):
         self.assertEqual(None, self.client.get('test_key'))
 
     def testStats(self):
-        stats = self.client.stats()['127.0.0.1:11211']
+        stats = self.client.stats()[self.server]
         self.assertTrue('pid' in stats)
 
-        stats = self.client.stats('settings')['127.0.0.1:11211']
+        stats = self.client.stats('settings')[self.server]
         self.assertTrue('verbosity' in stats)
 
-        stats = self.client.stats('slabs')['127.0.0.1:11211']
+        stats = self.client.stats('slabs')[self.server]
         self.assertTrue('1:get_hits' in stats)
+
+
+class SocketMemcachedTests(MemcachedTests):
+    """
+    Same tests as above, just make sure it works with sockets.
+    """
+    def setUp(self):
+        self.server = '/tmp/memcached.sock'
+        self.client = bmemcached.Client(self.server, 'user', 'password')
 
 
 class TestMemcachedErrors(unittest.TestCase):
