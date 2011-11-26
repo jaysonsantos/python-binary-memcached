@@ -101,6 +101,58 @@ class MainTests(unittest.TestCase):
         self.assertTrue('1:get_hits' in stats)
 
 
+class TestMemcachedErrors(unittest.TestCase):
+    def testGet(self):
+        """
+        Raise MemcachedException if request wasn't successful and
+        wasn't a 'key not found' error.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
+        with patch.object(bmemcached.Server, '_get_response') as mock:
+            mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
+            self.assertRaises(bmemcached.MemcachedException, client.get, 'foo')
+
+    def testSet(self):
+        """
+        Raise MemcachedException if request wasn't successful and
+        wasn't a 'key not found' or 'key exists' error.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
+        with patch.object(bmemcached.Server, '_get_response') as mock:
+            mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
+            self.assertRaises(bmemcached.MemcachedException, client.set, 'foo', 'bar', 300)
+
+    def testIncrDecr(self):
+        """
+        Incr/Decr raise MemcachedException unless the request wasn't
+        successful.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
+        client.set('foo', 1)
+        with patch.object(bmemcached.Server, '_get_response') as mock:
+            mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 2)
+            self.assertRaises(bmemcached.MemcachedException, client.incr, 'foo', 1)
+            self.assertRaises(bmemcached.MemcachedException, client.decr, 'foo', 1)
+
+    def testDelete(self):
+        """
+        Raise MemcachedException if the delete request isn't successful.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
+        client.flush_all()
+        with patch.object(bmemcached.Server, '_get_response') as mock:
+            mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
+            self.assertRaises(bmemcached.MemcachedException, client.delete, 'foo')
+
+    def testFlushAll(self):
+        """
+        Raise MemcachedException if the flush wasn't successful.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
+        with patch.object(bmemcached.Server, '_get_response') as mock:
+            mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
+            self.assertRaises(bmemcached.MemcachedException, client.flush_all)
+
 class TestServerParsing(unittest.TestCase):
     def testAcceptStringServer(self):
         client = bmemcached.Client('127.0.0.1:11211')
