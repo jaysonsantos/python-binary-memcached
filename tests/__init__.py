@@ -110,12 +110,6 @@ class TestAuthentication(unittest.TestCase):
             os.environ.get('MEMCACHED_PASSWORD', 'password')))
 
 
-class TestWrongPort(unittest.TestCase):
-    def testWrongPortFail(self):
-        bmemcached.Client(('127.0.0.1:bla', ), 'user',
-            'password')
-
-
 class TestServerParsing(unittest.TestCase):
     def testAcceptStringServer(self):
         client = bmemcached.Client('127.0.0.1:11211')
