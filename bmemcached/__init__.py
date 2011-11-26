@@ -6,7 +6,7 @@ import zlib
 try:
     from cPickle import loads, dumps
 except ImportError:
-    from Pickle import loads, dumps
+    from pickle import loads, dumps
 
 __all__ = ['Client']
 logger = logging.getLogger('bmemcached')
