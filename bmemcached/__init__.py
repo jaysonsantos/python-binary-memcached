@@ -1,3 +1,5 @@
+import re
+from urllib import splitport
 import struct
 import socket
 import logging
@@ -161,22 +163,30 @@ class Server(object):
         else:
             self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection.settimeout(5)
-            server = server.split(':')
-            self.host = server[0]
-            if len(server) > 1:
-                try:
-                    port = int(server[1])
-                except (ValueError, TypeError):
-                    port = 11211
-            else:
-                port = 11211
-
-            self.port = port
-
+            self.host, self.port = self.split_host_port(self.server)
             self.connection.connect((self.host, self.port))
 
         if username and password:
             self.authenticate(username, password)
+
+    def split_host_port(self, server):
+        """
+        Return (host, port) from server.
+
+        Port defaults to 11211.
+
+        >>> split_host_port('127.0.0.1:11211')
+        ('127.0.0.1', 11211)
+        >>> split_host_port('127.0.0.1')
+        ('127.0.0.1', 11211)
+        """
+        host, port = splitport(server)
+        if port is None:
+            port = 11211
+        port = int(port)
+        if re.search(':.*$', host):
+            host = re.sub(':.*$', '', host)
+        return (host, port)
 
     def _read_socket(self, size):
         value = ''
