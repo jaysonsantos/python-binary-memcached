@@ -261,7 +261,7 @@ class Server(object):
         return (flags, value)
 
     def deserialize(self, value, flags):
-        if flags & self.FLAGS['compressed']:
+        if flags & self.FLAGS['compressed']: # pragma: no branch
             value = zlib.decompress(value)
 
         if flags & self.FLAGS['integer']:

@@ -4,3 +4,6 @@ branch = True
 [report]
 exclude_lines =
     except ImportError
+partial_branches =
+    pragma: no branch
+    for server in self.servers
