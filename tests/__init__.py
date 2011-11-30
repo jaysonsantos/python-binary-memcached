@@ -1,12 +1,13 @@
+from mock import Mock, patch
 import unittest
 import bmemcached
 import os
 
 
-class MainTests(unittest.TestCase):
+class MemcachedTests(unittest.TestCase):
     def setUp(self):
-        self.client = bmemcached.Client(('127.0.0.1:11211', ), 'user',
-            'password')
+        self.server = '127.0.0.1:11211'
+        self.client = bmemcached.Client(self.server, 'user', 'password')
 
     def tearDown(self):
         self.client.delete('test_key')
@@ -29,6 +30,8 @@ class MainTests(unittest.TestCase):
             'test_key2': 'value2'}))
         self.assertEqual({'test_key': 'value', 'test_key2': 'value2'},
             self.client.get_multi(['test_key', 'test_key2']))
+        self.assertEqual({'test_key': 'value', 'test_key2': 'value2'},
+            self.client.get_multi(['test_key', 'test_key2', 'nothere']))
 
     def testGetLong(self):
         self.client.set('test_key', 1L)
@@ -87,19 +90,173 @@ class MainTests(unittest.TestCase):
         self.assertTrue(self.client.flush_all())
         self.assertEqual(None, self.client.get('test_key'))
 
+    def testStats(self):
+        stats = self.client.stats()[self.server]
+        self.assertTrue('pid' in stats)
 
-class TestAuthentication(unittest.TestCase):
+        stats = self.client.stats('settings')[self.server]
+        self.assertTrue('verbosity' in stats)
+
+        stats = self.client.stats('slabs')[self.server]
+        self.assertTrue('1:get_hits' in stats)
+
+
+class SocketMemcachedTests(MemcachedTests):
+    """
+    Same tests as above, just make sure it works with sockets.
+    """
     def setUp(self):
-        self.server = bmemcached.Server(os.environ.get('MEMCACHED_SERVER',
-            '127.0.0.1'))
-
-    def testAuth(self):
-        self.assertTrue(self.server.authenticate(
-            os.environ.get('MEMCACHED_USERNAME', 'user'),
-            os.environ.get('MEMCACHED_PASSWORD', 'password')))
+        self.server = '/tmp/memcached.sock'
+        self.client = bmemcached.Client(self.server, 'user', 'password')
 
 
-class TestWrongPort(unittest.TestCase):
-    def testWrongPortFail(self):
-        bmemcached.Client(('127.0.0.1:bla', ), 'user',
-            'password')
+class TestMemcachedErrors(unittest.TestCase):
+    def testGet(self):
+        """
+        Raise MemcachedException if request wasn't successful and
+        wasn't a 'key not found' error.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
+        with patch.object(bmemcached.Server, '_get_response') as mock:
+            mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
+            self.assertRaises(bmemcached.MemcachedException, client.get, 'foo')
+
+    def testSet(self):
+        """
+        Raise MemcachedException if request wasn't successful and
+        wasn't a 'key not found' or 'key exists' error.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
+        with patch.object(bmemcached.Server, '_get_response') as mock:
+            mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
+            self.assertRaises(bmemcached.MemcachedException, client.set, 'foo', 'bar', 300)
+
+    def testIncrDecr(self):
+        """
+        Incr/Decr raise MemcachedException unless the request wasn't
+        successful.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
+        client.set('foo', 1)
+        with patch.object(bmemcached.Server, '_get_response') as mock:
+            mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 2)
+            self.assertRaises(bmemcached.MemcachedException, client.incr, 'foo', 1)
+            self.assertRaises(bmemcached.MemcachedException, client.decr, 'foo', 1)
+
+    def testDelete(self):
+        """
+        Raise MemcachedException if the delete request isn't successful.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
+        client.flush_all()
+        with patch.object(bmemcached.Server, '_get_response') as mock:
+            mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
+            self.assertRaises(bmemcached.MemcachedException, client.delete, 'foo')
+
+    def testFlushAll(self):
+        """
+        Raise MemcachedException if the flush wasn't successful.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
+        with patch.object(bmemcached.Server, '_get_response') as mock:
+            mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
+            self.assertRaises(bmemcached.MemcachedException, client.flush_all)
+
+class TestServerParsing(unittest.TestCase):
+    def testAcceptStringServer(self):
+        client = bmemcached.Client('127.0.0.1:11211')
+        self.assertEqual(len(client.servers), 1)
+
+    def testAcceptIterableServer(self):
+        client = bmemcached.Client(['127.0.0.1:11211', '127.0.0.1:11211'])
+        self.assertEqual(len(client.servers), 2)
+
+    def testNoPortGiven(self):
+        server = bmemcached.Server('127.0.0.1')
+        self.assertEqual(server.host, '127.0.0.1')
+        self.assertEqual(server.port, 11211)
+
+    def testInvalidPort(self):
+        server = bmemcached.Server('127.0.0.1:blah')
+        self.assertEqual(server.host, '127.0.0.1')
+        self.assertEqual(server.port, 11211)
+
+    def testNonStandardPort(self):
+        server = bmemcached.Server('127.0.0.1:5000')
+        self.assertEqual(server.host, '127.0.0.1')
+        self.assertEqual(server.port, 5000)
+
+    def testAcceptUnixSocket(self):
+        client = bmemcached.Client('/tmp/memcached.sock')
+        self.assertEqual(len(client.servers), 1)
+
+    def testPassCredentials(self):
+        """
+        If username/password passed to Client, auto-authenticate.
+        """
+        client = bmemcached.Client('127.0.0.1:11211', username='user',
+                                   password='password')
+        server = client.servers[0]
+        self.assertTrue(server.authenticated)
+
+    def testNoCredentialsNoAuth(self):
+        client = bmemcached.Client('127.0.0.1:11211')
+        server = client.servers[0]
+        self.assertFalse(server.authenticated)
+
+    def testNoServersSupplied(self):
+        """
+        Raise assertion if the server list is empty.
+        """
+        self.assertRaises(AssertionError, bmemcached.Client, [])
+
+class TestServerAuth(unittest.TestCase):
+    @patch.object(bmemcached.Server, '_get_response')
+    def testServerDoesntNeedAuth(self, mock):
+        """
+        If 0x81 ('unkown_command') comes back in the status field when
+        authenticating, it isn't needed.
+        """
+        mock.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
+        server = bmemcached.Server('127.0.0.1')
+        # can pass anything and it'll work
+        self.assertTrue(server.authenticate('user', 'badpassword'))
+
+    @patch.object(bmemcached.Server, '_get_response')
+    def testNotUsingPlainAuth(self, mock):
+        """
+        Raise AuthenticationNotSupported unless we're using PLAIN auth.
+        """
+        mock.return_value = (0, 0, 0, 0, 0, 0, 0, 0, 0, [])
+        server = bmemcached.Server('127.0.0.1')
+        self.assertRaises(bmemcached.AuthenticationNotSupported,
+                          server.authenticate, 'user', 'password')
+
+    @patch.object(bmemcached.Server, '_get_response')
+    def testAuthNotSuccessful(self, mock):
+        """
+        Raise MemcachedException for anything unsuccessful.
+        """
+        mock.return_value = (0, 0, 0, 0, 0, 0x01, 0, 0, 0, ['PLAIN'])
+        server = bmemcached.Server('127.0.0.1')
+        self.assertRaises(bmemcached.MemcachedException,
+                          server.authenticate, 'user', 'password')
+
+    @patch.object(bmemcached.Server, '_get_response')
+    def testAuthSuccessful(self, mock):
+        """
+        Valid logins return True.
+        """
+        mock.return_value = (0, 0, 0, 0, 0, 0, 0, 0, 0, ['PLAIN'])
+        server = bmemcached.Server('127.0.0.1')
+        self.assertTrue(server.authenticate('user', 'password'))
+
+    @patch.object(bmemcached.Server, '_get_response')
+    def testAuthUnsuccessful(self, mock):
+        """
+        Invalid logins raise InvalidCredentials
+        """
+        mock.return_value = (0, 0, 0, 0, 0, 0x08, 0, 0, 0, ['PLAIN'])
+        server = bmemcached.Server('127.0.0.1')
+        self.assertRaises(bmemcached.InvalidCredentials, server.authenticate,
+                          'user', 'password2')

@@ -1,3 +1,5 @@
+import re
+from urllib import splitport
 import struct
 import socket
 import logging
@@ -6,19 +8,24 @@ import zlib
 try:
     from cPickle import loads, dumps
 except ImportError:
-    from Pickle import loads, dumps
+    from pickle import loads, dumps
 
 __all__ = ['Client']
 logger = logging.getLogger('bmemcached')
 
 
 class Client(object):
-    def __init__(self, servers, username=None, password=None):
+    def __init__(self, servers=['127.0.0.1:11211'], username=None, password=None):
         self.username = username
         self.password = password
         self.set_servers(servers)
 
     def set_servers(self, servers):
+        if isinstance(servers, basestring):
+            servers = [servers]
+
+        assert servers, "No memcached servers supplied"
+
         self.servers = [Server(server, self.username,
             self.password) for server in servers]
 
@@ -79,16 +86,14 @@ class Client(object):
         for server in self.servers:
             returns.append(server.incr(key, value))
 
-        if len(returns):
-            return returns[0]
+        return returns[0]
 
     def decr(self, key, value):
         returns = []
         for server in self.servers:
             returns.append(server.decr(key, value))
 
-        if len(returns):
-            return returns[0]
+        return returns[0]
 
     def flush_all(self, time=0):
         returns = []
@@ -96,6 +101,13 @@ class Client(object):
             returns.append(server.flush_all(time))
 
         return any(returns)
+
+    def stats(self, key=None):
+        returns = {}
+        for server in self.servers:
+            returns[server.server] = server.stats(key)
+
+        return returns
 
     def disconnect_all(self):
         for server in self.servers:
@@ -121,6 +133,7 @@ class Server(object):
         'incr': {'command': 0x05, 'struct': 'QQL%ds'},
         'decr': {'command': 0x06, 'struct': 'QQL%ds'},
         'flush': {'command': 0x08, 'struct': 'I'},
+        'stat': {'command': 0x10},
         'auth_negotiation': {'command': 0x20},
         'auth_request': {'command': 0x21, 'struct': '%ds%ds'}
     }
@@ -129,6 +142,7 @@ class Server(object):
         'success': 0x00,
         'key_not_found': 0x01,
         'key_exists': 0x02,
+        'auth_error': 0x08,
         'unknown_command': 0x81
     }
 
@@ -140,28 +154,46 @@ class Server(object):
     }
 
     def __init__(self, server, username=None, password=None):
-        self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.connection.settimeout(5)
-        server = server.split(':')
-        host = server[0]
-        if len(server) > 1:
-            try:
-                port = int(server[1])
-            except (ValueError, TypeError):
-                port = 11211
-        else:
-            port = 11211
+        self.server = server
+        self.authenticated = False
 
-        self.connection.connect((host, port))
+        if server.startswith('/'):
+            self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.connection.connect(server)
+        else:
+            self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.connection.settimeout(5)
+            self.host, self.port = self.split_host_port(self.server)
+            self.connection.connect((self.host, self.port))
+
         if username and password:
             self.authenticate(username, password)
 
+    def split_host_port(self, server):
+        """
+        Return (host, port) from server.
+
+        Port defaults to 11211.
+
+        >>> split_host_port('127.0.0.1:11211')
+        ('127.0.0.1', 11211)
+        >>> split_host_port('127.0.0.1')
+        ('127.0.0.1', 11211)
+        """
+        host, port = splitport(server)
+        if port is None:
+            port = 11211
+        port = int(port)
+        if re.search(':.*$', host):
+            host = re.sub(':.*$', '', host)
+        return (host, port)
+
     def _read_socket(self, size):
         value = ''
-        while True:
+        while len(value) < size:
             value += self.connection.recv(size - len(value))
-            if len(value) == size:
-                return value
+        assert len(value) == size, "Asked for %d bytes, got %d" % (size, len(value))
+        return value
 
     def _get_response(self):
         header = self._read_socket(self.HEADER_SIZE)
@@ -207,6 +239,9 @@ class Server(object):
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
             cas, extra_content) = self._get_response()
 
+        if status == self.STATUS['auth_error']:
+            raise InvalidCredentials("Incorrect username or password")
+
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status,
                 extra_content))
@@ -214,6 +249,7 @@ class Server(object):
         logger.debug('Auth OK. Code: %d Message: %s' % (status,
             extra_content))
 
+        self.authenticated = True
         return True
 
     def serialize(self, value):
@@ -235,7 +271,7 @@ class Server(object):
         return (flags, value)
 
     def deserialize(self, value, flags):
-        if flags & self.FLAGS['compressed']:
+        if flags & self.FLAGS['compressed']: # pragma: no branch
             value = zlib.decompress(value)
 
         if flags & self.FLAGS['integer']:
@@ -370,11 +406,49 @@ class Server(object):
         logger.debug('Memcached flushed')
         return True
 
+    def stats(self, key=None):
+        if key is not None:
+            keylen = len(key)
+            packed = struct.pack(
+                self.HEADER_STRUCT + '%ds' % keylen,
+                self.MAGIC['request'],
+                self.COMMANDS['stat']['command'],
+                keylen, 0, 0, 0, keylen, 0, 0, key)
+        else:
+            packed = struct.pack(
+                self.HEADER_STRUCT,
+                self.MAGIC['request'],
+                self.COMMANDS['stat']['command'],
+                0, 0, 0, 0, 0, 0, 0)
+
+        self.connection.send(packed)
+
+        value = {}
+
+        while True:
+            response = self._get_response()
+            keylen = response[2]
+            bodylen = response[6]
+
+            if keylen == 0 and bodylen == 0:
+                break
+
+            extra_content = response[-1]
+            key = extra_content[:keylen]
+            body = extra_content[keylen:bodylen]
+            value[key] = body
+
+        return value
+
     def disconnect(self):
         self.connection.close()
 
 
 class AuthenticationNotSupported(Exception):
+    pass
+
+
+class InvalidCredentials(Exception):
     pass
 
 
