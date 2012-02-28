@@ -69,8 +69,7 @@ class MemcachedTests(unittest.TestCase):
 
     def testAddFail(self):
         self.client.add('test_key', 'value')
-        with self.assertRaises(ValueError) as exp:
-            self.client.add('test_key', 'value')
+        self.assertRaises(ValueError, self.client.add, 'test_key', 'value')
 
     def testReplacePass(self):
         self.client.add('test_key', 'value')
@@ -78,8 +77,7 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual('value2', self.client.get('test_key'))
 
     def testReplaceFail(self):
-        with self.assertRaises(ValueError) as exp:
-            self.client.replace('test_key', 'value2')
+        self.assertRaises(ValueError, self.client.replace, 'test_key', 'value2')
 
     def testIncrement(self):
         self.assertEqual(0, self.client.incr('test_key', 1))
