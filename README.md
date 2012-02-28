@@ -1,3 +1,4 @@
+[![Build Status](https://secure.travis-ci.org/jaysonsantos/python-binary-memcached.png?branch=master)](http://travis-ci.org/jaysonsantos/python-binary-memcached)
 # BMemcached
 A pure python module to access memcached via it's binary with SASL auth support.
 
