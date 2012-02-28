@@ -1,8 +1,8 @@
 #!/bin/bash
 sudo service memcached stop
 memcached -S -d
-memached -s/tmp/memached.sock -d
-memached -p5000 -d
+memcached -s/tmp/memached.sock -d
+memcached -p5000 -d
 
 nosetests
 exit $?
