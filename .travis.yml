@@ -4,4 +4,6 @@ python:
   - "2.7"
 install: pip install -r requirements_test.txt --use-mirrors
 script: nosetests
-
+before_script:
+  - "memcached -s/tmp/memcached.sock -d"
+  - "memcached -p5000 -d"
