@@ -25,7 +25,11 @@ First run memcached with:
 
 ```bash
 memcached -S -vvv
+memcached -p5000 -S -vvv
+memcached -S -s/tmp/memcached.sock -vvv
 ```
+
+This is to cover all tests with socket, standard port and non standard port.
 
 Then, run the tests.
 

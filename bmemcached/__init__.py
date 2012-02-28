@@ -32,7 +32,7 @@ class Client(object):
     def get(self, key):
         for server in self.servers:
             value = server.get(key)
-            if value:
+            if value is not None:
                 return value
 
     def get_multi(self, keys):
@@ -40,7 +40,7 @@ class Client(object):
         for key in keys:
             for server in self.servers:
                 value = server.get(key)
-                if value:
+                if value is not None:
                     values.append((key, value))
                     break
 

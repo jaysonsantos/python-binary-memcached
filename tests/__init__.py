@@ -25,6 +25,10 @@ class MemcachedTests(unittest.TestCase):
         self.client.set('test_key', 'test')
         self.assertEqual('test', self.client.get('test_key'))
 
+    def testGetEmptyString(self):
+        self.client.set('test_key', '')
+        self.assertEqual('', self.client.get('test_key'))
+
     def testGetMulti(self):
         self.assertTrue(self.client.set_multi({'test_key': 'value',
             'test_key2': 'value2'}))
