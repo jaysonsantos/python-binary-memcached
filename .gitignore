@@ -1,0 +1,4 @@
+.coverage
+cover/*
+*.swp
+*.egg-info/*
