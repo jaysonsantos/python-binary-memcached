@@ -17,9 +17,6 @@ class MemcachedTests(unittest.TestCase):
     def testSet(self):
         self.assertTrue(self.client.set('test_key', 'test'))
 
-    def testSetAlreadyExists(self):
-        self.assertFalse(self.client.set('test_key', 'test'))
-
     def testSetMulti(self):
         self.assertTrue(self.client.set_multi({'test_key': 'value',
             'test_key2': 'value2'}))
