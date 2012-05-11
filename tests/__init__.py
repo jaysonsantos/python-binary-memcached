@@ -17,6 +17,9 @@ class MemcachedTests(unittest.TestCase):
     def testSet(self):
         self.assertTrue(self.client.set('test_key', 'test'))
 
+    def testSetAlreadyExists(self):
+        self.assertFalse(self.client.set('test_key', 'test'))
+
     def testSetMulti(self):
         self.assertTrue(self.client.set_multi({'test_key': 'value',
             'test_key2': 'value2'}))
@@ -69,7 +72,7 @@ class MemcachedTests(unittest.TestCase):
 
     def testAddFail(self):
         self.client.add('test_key', 'value')
-        self.assertRaises(ValueError, self.client.add, 'test_key', 'value')
+        self.assertFalse(self.client.add('test_key', 'test'))
 
     def testReplacePass(self):
         self.client.add('test_key', 'value')
@@ -77,7 +80,7 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual('value2', self.client.get('test_key'))
 
     def testReplaceFail(self):
-        self.assertRaises(ValueError, self.client.replace, 'test_key', 'value2')
+        self.assertFalse(self.client.replace('test_key', 'value'))
 
     def testIncrement(self):
         self.assertEqual(0, self.client.incr('test_key', 1))

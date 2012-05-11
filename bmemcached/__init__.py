@@ -327,9 +327,9 @@ class Server(object):
 
         if status != self.STATUS['success']:
             if status == self.STATUS['key_exists']:
-                raise ValueError('Key already exists')
+                return False
             elif status == self.STATUS['key_not_found']:
-                raise ValueError('Key not found')
+                return False
             raise MemcachedException('Code: %d Message: %s' % (status,
                 extra_content))
 
