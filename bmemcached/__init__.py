@@ -153,6 +153,8 @@ class Server(object):
         'compressed': 1 << 3
     }
 
+    COMPRESSION_THRESOLD = 128
+
     def __init__(self, server, username=None, password=None):
         self.server = server
         self.authenticated = False
@@ -266,8 +268,10 @@ class Server(object):
             flags |= self.FLAGS['pickle']
             value = dumps(value)
 
-        value = zlib.compress(value)
-        flags |= self.FLAGS['compressed']
+        if len(value) > self.COMPRESSION_THRESOLD:
+            value = zlib.compress(value)
+            flags |= self.FLAGS['compressed']
+
         return (flags, value)
 
     def deserialize(self, value, flags):
