@@ -53,8 +53,8 @@ class Client(object):
 
     def set_multi(self, mappings, time=100):
         returns = []
-        for key, value in mappings.iteritems():
-            returns.append(self.set(key, value, time))
+        for server in self.servers:
+            returns.append(server.set_multi(mappings, time))
 
         return all(returns)
 
@@ -127,6 +127,7 @@ class Server(object):
         'getk': {'command': 0x0C, 'struct': '%ds'},
         'getkq': {'command': 0x0D, 'struct': '%ds'},
         'set': {'command': 0x01, 'struct': 'LL%ds%ds'},
+        'setq': {'command': 0x11, 'struct': 'LL%ds%ds'},
         'add': {'command': 0x02, 'struct': 'LL%ds%ds'},
         'replace': {'command': 0x03, 'struct': 'LL%ds%ds'},
         'delete': {'command': 0x04, 'struct': '%ds'},
@@ -333,7 +334,6 @@ class Server(object):
 
         self.connection.send(msg)
 
-
         d = {}
         opcode = -1
         while opcode != self.COMMANDS['getk']['command']:
@@ -383,6 +383,43 @@ class Server(object):
 
     def replace(self, key, value, time):
         return self._set_add_replace('replace', key, value, time)
+
+    def set_multi(self, mappings, time=100):
+        mappings = mappings.items()
+        mappings, last = mappings[:-1], mappings[-1]
+        msg = []
+        for key, value in mappings:
+            flags, value = self.serialize(value)
+            m = struct.pack(self.HEADER_STRUCT + \
+                self.COMMANDS['setq']['struct'] % (len(key), len(value)),
+                self.MAGIC['request'],
+                self.COMMANDS['setq']['command'],
+                len(key),
+                8, 0, 0, len(key) + len(value) + 8, 0, 0, flags, time, key, value)
+            msg.append(m)
+
+        key, value = last
+        flags, value = self.serialize(value)
+        msg.append(struct.pack(self.HEADER_STRUCT + \
+            self.COMMANDS['set']['struct'] % (len(key), len(value)),
+            self.MAGIC['request'],
+            self.COMMANDS['set']['command'],
+            len(key),
+            8, 0, 0, len(key) + len(value) + 8, 0, 0, flags, time, key, value))
+
+        msg = ''.join(msg)
+
+        self.connection.send(msg)
+
+        opcode = -1
+        retval = True
+        while opcode != self.COMMANDS['set']['command']:
+            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+                cas, extra_content) = self._get_response()
+            if status != self.STATUS['success']:
+                retval = False
+
+        return retval
 
     def _incr_decr(self, command, key, value, default, time):
         self.connection.send(struct.pack(self.HEADER_STRUCT + \
