@@ -36,15 +36,13 @@ class Client(object):
                 return value
 
     def get_multi(self, keys):
-        values = []
-        for key in keys:
-            for server in self.servers:
-                value = server.get(key)
-                if value is not None:
-                    values.append((key, value))
-                    break
-
-        return dict(values)
+        d = {}
+        for server in self.servers:
+            d.update(server.get_multi(keys))
+            keys = [_ for _ in keys if not _ in d]
+            if not keys:
+                break
+        return d
 
     def set(self, key, value, time=100):
         returns = []
@@ -126,6 +124,8 @@ class Server(object):
     # All structures will be appended to HEADER_STRUCT
     COMMANDS = {
         'get': {'command': 0x00, 'struct': '%ds'},
+        'getk': {'command': 0x0C, 'struct': '%ds'},
+        'getkq': {'command': 0x0D, 'struct': '%ds'},
         'set': {'command': 0x01, 'struct': 'LL%ds%ds'},
         'add': {'command': 0x02, 'struct': 'LL%ds%ds'},
         'replace': {'command': 0x03, 'struct': 'LL%ds%ds'},
@@ -135,7 +135,7 @@ class Server(object):
         'flush': {'command': 0x08, 'struct': 'I'},
         'stat': {'command': 0x10},
         'auth_negotiation': {'command': 0x20},
-        'auth_request': {'command': 0x21, 'struct': '%ds%ds'}
+        'auth_request': {'command': 0x21, 'struct': '%ds%ds'},
     }
 
     STATUS = {
@@ -313,6 +313,42 @@ class Server(object):
         flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
 
         return self.deserialize(value, flags)
+
+    def get_multi(self, keys):
+        # pipeline N-1 getkq requests, followed by a regular getk to uncork the
+        # server
+        keys, last = keys[:-1], keys[-1]
+        msg = ''.join([
+            struct.pack(self.HEADER_STRUCT + \
+                self.COMMANDS['getkq']['struct'] % (len(key)),
+                self.MAGIC['request'],
+                self.COMMANDS['getkq']['command'],
+                len(key), 0, 0, 0, len(key), 0, 0, key)
+            for key in keys])
+        msg += struct.pack(self.HEADER_STRUCT + \
+            self.COMMANDS['getk']['struct'] % (len(last)),
+            self.MAGIC['request'],
+            self.COMMANDS['getk']['command'],
+            len(last), 0, 0, 0, len(last), 0, 0, last)
+
+        self.connection.send(msg)
+
+
+        d = {}
+        opcode = -1
+        while opcode != self.COMMANDS['getk']['command']:
+            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+                cas, extra_content) = self._get_response()
+
+            if status == self.STATUS['success']:
+                flags, key, value = struct.unpack('!L%ds%ds' %
+                    (keylen, bodylen - keylen - 4), extra_content)
+                d[key] = self.deserialize(value, flags)
+            elif status != self.STATUS['key_not_found']:
+                raise MemcachedException('Code: %d Message: %s' % (status,
+                    extra_content))
+
+        return d
 
     def _set_add_replace(self, command, key, value, time):
         logger.info('Setting/adding/replacing key %s.' % key)
