@@ -54,8 +54,9 @@ class Client(object):
 
     def set_multi(self, mappings, time=100):
         returns = []
-        for server in self.servers:
-            returns.append(server.set_multi(mappings, time))
+        if mappings:
+            for server in self.servers:
+                returns.append(server.set_multi(mappings, time))
 
         return all(returns)
 
