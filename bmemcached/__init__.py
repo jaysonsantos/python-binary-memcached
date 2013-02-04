@@ -37,11 +37,12 @@ class Client(object):
 
     def get_multi(self, keys):
         d = {}
-        for server in self.servers:
-            d.update(server.get_multi(keys))
-            keys = [_ for _ in keys if not _ in d]
-            if not keys:
-                break
+        if keys:
+            for server in self.servers:
+                d.update(server.get_multi(keys))
+                keys = [_ for _ in keys if not _ in d]
+                if not keys:
+                    break
         return d
 
     def set(self, key, value, time=100):
