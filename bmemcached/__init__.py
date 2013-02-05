@@ -196,7 +196,10 @@ class Server(object):
     def _read_socket(self, size):
         value = ''
         while len(value) < size:
-            value += self.connection.recv(size - len(value))
+            data = self.connection.recv(size - len(value))
+            if not data:
+                break
+            value += data
         assert len(value) == size, "Asked for %d bytes, got %d" % (size, len(value))
         return value
 
