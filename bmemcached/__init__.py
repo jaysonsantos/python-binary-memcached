@@ -27,7 +27,7 @@ class Client(object):
         assert servers, "No memcached servers supplied"
 
         self.servers = [Server(server, self.username,
-            self.password) for server in servers]
+                               self.password) for server in servers]
 
     def get(self, key):
         for server in self.servers:
@@ -215,14 +215,14 @@ class Server(object):
             extra_content = self._read_socket(bodylen)
 
         return (magic, opcode, keylen, extlen, datatype, status, bodylen,
-            opaque, cas, extra_content)
+                opaque, cas, extra_content)
 
     def authenticate(self, username, password):
         logger.info('Authenticating as %s' % username)
         self.connection.send(struct.pack(self.HEADER_STRUCT,
-            self.MAGIC['request'],
-            self.COMMANDS['auth_negotiation']['command'],
-            0, 0, 0, 0, 0, 0, 0))
+                                         self.MAGIC['request'],
+                                         self.COMMANDS['auth_negotiation']['command'],
+                                         0, 0, 0, 0, 0, 0, 0))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
             cas, extra_content) = self._get_response()
@@ -234,15 +234,15 @@ class Server(object):
         methods = extra_content
 
         if not 'PLAIN' in methods:
-            raise AuthenticationNotSupported('This module only supports ' + \
-                'PLAIN auth for now.')
+            raise AuthenticationNotSupported('This module only supports '
+                                             'PLAIN auth for now.')
 
         method = 'PLAIN'
         auth = '\x00%s\x00%s' % (username, password)
-        self.connection.send(struct.pack(self.HEADER_STRUCT + \
-            self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
-            self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
-            len(method), 0, 0, 0, len(method) + len(auth), 0, 0, method, auth))
+        self.connection.send(struct.pack(self.HEADER_STRUCT +
+                                         self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
+                                         self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
+                                         len(method), 0, 0, 0, len(method) + len(auth), 0, 0, method, auth))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
             cas, extra_content) = self._get_response()
@@ -251,11 +251,9 @@ class Server(object):
             raise InvalidCredentials("Incorrect username or password")
 
         if status != self.STATUS['success']:
-            raise MemcachedException('Code: %d Message: %s' % (status,
-                extra_content))
+            raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
-        logger.debug('Auth OK. Code: %d Message: %s' % (status,
-            extra_content))
+        logger.debug('Auth OK. Code: %d Message: %s' % (status, extra_content))
 
         self.authenticated = True
         return True
@@ -281,7 +279,7 @@ class Server(object):
         return (flags, value)
 
     def deserialize(self, value, flags):
-        if flags & self.FLAGS['compressed']: # pragma: no branch
+        if flags & self.FLAGS['compressed']:  # pragma: no branch
             value = zlib.decompress(value)
 
         if flags & self.FLAGS['integer']:
@@ -295,11 +293,11 @@ class Server(object):
 
     def get(self, key):
         logger.info('Getting key %s' % key)
-        self.connection.send(struct.pack(self.HEADER_STRUCT + \
-            self.COMMANDS['get']['struct'] % (len(key)),
-            self.MAGIC['request'],
-            self.COMMANDS['get']['command'],
-            len(key), 0, 0, 0, len(key), 0, 0, key))
+        self.connection.send(struct.pack(self.HEADER_STRUCT +
+                                         self.COMMANDS['get']['struct'] % (len(key)),
+                                         self.MAGIC['request'],
+                                         self.COMMANDS['get']['command'],
+                                         len(key), 0, 0, 0, len(key), 0, 0, key))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
             cas, extra_content) = self._get_response()
@@ -309,12 +307,11 @@ class Server(object):
 
         if status != self.STATUS['success']:
             if status == self.STATUS['key_not_found']:
-                logger.debug('Key not found. Message: %s' \
-                    % extra_content)
+                logger.debug('Key not found. Message: %s'
+                             % extra_content)
                 return None
 
-            raise MemcachedException('Code: %d Message: %s' % (status,
-                extra_content))
+            raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
         flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
 
@@ -325,17 +322,17 @@ class Server(object):
         # server
         keys, last = keys[:-1], keys[-1]
         msg = ''.join([
-            struct.pack(self.HEADER_STRUCT + \
-                self.COMMANDS['getkq']['struct'] % (len(key)),
-                self.MAGIC['request'],
-                self.COMMANDS['getkq']['command'],
-                len(key), 0, 0, 0, len(key), 0, 0, key)
+            struct.pack(self.HEADER_STRUCT +
+                        self.COMMANDS['getkq']['struct'] % (len(key)),
+                        self.MAGIC['request'],
+                        self.COMMANDS['getkq']['command'],
+                        len(key), 0, 0, 0, len(key), 0, 0, key)
             for key in keys])
-        msg += struct.pack(self.HEADER_STRUCT + \
-            self.COMMANDS['getk']['struct'] % (len(last)),
-            self.MAGIC['request'],
-            self.COMMANDS['getk']['command'],
-            len(last), 0, 0, 0, len(last), 0, 0, last)
+        msg += struct.pack(self.HEADER_STRUCT +
+                           self.COMMANDS['getk']['struct'] % (len(last)),
+                           self.MAGIC['request'],
+                           self.COMMANDS['getk']['command'],
+                           len(last), 0, 0, 0, len(last), 0, 0, last)
 
         self.connection.send(msg)
 
@@ -347,11 +344,11 @@ class Server(object):
 
             if status == self.STATUS['success']:
                 flags, key, value = struct.unpack('!L%ds%ds' %
-                    (keylen, bodylen - keylen - 4), extra_content)
+                                                  (keylen, bodylen - keylen - 4),
+                                                  extra_content)
                 d[key] = self.deserialize(value, flags)
             elif status != self.STATUS['key_not_found']:
-                raise MemcachedException('Code: %d Message: %s' % (status,
-                    extra_content))
+                raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
         return d
 
@@ -360,12 +357,13 @@ class Server(object):
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
 
-        self.connection.send(struct.pack(self.HEADER_STRUCT + \
-            self.COMMANDS[command]['struct'] % (len(key), len(value)),
-            self.MAGIC['request'],
-            self.COMMANDS[command]['command'],
-            len(key),
-            8, 0, 0, len(key) + len(value) + 8, 0, 0, flags, time, key, value))
+        self.connection.send(struct.pack(self.HEADER_STRUCT +
+                                         self.COMMANDS[command]['struct'] % (len(key), len(value)),
+                                         self.MAGIC['request'],
+                                         self.COMMANDS[command]['command'],
+                                         len(key),
+                                         8, 0, 0, len(key) + len(value) + 8, 0, 0, flags,
+                                         time, key, value))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
             cas, extra_content) = self._get_response()
@@ -375,8 +373,7 @@ class Server(object):
                 return False
             elif status == self.STATUS['key_not_found']:
                 return False
-            raise MemcachedException('Code: %d Message: %s' % (status,
-                extra_content))
+            raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
         return True
 
@@ -395,22 +392,24 @@ class Server(object):
         msg = []
         for key, value in mappings:
             flags, value = self.serialize(value)
-            m = struct.pack(self.HEADER_STRUCT + \
-                self.COMMANDS['setq']['struct'] % (len(key), len(value)),
-                self.MAGIC['request'],
-                self.COMMANDS['setq']['command'],
-                len(key),
-                8, 0, 0, len(key) + len(value) + 8, 0, 0, flags, time, key, value)
+            m = struct.pack(self.HEADER_STRUCT +
+                            self.COMMANDS['setq']['struct'] % (len(key), len(value)),
+                            self.MAGIC['request'],
+                            self.COMMANDS['setq']['command'],
+                            len(key),
+                            8, 0, 0, len(key) + len(value) + 8, 0, 0,
+                            flags, time, key, value)
             msg.append(m)
 
         key, value = last
         flags, value = self.serialize(value)
-        msg.append(struct.pack(self.HEADER_STRUCT + \
-            self.COMMANDS['set']['struct'] % (len(key), len(value)),
-            self.MAGIC['request'],
-            self.COMMANDS['set']['command'],
-            len(key),
-            8, 0, 0, len(key) + len(value) + 8, 0, 0, flags, time, key, value))
+        msg.append(struct.pack(self.HEADER_STRUCT +
+                               self.COMMANDS['set']['struct'] % (len(key), len(value)),
+                               self.MAGIC['request'],
+                               self.COMMANDS['set']['command'],
+                               len(key),
+                               8, 0, 0, len(key) + len(value) + 8, 0, 0,
+                               flags, time, key, value))
 
         msg = ''.join(msg)
 
@@ -427,63 +426,58 @@ class Server(object):
         return retval
 
     def _incr_decr(self, command, key, value, default, time):
-        self.connection.send(struct.pack(self.HEADER_STRUCT + \
-            self.COMMANDS[command]['struct'] % len(key),
-            self.MAGIC['request'],
-            self.COMMANDS[command]['command'],
-            len(key),
-            20, 0, 0, len(key) + 20, 0, 0, value, default, time, key))
+        self.connection.send(struct.pack(self.HEADER_STRUCT +
+                                         self.COMMANDS[command]['struct'] % len(key),
+                                         self.MAGIC['request'],
+                                         self.COMMANDS[command]['command'],
+                                         len(key),
+                                         20, 0, 0, len(key) + 20, 0, 0, value,
+                                         default, time, key))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
             cas, extra_content) = self._get_response()
 
         if status != self.STATUS['success']:
-            raise MemcachedException('Code: %d Message: %s' % (status,
-                extra_content))
+            raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
         return struct.unpack('!Q', extra_content)[0]
 
     def incr(self, key, value, default=0, time=1000000):
-        return self._incr_decr('incr', key, value, default,
-            time)
+        return self._incr_decr('incr', key, value, default, time)
 
     def decr(self, key, value, default=0, time=100):
-        return self._incr_decr('decr', key, value, default,
-            time)
+        return self._incr_decr('decr', key, value, default, time)
 
     def delete(self, key):
         logger.info('Deletting key %s' % key)
-        self.connection.send(struct.pack(self.HEADER_STRUCT + \
-            self.COMMANDS['delete']['struct'] % len(key),
-            self.MAGIC['request'],
-            self.COMMANDS['delete']['command'],
-            len(key), 0, 0, 0, len(key), 0, 0, key))
+        self.connection.send(struct.pack(self.HEADER_STRUCT +
+                                         self.COMMANDS['delete']['struct'] % len(key),
+                                         self.MAGIC['request'],
+                                         self.COMMANDS['delete']['command'],
+                                         len(key), 0, 0, 0, len(key), 0, 0, key))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
             cas, extra_content) = self._get_response()
 
-        if status != self.STATUS['success'] \
-            and status != self.STATUS['key_not_found']:
-            raise MemcachedException('Code: %d message: %s' % (status,
-                extra_content))
+        if status != self.STATUS['success'] and status != self.STATUS['key_not_found']:
+            raise MemcachedException('Code: %d message: %s' % (status, extra_content))
 
         logger.debug('Key deleted %s' % key)
         return True
 
     def flush_all(self, time):
         logger.info('Flushing memcached')
-        self.connection.send(struct.pack(self.HEADER_STRUCT + \
-            self.COMMANDS['flush']['struct'],
-            self.MAGIC['request'],
-            self.COMMANDS['flush']['command'],
-            0, 4, 0, 0, 4, 0, 0, time))
+        self.connection.send(struct.pack(self.HEADER_STRUCT +
+                                         self.COMMANDS['flush']['struct'],
+                                         self.MAGIC['request'],
+                                         self.COMMANDS['flush']['command'],
+                                         0, 4, 0, 0, 4, 0, 0, time))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
             cas, extra_content) = self._get_response()
 
         if status != self.STATUS['success']:
-            raise MemcachedException('Code: %d message: %s' % (status,
-                extra_content))
+            raise MemcachedException('Code: %d message: %s' % (status, extra_content))
 
         logger.debug('Memcached flushed')
         return True
