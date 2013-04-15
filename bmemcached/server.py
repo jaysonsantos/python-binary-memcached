@@ -10,6 +10,7 @@ from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials
 
 logger = logging.getLogger(__name__)
 
+
 class Server(object):
     HEADER_STRUCT = '!BBHBBHLLQ'
     HEADER_SIZE = 24
@@ -35,7 +36,7 @@ class Server(object):
         'stat': {'command': 0x10},
         'auth_negotiation': {'command': 0x20},
         'auth_request': {'command': 0x21, 'struct': '%ds%ds'},
-        }
+    }
 
     STATUS = {
         'success': 0x00,
@@ -172,7 +173,7 @@ class Server(object):
             value = zlib.compress(value)
             flags |= self.FLAGS['compressed']
 
-        return (flags, value)
+        return flags, value
 
     def deserialize(self, value, flags):
         if flags & self.FLAGS['compressed']:  # pragma: no branch
