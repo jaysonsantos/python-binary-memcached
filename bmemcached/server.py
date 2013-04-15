@@ -216,7 +216,7 @@ class Server(object):
         Deserialized values based on flags or just return it if it is not serialized.
 
         :param value: Serialized or not value.
-        :type value: basestring|int
+        :type value: basestring, int
         :param flags: Value flags
         :type flags: int
         :return: Deserialized value
@@ -493,8 +493,8 @@ class Server(object):
     def decr(self, key, value, default=0, time=100):
         """
         Decrement a key, if it exists, returns it's actual value, if it don't, return 0.
-
         Minimum value of decrement return is 0.
+
         :param key: Key's name
         :type key: basestring
         :param value: Number to be decremented
