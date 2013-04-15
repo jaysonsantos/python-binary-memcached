@@ -48,3 +48,7 @@ Then, run the tests.
 Using with Django
 -----------------
 If you want to use it with Django, go to `django-bmemcached <https://github.com/jaysonsantos/django-bmemcached>`_ to get a Django backend.
+
+Tests Status
+------------
+.. image:: https://travis-ci.org/jaysonsantos/python-binary-memcached.png?branch=master
