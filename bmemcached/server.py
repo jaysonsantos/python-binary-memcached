@@ -12,6 +12,9 @@ logger = logging.getLogger(__name__)
 
 
 class Server(object):
+    """
+    This class is used by Client class to communicate with server.
+    """
     HEADER_STRUCT = '!BBHBBHLLQ'
     HEADER_SIZE = 24
 
@@ -91,6 +94,13 @@ class Server(object):
         return host, port
 
     def _read_socket(self, size):
+        """
+        Reads data from socket.
+        :param size: Size in bytes to be read.
+        :type size: int
+        :return: Data from socket
+        :rtype: basestring
+        """
         value = ''
         while len(value) < size:
             data = self.connection.recv(size - len(value))
@@ -101,6 +111,11 @@ class Server(object):
         return value
 
     def _get_response(self):
+        """
+        Get memcached response from socket.
+        :return: A tuple with binary values from memcached.
+        :rtype: tuple
+        """
         header = self._read_socket(self.HEADER_SIZE)
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas) = struct.unpack(self.HEADER_STRUCT, header)
@@ -115,6 +130,16 @@ class Server(object):
                 opaque, cas, extra_content)
 
     def authenticate(self, username, password):
+        """
+        Authenticate user on server.
+        :param username: Username used to be authenticated.
+        :type username: basestring
+        :param password: Password used to be authenticated.
+        :type password: basestring
+        :return: True if successful.
+        :raises: InvalidCredentials|AuthenticationNotSupported|MemcachedException
+        :rtype: bool
+        """
         logger.info('Authenticating as %s' % username)
         self.connection.send(struct.pack(self.HEADER_STRUCT,
                                          self.MAGIC['request'],
@@ -156,6 +181,13 @@ class Server(object):
         return True
 
     def serialize(self, value):
+        """
+        Serializes a value based on it's type.
+        :param value: Something to be serialized
+        :type value: basestring|int|long|object
+        :return: Serialized type
+        :rtype: str
+        """
         flags = 0
         if isinstance(value, str):
             pass
@@ -176,6 +208,15 @@ class Server(object):
         return flags, value
 
     def deserialize(self, value, flags):
+        """
+        Deserialized values based on flags or just return it if it is not serialized..
+        :param value: Serialized or not value.
+        :type value: basestring|int
+        :param flags: Value flags
+        :type flags: int
+        :return: Deserialized value
+        :rtype: basestring|int
+        """
         if flags & self.FLAGS['compressed']:  # pragma: no branch
             value = zlib.decompress(value)
 
@@ -189,6 +230,13 @@ class Server(object):
         return value
 
     def get(self, key):
+        """
+        Get a key from server.
+        :param key: Key's name
+        :type key: basestring
+        :return: Returns a key data from server.
+        :rtype: object
+        """
         logger.info('Getting key %s' % key)
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['get']['struct'] % (len(key)),
@@ -215,6 +263,13 @@ class Server(object):
         return self.deserialize(value, flags)
 
     def get_multi(self, keys):
+        """
+        Get multiple keys from server.
+        :param keys: A list of keys to from server.
+        :type keys: list
+        :return: A dict with all requested keys.
+        :rtype: dict
+        """
         # pipeline N-1 getkq requests, followed by a regular getk to uncork the
         # server
         keys, last = keys[:-1], keys[-1]
@@ -250,6 +305,17 @@ class Server(object):
         return d
 
     def _set_add_replace(self, command, key, value, time):
+        """
+        Function to set/add/replace commands.
+        :param key: Key's name
+        :type key: basestring
+        :param value: A value to be stored on server.
+        :type value: object
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :return: True in case of success and False in case of failure
+        :rtype: bool
+        """
         logger.info('Setting/adding/replacing key %s.' % key)
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
@@ -275,15 +341,57 @@ class Server(object):
         return True
 
     def set(self, key, value, time):
+        """
+        Set a value for a key on server.
+        :param key: Key's name
+        :type key: basestring
+        :param value: A value to be stored on server.
+        :type value: object
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :return: True in case of success and False in case of failure
+        :rtype: bool
+        """
         return self._set_add_replace('set', key, value, time)
 
     def add(self, key, value, time):
+        """
+        Add a key/value to server ony if it does not exist.
+        :param key: Key's name
+        :type key: basestring
+        :param value: A value to be stored on server.
+        :type value: object
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :return: True if key is added False if key already exists
+        :rtype: bool
+        """
         return self._set_add_replace('add', key, value, time)
 
     def replace(self, key, value, time):
+        """
+        Replace a key/value to server ony if it does exist.
+        :param key: Key's name
+        :type key: basestring
+        :param value: A value to be stored on server.
+        :type value: object
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :return: True if key is replace False if key does not exists
+        :rtype: bool
+        """
         return self._set_add_replace('replace', key, value, time)
 
     def set_multi(self, mappings, time=100):
+        """
+        Set multiple keys with it's values on server.
+        :param mappings: A dict with keys/values
+        :type mappings: dict
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :return: True in case of success and False in case of failure
+        :rtype: bool
+        """
         mappings = mappings.items()
         mappings, last = mappings[:-1], mappings[-1]
         msg = []
@@ -323,6 +431,19 @@ class Server(object):
         return retval
 
     def _incr_decr(self, command, key, value, default, time):
+        """
+        Function which increments and decrements.
+        :param key: Key's name
+        :type key: basestring
+        :param value: Number to be (de|in)cremented
+        :type value: int
+        :param default: Default value if key does not exist.
+        :type default: int
+        :param time: Time in seconds to expire key.
+        :type time: int
+        :return: Actual value of the key on server
+        :rtype: int
+        """
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS[command]['struct'] % len(key),
                                          self.MAGIC['request'],
@@ -340,12 +461,46 @@ class Server(object):
         return struct.unpack('!Q', extra_content)[0]
 
     def incr(self, key, value, default=0, time=1000000):
+        """
+        Increment a key, if it exists, returns it's actual value, if it don't, return 0.
+        :param key: Key's name
+        :type key: basestring
+        :param value: Number to be incremented
+        :type value: int
+        :param default: Default value if key does not exist.
+        :type default: int
+        :param time: Time in seconds to expire key.
+        :type time: int
+        :return: Actual value of the key on server
+        :rtype: int
+        """
         return self._incr_decr('incr', key, value, default, time)
 
     def decr(self, key, value, default=0, time=100):
+        """
+        Decrement a key, if it exists, returns it's actual value, if it don't, return 0.
+        Minimum value of decrement return is 0.
+        :param key: Key's name
+        :type key: basestring
+        :param value: Number to be decremented
+        :type value: int
+        :param default: Default value if key does not exist.
+        :type default: int
+        :param time: Time in seconds to expire key.
+        :type time: int
+        :return: Actual value of the key on server
+        :rtype: int
+        """
         return self._incr_decr('decr', key, value, default, time)
 
     def delete(self, key):
+        """
+        Delete a key/value from server. If key does not exist, it returns True.
+        :param key: Key's name to be deleted
+        :type key: basestring
+        :return: True in case o success and False in case of failure.
+        :rtype: bool
+        """
         logger.info('Deletting key %s' % key)
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['delete']['struct'] % len(key),
@@ -363,6 +518,13 @@ class Server(object):
         return True
 
     def flush_all(self, time):
+        """
+        Send a command to server flush|delete all keys.
+        :param time: Time to wait until flush in seconds.
+        :type time: int
+        :return: True in case of success, False in case of failure
+        :rtype: bool
+        """
         logger.info('Flushing memcached')
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['flush']['struct'],
@@ -380,6 +542,14 @@ class Server(object):
         return True
 
     def stats(self, key=None):
+        """
+        Return server stats.
+        :param key: Optional if you want status from a key.
+        :type key: basestring
+        :return: A dict with server stats
+        :rtype: dict
+        """
+        # TODO: Stats with key is not working.
         if key is not None:
             keylen = len(key)
             packed = struct.pack(
@@ -414,4 +584,9 @@ class Server(object):
         return value
 
     def disconnect(self):
+        """
+        Disconnects from server.
+        :return: Nothing
+        :rtype: None
+        """
         self.connection.close()
