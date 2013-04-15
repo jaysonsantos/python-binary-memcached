@@ -36,7 +36,7 @@ Then, run the tests.
 
 ```bash
 cd src_dir/
-nosetests
+py.test
 ```
 
 ## Using with Django
