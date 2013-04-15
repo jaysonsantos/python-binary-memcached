@@ -1,7 +1,6 @@
 from mock import Mock, patch
 import unittest
 import bmemcached
-import os
 from bmemcached.exceptions import InvalidCredentials, AuthenticationNotSupported, MemcachedException
 
 
@@ -31,12 +30,14 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual('', self.client.get('test_key'))
 
     def testGetMulti(self):
-        self.assertTrue(self.client.set_multi({'test_key': 'value',
-            'test_key2': 'value2'}))
+        self.assertTrue(self.client.set_multi({
+            'test_key': 'value',
+            'test_key2': 'value2'
+        }))
         self.assertEqual({'test_key': 'value', 'test_key2': 'value2'},
-            self.client.get_multi(['test_key', 'test_key2']))
+                         self.client.get_multi(['test_key', 'test_key2']))
         self.assertEqual({'test_key': 'value', 'test_key2': 'value2'},
-            self.client.get_multi(['test_key', 'test_key2', 'nothere']))
+                         self.client.get_multi(['test_key', 'test_key2', 'nothere']))
 
     def testGetLong(self):
         self.client.set('test_key', 1L)
