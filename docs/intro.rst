@@ -9,7 +9,7 @@ Installing
 ----------
 Use pip or easy_install.
 
-::
+.. code:: bash
 
     pip install python-binary-memcached
 
@@ -30,7 +30,7 @@ Running the tests
 
 First run memcached with:
 
-::
+.. code:: bash
 
     memcached -S -vvv
     memcached -p5000 -S -vvv
@@ -40,7 +40,7 @@ This is to cover all tests with socket, standard port and non standard port.
 
 Then, run the tests.
 
-::
+.. code:: python
 
     cd src_dir/
     py.test
