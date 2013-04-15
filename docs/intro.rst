@@ -16,7 +16,7 @@ Use pip or easy_install.
 Using
 -----
 
-::
+.. code:: python
 
     import bmemcached
     client = bmemcached.Client(('127.0.0.1:11211', ), 'user',
