@@ -1,0 +1,322 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>bmemcached.client &mdash; Python Binary Memcached (bmemached) 0.16 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.16',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Python Binary Memcached (bmemached) 0.16 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Python Binary Memcached (bmemached) 0.16 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for bmemcached.client</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">bmemcached.server</span> <span class="kn">import</span> <span class="n">Server</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">cPickle</span> <span class="kn">import</span> <span class="n">loads</span><span class="p">,</span> <span class="n">dumps</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">pickle</span> <span class="kn">import</span> <span class="n">loads</span><span class="p">,</span> <span class="n">dumps</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is intended to be a client class which implement standard cache interface that common libs do.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">servers</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;127.0.0.1:11211&#39;</span><span class="p">],</span> <span class="n">username</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param servers: A list of servers with ip[:port] or unix socket.</span>
+<span class="sd">        :type servers: list</span>
+<span class="sd">        :param username: If your server have auth activated, provide it&#39;s username.</span>
+<span class="sd">        :type username: basestring</span>
+<span class="sd">        :param password: If your server have auth activated, provide it&#39;s password.</span>
+<span class="sd">        :type password: basestring</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">username</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">password</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_servers</span><span class="p">(</span><span class="n">servers</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Client.set_servers"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.set_servers">[docs]</a>    <span class="k">def</span> <span class="nf">set_servers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">servers</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Iter to a list of servers and instantiate Server class.</span>
+<span class="sd">        :param servers: A list of servers</span>
+<span class="sd">        :type servers: list</span>
+<span class="sd">        :return: Returns nothing</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">servers</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">):</span>
+            <span class="n">servers</span> <span class="o">=</span> <span class="p">[</span><span class="n">servers</span><span class="p">]</span>
+
+        <span class="k">assert</span> <span class="n">servers</span><span class="p">,</span> <span class="s">&quot;No memcached servers supplied&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">servers</span> <span class="o">=</span> <span class="p">[</span><span class="n">Server</span><span class="p">(</span><span class="n">server</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">password</span><span class="p">)</span> <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="n">servers</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Client.get"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get a key from server.</span>
+<span class="sd">        :param key: Key&#39;s name</span>
+<span class="sd">        :type key: basestring</span>
+<span class="sd">        :return: Returns a key data from server.</span>
+<span class="sd">        :rtype: object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">value</span>
+</div>
+<div class="viewcode-block" id="Client.get_multi"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.get_multi">[docs]</a>    <span class="k">def</span> <span class="nf">get_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keys</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get multiple keys from server.</span>
+<span class="sd">        :param keys: A list of keys to from server.</span>
+<span class="sd">        :type keys: list</span>
+<span class="sd">        :return: A dict with all requested keys.</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">keys</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+                <span class="n">d</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">get_multi</span><span class="p">(</span><span class="n">keys</span><span class="p">))</span>
+                <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">_</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">keys</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">d</span><span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">keys</span><span class="p">:</span>
+                    <span class="k">break</span>
+        <span class="k">return</span> <span class="n">d</span>
+</div>
+<div class="viewcode-block" id="Client.set"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.set">[docs]</a>    <span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set a value for a key on server.</span>
+<span class="sd">        :param key: Key&#39;s name</span>
+<span class="sd">        :type key: basestring</span>
+<span class="sd">        :param value: A value to be stored on server.</span>
+<span class="sd">        :type value: object</span>
+<span class="sd">        :param time: Time in seconds that your key will expire.</span>
+<span class="sd">        :type time: int</span>
+<span class="sd">        :return: True in case of success and False in case of failure</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">returns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">time</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Client.set_multi"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.set_multi">[docs]</a>    <span class="k">def</span> <span class="nf">set_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mappings</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set multiple keys with it&#39;s values on server.</span>
+<span class="sd">        :param mappings: A dict with keys/values</span>
+<span class="sd">        :type mappings: dict</span>
+<span class="sd">        :param time: Time in seconds that your key will expire.</span>
+<span class="sd">        :type time: int</span>
+<span class="sd">        :return: True in case of success and False in case of failure</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">mappings</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+                <span class="n">returns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">set_multi</span><span class="p">(</span><span class="n">mappings</span><span class="p">,</span> <span class="n">time</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Client.add"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a key/value to server ony if it does not exist.</span>
+<span class="sd">        :param key: Key&#39;s name</span>
+<span class="sd">        :type key: basestring</span>
+<span class="sd">        :param value: A value to be stored on server.</span>
+<span class="sd">        :type value: object</span>
+<span class="sd">        :param time: Time in seconds that your key will expire.</span>
+<span class="sd">        :type time: int</span>
+<span class="sd">        :return: True if key is added False if key already exists</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">returns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">time</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Client.replace"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.replace">[docs]</a>    <span class="k">def</span> <span class="nf">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Replace a key/value to server ony if it does exist.</span>
+<span class="sd">        :param key: Key&#39;s name</span>
+<span class="sd">        :type key: basestring</span>
+<span class="sd">        :param value: A value to be stored on server.</span>
+<span class="sd">        :type value: object</span>
+<span class="sd">        :param time: Time in seconds that your key will expire.</span>
+<span class="sd">        :type time: int</span>
+<span class="sd">        :return: True if key is replace False if key does not exists</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">returns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">time</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Client.delete"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Delete a key/value from server. If key does not exist, it returns True.</span>
+<span class="sd">        :param key: Key&#39;s name to be deleted</span>
+<span class="sd">        :type key: basestring</span>
+<span class="sd">        :return: True in case o success and False in case of failure.</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">returns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Client.incr"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.incr">[docs]</a>    <span class="k">def</span> <span class="nf">incr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Increment a key, if it exists, returns it&#39;s actual value, if it don&#39;t, return 0.</span>
+<span class="sd">        :param key: Key&#39;s name</span>
+<span class="sd">        :type key: basestring</span>
+<span class="sd">        :param value: Number to be incremented</span>
+<span class="sd">        :type value: int</span>
+<span class="sd">        :return: Actual value of the key on server</span>
+<span class="sd">        :rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">returns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">incr</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">returns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Client.decr"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.decr">[docs]</a>    <span class="k">def</span> <span class="nf">decr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decrement a key, if it exists, returns it&#39;s actual value, if it don&#39;t, return 0.</span>
+<span class="sd">        Minimum value of decrement return is 0.</span>
+<span class="sd">        :param key: Key&#39;s name</span>
+<span class="sd">        :type key: basestring</span>
+<span class="sd">        :param value: Number to be decremented</span>
+<span class="sd">        :type value: int</span>
+<span class="sd">        :return: Actual value of the key on server</span>
+<span class="sd">        :rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">returns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">decr</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">returns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Client.flush_all"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.flush_all">[docs]</a>    <span class="k">def</span> <span class="nf">flush_all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Send a command to server flush|delete all keys.</span>
+<span class="sd">        :param time: Time to wait until flush in seconds.</span>
+<span class="sd">        :type time: int</span>
+<span class="sd">        :return: True in case of success, False in case of failure</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">returns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">server</span><span class="o">.</span><span class="n">flush_all</span><span class="p">(</span><span class="n">time</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">returns</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Client.stats"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.stats">[docs]</a>    <span class="k">def</span> <span class="nf">stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return server stats.</span>
+<span class="sd">        :param key: Optional if you want status from a key.</span>
+<span class="sd">        :type key: basestring</span>
+<span class="sd">        :return: A dict with server stats</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># TODO: Stats with key is not working.</span>
+
+        <span class="n">returns</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">returns</span><span class="p">[</span><span class="n">server</span><span class="o">.</span><span class="n">server</span><span class="p">]</span> <span class="o">=</span> <span class="n">server</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">returns</span>
+</div>
+<div class="viewcode-block" id="Client.disconnect_all"><a class="viewcode-back" href="../../bmemcached.html#bmemcached.client.Client.disconnect_all">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disconnect all servers.</span>
+<span class="sd">        :return: Nothing</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">server</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Python Binary Memcached (bmemached) 0.16 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Jayson Reis.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

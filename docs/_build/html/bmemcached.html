@@ -1,0 +1,1080 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>bmemcached Package &mdash; Python Binary Memcached (bmemached) 0.16 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.16',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Python Binary Memcached (bmemached) 0.16 documentation" href="index.html" />
+    <link rel="up" title="bmemcached" href="modules.html" />
+    <link rel="prev" title="bmemcached" href="modules.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="modules.html" title="bmemcached"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Python Binary Memcached (bmemached) 0.16 documentation</a> &raquo;</li>
+          <li><a href="modules.html" accesskey="U">bmemcached</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="bmemcached-package">
+<h1>bmemcached Package<a class="headerlink" href="#bmemcached-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">bmemcached</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-bmemcached.__init__"></span><dl class="class">
+<dt id="bmemcached.__init__.Client">
+<em class="property">class </em><tt class="descclassname">bmemcached.__init__.</tt><tt class="descname">Client</tt><big>(</big><em>servers=['127.0.0.1:11211'], username=None, password=None</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>This is intended to be a client class which implement standard cache interface that common libs do.</p>
+<dl class="method">
+<dt id="bmemcached.__init__.Client.add">
+<tt class="descname">add</tt><big>(</big><em>key</em>, <em>value</em>, <em>time=100</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a key/value to server ony if it does not exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><em>object</em></a>) &#8211; A value to be stored on server.</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if key is added False if key already exists</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.decr">
+<tt class="descname">decr</tt><big>(</big><em>key</em>, <em>value</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.decr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrement a key, if it exists, returns it&#8217;s actual value, if it don&#8217;t, return 0.
+Minimum value of decrement return is 0.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number to be decremented</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Actual value of the key on server</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">int</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.delete">
+<tt class="descname">delete</tt><big>(</big><em>key</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a key/value from server. If key does not exist, it returns True.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name to be deleted</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True in case o success and False in case of failure.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.disconnect_all">
+<tt class="descname">disconnect_all</tt><big>(</big><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.disconnect_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Disconnect all servers.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Nothing</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.flush_all">
+<tt class="descname">flush_all</tt><big>(</big><em>time=0</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.flush_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send a command to server flush|delete all keys.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time to wait until flush in seconds.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True in case of success, False in case of failure</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.get">
+<tt class="descname">get</tt><big>(</big><em>key</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a key from server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns a key data from server.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">object</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.get_multi">
+<tt class="descname">get_multi</tt><big>(</big><em>keys</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.get_multi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get multiple keys from server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>keys</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; A list of keys to from server.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A dict with all requested keys.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.incr">
+<tt class="descname">incr</tt><big>(</big><em>key</em>, <em>value</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.incr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increment a key, if it exists, returns it&#8217;s actual value, if it don&#8217;t, return 0.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number to be incremented</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Actual value of the key on server</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">int</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.replace">
+<tt class="descname">replace</tt><big>(</big><em>key</em>, <em>value</em>, <em>time=100</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.replace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace a key/value to server ony if it does exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><em>object</em></a>) &#8211; A value to be stored on server.</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if key is replace False if key does not exists</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.set">
+<tt class="descname">set</tt><big>(</big><em>key</em>, <em>value</em>, <em>time=100</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a value for a key on server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><em>object</em></a>) &#8211; A value to be stored on server.</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True in case of success and False in case of failure</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.set_multi">
+<tt class="descname">set_multi</tt><big>(</big><em>mappings</em>, <em>time=100</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.set_multi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set multiple keys with it&#8217;s values on server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mappings</strong> (<a class="reference external" href="http://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; A dict with keys/values</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True in case of success and False in case of failure</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.set_servers">
+<tt class="descname">set_servers</tt><big>(</big><em>servers</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.set_servers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iter to a list of servers and instantiate Server class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>servers</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; A list of servers</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns nothing</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.__init__.Client.stats">
+<tt class="descname">stats</tt><big>(</big><em>key=None</em><big>)</big><a class="headerlink" href="#bmemcached.__init__.Client.stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return server stats.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Optional if you want status from a key.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A dict with server stats</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-bmemcached.client">
+<span id="client-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">client</span></tt> Module<a class="headerlink" href="#module-bmemcached.client" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="bmemcached.client.Client">
+<em class="property">class </em><tt class="descclassname">bmemcached.client.</tt><tt class="descname">Client</tt><big>(</big><em>servers=['127.0.0.1:11211'], username=None, password=None</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>This is intended to be a client class which implement standard cache interface that common libs do.</p>
+<dl class="method">
+<dt id="bmemcached.client.Client.add">
+<tt class="descname">add</tt><big>(</big><em>key</em>, <em>value</em>, <em>time=100</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.add"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a key/value to server ony if it does not exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><em>object</em></a>) &#8211; A value to be stored on server.</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if key is added False if key already exists</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.decr">
+<tt class="descname">decr</tt><big>(</big><em>key</em>, <em>value</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.decr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.decr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrement a key, if it exists, returns it&#8217;s actual value, if it don&#8217;t, return 0.
+Minimum value of decrement return is 0.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number to be decremented</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Actual value of the key on server</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">int</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.delete">
+<tt class="descname">delete</tt><big>(</big><em>key</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a key/value from server. If key does not exist, it returns True.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name to be deleted</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True in case o success and False in case of failure.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.disconnect_all">
+<tt class="descname">disconnect_all</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.disconnect_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.disconnect_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Disconnect all servers.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Nothing</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.flush_all">
+<tt class="descname">flush_all</tt><big>(</big><em>time=0</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.flush_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.flush_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send a command to server flush|delete all keys.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time to wait until flush in seconds.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True in case of success, False in case of failure</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.get">
+<tt class="descname">get</tt><big>(</big><em>key</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a key from server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns a key data from server.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">object</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.get_multi">
+<tt class="descname">get_multi</tt><big>(</big><em>keys</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.get_multi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.get_multi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get multiple keys from server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>keys</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; A list of keys to from server.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A dict with all requested keys.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.incr">
+<tt class="descname">incr</tt><big>(</big><em>key</em>, <em>value</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.incr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.incr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increment a key, if it exists, returns it&#8217;s actual value, if it don&#8217;t, return 0.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number to be incremented</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Actual value of the key on server</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">int</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.replace">
+<tt class="descname">replace</tt><big>(</big><em>key</em>, <em>value</em>, <em>time=100</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.replace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.replace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace a key/value to server ony if it does exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><em>object</em></a>) &#8211; A value to be stored on server.</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if key is replace False if key does not exists</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.set">
+<tt class="descname">set</tt><big>(</big><em>key</em>, <em>value</em>, <em>time=100</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a value for a key on server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><em>object</em></a>) &#8211; A value to be stored on server.</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True in case of success and False in case of failure</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.set_multi">
+<tt class="descname">set_multi</tt><big>(</big><em>mappings</em>, <em>time=100</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.set_multi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.set_multi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set multiple keys with it&#8217;s values on server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mappings</strong> (<a class="reference external" href="http://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; A dict with keys/values</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True in case of success and False in case of failure</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.set_servers">
+<tt class="descname">set_servers</tt><big>(</big><em>servers</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.set_servers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.set_servers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iter to a list of servers and instantiate Server class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>servers</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; A list of servers</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns nothing</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.client.Client.stats">
+<tt class="descname">stats</tt><big>(</big><em>key=None</em><big>)</big><a class="reference internal" href="_modules/bmemcached/client.html#Client.stats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.client.Client.stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return server stats.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Optional if you want status from a key.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A dict with server stats</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-bmemcached.exceptions">
+<span id="exceptions-module"></span><h2><a class="reference external" href="http://docs.python.org/library/exceptions.html#exceptions" title="(in Python v2.7)"><tt class="xref py py-mod docutils literal"><span class="pre">exceptions</span></tt></a> Module<a class="headerlink" href="#module-bmemcached.exceptions" title="Permalink to this headline">¶</a></h2>
+<dl class="exception">
+<dt id="bmemcached.exceptions.AuthenticationNotSupported">
+<em class="property">exception </em><tt class="descclassname">bmemcached.exceptions.</tt><tt class="descname">AuthenticationNotSupported</tt><a class="reference internal" href="_modules/bmemcached/exceptions.html#AuthenticationNotSupported"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.exceptions.AuthenticationNotSupported" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#bmemcached.exceptions.MemcachedException" title="bmemcached.exceptions.MemcachedException"><tt class="xref py py-class docutils literal"><span class="pre">bmemcached.exceptions.MemcachedException</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="bmemcached.exceptions.InvalidCredentials">
+<em class="property">exception </em><tt class="descclassname">bmemcached.exceptions.</tt><tt class="descname">InvalidCredentials</tt><a class="reference internal" href="_modules/bmemcached/exceptions.html#InvalidCredentials"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.exceptions.InvalidCredentials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#bmemcached.exceptions.MemcachedException" title="bmemcached.exceptions.MemcachedException"><tt class="xref py py-class docutils literal"><span class="pre">bmemcached.exceptions.MemcachedException</span></tt></a></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="bmemcached.exceptions.MemcachedException">
+<em class="property">exception </em><tt class="descclassname">bmemcached.exceptions.</tt><tt class="descname">MemcachedException</tt><a class="reference internal" href="_modules/bmemcached/exceptions.html#MemcachedException"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.exceptions.MemcachedException" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></tt></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-bmemcached.server">
+<span id="server-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">server</span></tt> Module<a class="headerlink" href="#module-bmemcached.server" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="bmemcached.server.Server">
+<em class="property">class </em><tt class="descclassname">bmemcached.server.</tt><tt class="descname">Server</tt><big>(</big><em>server</em>, <em>username=None</em>, <em>password=None</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>This class is used by Client class to communicate with server.</p>
+<dl class="attribute">
+<dt id="bmemcached.server.Server.COMMANDS">
+<tt class="descname">COMMANDS</tt><em class="property"> = {'auth_negotiation': {'command': 32}, 'getkq': {'command': 13, 'struct': '%ds'}, 'stat': {'command': 16}, 'set': {'command': 1, 'struct': 'LL%ds%ds'}, 'get': {'command': 0, 'struct': '%ds'}, 'replace': {'command': 3, 'struct': 'LL%ds%ds'}, 'flush': {'command': 8, 'struct': 'I'}, 'decr': {'command': 6, 'struct': 'QQL%ds'}, 'incr': {'command': 5, 'struct': 'QQL%ds'}, 'getk': {'command': 12, 'struct': '%ds'}, 'auth_request': {'command': 33, 'struct': '%ds%ds'}, 'add': {'command': 2, 'struct': 'LL%ds%ds'}, 'setq': {'command': 17, 'struct': 'LL%ds%ds'}, 'delete': {'command': 4, 'struct': '%ds'}}</em><a class="headerlink" href="#bmemcached.server.Server.COMMANDS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="bmemcached.server.Server.COMPRESSION_THRESHOLD">
+<tt class="descname">COMPRESSION_THRESHOLD</tt><em class="property"> = 128</em><a class="headerlink" href="#bmemcached.server.Server.COMPRESSION_THRESHOLD" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="bmemcached.server.Server.FLAGS">
+<tt class="descname">FLAGS</tt><em class="property"> = {'integer': 2, 'pickle': 1, 'compressed': 8, 'long': 4}</em><a class="headerlink" href="#bmemcached.server.Server.FLAGS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="bmemcached.server.Server.HEADER_SIZE">
+<tt class="descname">HEADER_SIZE</tt><em class="property"> = 24</em><a class="headerlink" href="#bmemcached.server.Server.HEADER_SIZE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="bmemcached.server.Server.HEADER_STRUCT">
+<tt class="descname">HEADER_STRUCT</tt><em class="property"> = '!BBHBBHLLQ'</em><a class="headerlink" href="#bmemcached.server.Server.HEADER_STRUCT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="bmemcached.server.Server.MAGIC">
+<tt class="descname">MAGIC</tt><em class="property"> = {'request': 128, 'response': 129}</em><a class="headerlink" href="#bmemcached.server.Server.MAGIC" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="bmemcached.server.Server.STATUS">
+<tt class="descname">STATUS</tt><em class="property"> = {'key_exists': 2, 'auth_error': 8, 'unknown_command': 129, 'success': 0, 'key_not_found': 1}</em><a class="headerlink" href="#bmemcached.server.Server.STATUS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.add">
+<tt class="descname">add</tt><big>(</big><em>key</em>, <em>value</em>, <em>time</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.add"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a key/value to server ony if it does not exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><em>object</em></a>) &#8211; A value to be stored on server.</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if key is added False if key already exists</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.authenticate">
+<tt class="descname">authenticate</tt><big>(</big><em>username</em>, <em>password</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.authenticate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.authenticate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Authenticate user on server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>username</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Username used to be authenticated.</li>
+<li><strong>password</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Password used to be authenticated.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if successful.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first">InvalidCredentials, AuthenticationNotSupported, MemcachedException</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.decr">
+<tt class="descname">decr</tt><big>(</big><em>key</em>, <em>value</em>, <em>default=0</em>, <em>time=100</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.decr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.decr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decrement a key, if it exists, returns it&#8217;s actual value, if it don&#8217;t, return 0.</p>
+<p>Minimum value of decrement return is 0.
+:param key: Key&#8217;s name
+:type key: basestring
+:param value: Number to be decremented
+:type value: int
+:param default: Default value if key does not exist.
+:type default: int
+:param time: Time in seconds to expire key.
+:type time: int
+:return: Actual value of the key on server
+:rtype: int</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.delete">
+<tt class="descname">delete</tt><big>(</big><em>key</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a key/value from server. If key does not exist, it returns True.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name to be deleted</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True in case o success and False in case of failure.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.deserialize">
+<tt class="descname">deserialize</tt><big>(</big><em>value</em>, <em>flags</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.deserialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.deserialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deserialized values based on flags or just return it if it is not serialized.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>value</strong> (<em>basestring|int</em>) &#8211; Serialized or not value.</li>
+<li><strong>flags</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Value flags</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Deserialized value</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">basestring|int</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.disconnect">
+<tt class="descname">disconnect</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.disconnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.disconnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Disconnects from server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Nothing</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.flush_all">
+<tt class="descname">flush_all</tt><big>(</big><em>time</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.flush_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.flush_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Send a command to server flush|delete all keys.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time to wait until flush in seconds.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">True in case of success, False in case of failure</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.get">
+<tt class="descname">get</tt><big>(</big><em>key</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a key from server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns a key data from server.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">object</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.get_multi">
+<tt class="descname">get_multi</tt><big>(</big><em>keys</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.get_multi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.get_multi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get multiple keys from server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>keys</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; A list of keys to from server.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A dict with all requested keys.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.incr">
+<tt class="descname">incr</tt><big>(</big><em>key</em>, <em>value</em>, <em>default=0</em>, <em>time=1000000</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.incr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.incr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Increment a key, if it exists, returns it&#8217;s actual value, if it don&#8217;t, return 0.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number to be incremented</li>
+<li><strong>default</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Default value if key does not exist.</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds to expire key.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Actual value of the key on server</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">int</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.replace">
+<tt class="descname">replace</tt><big>(</big><em>key</em>, <em>value</em>, <em>time</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.replace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.replace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace a key/value to server ony if it does exist.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><em>object</em></a>) &#8211; A value to be stored on server.</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True if key is replace False if key does not exists</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.serialize">
+<tt class="descname">serialize</tt><big>(</big><em>value</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.serialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serializes a value based on it&#8217;s type.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>value</strong> (<em>basestring or int or long or object</em>) &#8211; Something to be serialized</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Serialized type</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.set">
+<tt class="descname">set</tt><big>(</big><em>key</em>, <em>value</em>, <em>time</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a value for a key on server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Key&#8217;s name</li>
+<li><strong>value</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><em>object</em></a>) &#8211; A value to be stored on server.</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True in case of success and False in case of failure</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.set_multi">
+<tt class="descname">set_multi</tt><big>(</big><em>mappings</em>, <em>time=100</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.set_multi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.set_multi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set multiple keys with it&#8217;s values on server.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mappings</strong> (<a class="reference external" href="http://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; A dict with keys/values</li>
+<li><strong>time</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Time in seconds that your key will expire.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">True in case of success and False in case of failure</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">bool</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.split_host_port">
+<tt class="descname">split_host_port</tt><big>(</big><em>server</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.split_host_port"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.split_host_port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return (host, port) from server.</p>
+<p>Port defaults to 11211.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">split_host_port</span><span class="p">(</span><span class="s">&#39;127.0.0.1:11211&#39;</span><span class="p">)</span>
+<span class="go">(&#39;127.0.0.1&#39;, 11211)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">split_host_port</span><span class="p">(</span><span class="s">&#39;127.0.0.1&#39;</span><span class="p">)</span>
+<span class="go">(&#39;127.0.0.1&#39;, 11211)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="bmemcached.server.Server.stats">
+<tt class="descname">stats</tt><big>(</big><em>key=None</em><big>)</big><a class="reference internal" href="_modules/bmemcached/server.html#Server.stats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#bmemcached.server.Server.stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return server stats.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> (<a class="reference external" href="http://docs.python.org/library/functions.html#basestring" title="(in Python v2.7)"><em>basestring</em></a>) &#8211; Optional if you want status from a key.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A dict with server stats</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">bmemcached Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">bmemcached</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-bmemcached.client"><tt class="docutils literal"><span class="pre">client</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-bmemcached.exceptions"><tt class="docutils literal"><span class="pre">exceptions</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-bmemcached.server"><tt class="docutils literal"><span class="pre">server</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="modules.html"
+                        title="previous chapter">bmemcached</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/bmemcached.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="modules.html" title="bmemcached"
+             >previous</a> |</li>
+        <li><a href="index.html">Python Binary Memcached (bmemached) 0.16 documentation</a> &raquo;</li>
+          <li><a href="modules.html" >bmemcached</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Jayson Reis.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>
