@@ -9,14 +9,14 @@ Installing
 ----------
 Use pip or easy_install.
 
-.. code:: bash
+.. code-block:: bash
 
     pip install python-binary-memcached
 
 Using
 -----
 
-.. code:: python
+.. code-block:: python
 
     import bmemcached
     client = bmemcached.Client(('127.0.0.1:11211', ), 'user',
@@ -30,7 +30,7 @@ Running the tests
 
 First run memcached with:
 
-.. code:: bash
+.. code-block:: bash
 
     memcached -S -vvv
     memcached -p5000 -S -vvv
@@ -40,7 +40,7 @@ This is to cover all tests with socket, standard port and non standard port.
 
 Then, run the tests.
 
-.. code:: python
+.. code-block:: bash
 
     cd src_dir/
     py.test
