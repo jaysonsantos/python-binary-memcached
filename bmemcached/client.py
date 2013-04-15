@@ -29,6 +29,7 @@ class Client(object):
     def set_servers(self, servers):
         """
         Iter to a list of servers and instantiate Server class.
+
         :param servers: A list of servers
         :type servers: list
         :return: Returns nothing
@@ -45,6 +46,7 @@ class Client(object):
     def get(self, key):
         """
         Get a key from server.
+
         :param key: Key's name
         :type key: basestring
         :return: Returns a key data from server.
@@ -58,6 +60,7 @@ class Client(object):
     def get_multi(self, keys):
         """
         Get multiple keys from server.
+
         :param keys: A list of keys to from server.
         :type keys: list
         :return: A dict with all requested keys.
@@ -75,6 +78,7 @@ class Client(object):
     def set(self, key, value, time=100):
         """
         Set a value for a key on server.
+
         :param key: Key's name
         :type key: basestring
         :param value: A value to be stored on server.
@@ -93,6 +97,7 @@ class Client(object):
     def set_multi(self, mappings, time=100):
         """
         Set multiple keys with it's values on server.
+
         :param mappings: A dict with keys/values
         :type mappings: dict
         :param time: Time in seconds that your key will expire.
@@ -110,6 +115,7 @@ class Client(object):
     def add(self, key, value, time=100):
         """
         Add a key/value to server ony if it does not exist.
+
         :param key: Key's name
         :type key: basestring
         :param value: A value to be stored on server.
@@ -128,6 +134,7 @@ class Client(object):
     def replace(self, key, value, time=100):
         """
         Replace a key/value to server ony if it does exist.
+
         :param key: Key's name
         :type key: basestring
         :param value: A value to be stored on server.
@@ -146,6 +153,7 @@ class Client(object):
     def delete(self, key):
         """
         Delete a key/value from server. If key does not exist, it returns True.
+
         :param key: Key's name to be deleted
         :type key: basestring
         :return: True in case o success and False in case of failure.
@@ -160,6 +168,7 @@ class Client(object):
     def incr(self, key, value):
         """
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
+
         :param key: Key's name
         :type key: basestring
         :param value: Number to be incremented
@@ -177,6 +186,7 @@ class Client(object):
         """
         Decrement a key, if it exists, returns it's actual value, if it don't, return 0.
         Minimum value of decrement return is 0.
+
         :param key: Key's name
         :type key: basestring
         :param value: Number to be decremented
@@ -193,6 +203,7 @@ class Client(object):
     def flush_all(self, time=0):
         """
         Send a command to server flush|delete all keys.
+
         :param time: Time to wait until flush in seconds.
         :type time: int
         :return: True in case of success, False in case of failure
@@ -207,6 +218,7 @@ class Client(object):
     def stats(self, key=None):
         """
         Return server stats.
+
         :param key: Optional if you want status from a key.
         :type key: basestring
         :return: A dict with server stats
@@ -223,6 +235,7 @@ class Client(object):
     def disconnect_all(self):
         """
         Disconnect all servers.
+
         :return: Nothing
         :rtype: None
         """

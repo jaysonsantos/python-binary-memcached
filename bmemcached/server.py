@@ -96,6 +96,7 @@ class Server(object):
     def _read_socket(self, size):
         """
         Reads data from socket.
+
         :param size: Size in bytes to be read.
         :type size: int
         :return: Data from socket
@@ -113,6 +114,7 @@ class Server(object):
     def _get_response(self):
         """
         Get memcached response from socket.
+
         :return: A tuple with binary values from memcached.
         :rtype: tuple
         """
@@ -132,12 +134,13 @@ class Server(object):
     def authenticate(self, username, password):
         """
         Authenticate user on server.
+
         :param username: Username used to be authenticated.
         :type username: basestring
         :param password: Password used to be authenticated.
         :type password: basestring
         :return: True if successful.
-        :raises: InvalidCredentials|AuthenticationNotSupported|MemcachedException
+        :raises: InvalidCredentials, AuthenticationNotSupported, MemcachedException
         :rtype: bool
         """
         logger.info('Authenticating as %s' % username)
@@ -183,8 +186,9 @@ class Server(object):
     def serialize(self, value):
         """
         Serializes a value based on it's type.
+
         :param value: Something to be serialized
-        :type value: basestring|int|long|object
+        :type value: basestring, int, long, object
         :return: Serialized type
         :rtype: str
         """
@@ -209,7 +213,8 @@ class Server(object):
 
     def deserialize(self, value, flags):
         """
-        Deserialized values based on flags or just return it if it is not serialized..
+        Deserialized values based on flags or just return it if it is not serialized.
+
         :param value: Serialized or not value.
         :type value: basestring|int
         :param flags: Value flags
@@ -232,6 +237,7 @@ class Server(object):
     def get(self, key):
         """
         Get a key from server.
+
         :param key: Key's name
         :type key: basestring
         :return: Returns a key data from server.
@@ -265,6 +271,7 @@ class Server(object):
     def get_multi(self, keys):
         """
         Get multiple keys from server.
+
         :param keys: A list of keys to from server.
         :type keys: list
         :return: A dict with all requested keys.
@@ -307,6 +314,7 @@ class Server(object):
     def _set_add_replace(self, command, key, value, time):
         """
         Function to set/add/replace commands.
+
         :param key: Key's name
         :type key: basestring
         :param value: A value to be stored on server.
@@ -343,6 +351,7 @@ class Server(object):
     def set(self, key, value, time):
         """
         Set a value for a key on server.
+
         :param key: Key's name
         :type key: basestring
         :param value: A value to be stored on server.
@@ -357,6 +366,7 @@ class Server(object):
     def add(self, key, value, time):
         """
         Add a key/value to server ony if it does not exist.
+
         :param key: Key's name
         :type key: basestring
         :param value: A value to be stored on server.
@@ -371,6 +381,7 @@ class Server(object):
     def replace(self, key, value, time):
         """
         Replace a key/value to server ony if it does exist.
+
         :param key: Key's name
         :type key: basestring
         :param value: A value to be stored on server.
@@ -385,6 +396,7 @@ class Server(object):
     def set_multi(self, mappings, time=100):
         """
         Set multiple keys with it's values on server.
+
         :param mappings: A dict with keys/values
         :type mappings: dict
         :param time: Time in seconds that your key will expire.
@@ -433,6 +445,7 @@ class Server(object):
     def _incr_decr(self, command, key, value, default, time):
         """
         Function which increments and decrements.
+
         :param key: Key's name
         :type key: basestring
         :param value: Number to be (de|in)cremented
@@ -463,6 +476,7 @@ class Server(object):
     def incr(self, key, value, default=0, time=1000000):
         """
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
+
         :param key: Key's name
         :type key: basestring
         :param value: Number to be incremented
@@ -479,6 +493,7 @@ class Server(object):
     def decr(self, key, value, default=0, time=100):
         """
         Decrement a key, if it exists, returns it's actual value, if it don't, return 0.
+
         Minimum value of decrement return is 0.
         :param key: Key's name
         :type key: basestring
@@ -496,6 +511,7 @@ class Server(object):
     def delete(self, key):
         """
         Delete a key/value from server. If key does not exist, it returns True.
+
         :param key: Key's name to be deleted
         :type key: basestring
         :return: True in case o success and False in case of failure.
@@ -520,6 +536,7 @@ class Server(object):
     def flush_all(self, time):
         """
         Send a command to server flush|delete all keys.
+
         :param time: Time to wait until flush in seconds.
         :type time: int
         :return: True in case of success, False in case of failure
@@ -544,6 +561,7 @@ class Server(object):
     def stats(self, key=None):
         """
         Return server stats.
+
         :param key: Optional if you want status from a key.
         :type key: basestring
         :return: A dict with server stats
@@ -586,6 +604,7 @@ class Server(object):
     def disconnect(self):
         """
         Disconnects from server.
+
         :return: Nothing
         :rtype: None
         """
