@@ -26,6 +26,11 @@ class Client(object):
         self.password = password
         self.set_servers(servers)
 
+    @property
+    def servers(self):
+        for server in self._servers:
+            yield Server(server, self.username, self.password)
+
     def set_servers(self, servers):
         """
         Iter to a list of servers and instantiate Server class.
@@ -39,9 +44,11 @@ class Client(object):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
+        self._servers = servers
 
-        self.servers = [Server(server, self.username,
-                               self.password) for server in servers]
+        # Forcing connection to detect early errors
+        for server in self.servers:
+            pass
 
     def get(self, key):
         """
