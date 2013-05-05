@@ -1,7 +1,7 @@
 Introduction to bmemcached
 ==========================
 
-A pure python module to access memcached via it's binary with SASL auth support.
+A pure python module (thread safe) to access memcached via it's binary with SASL auth support.
 
 The main purpose of this module it to be able to communicate with memcached using binary protocol and support authentication, so it can work with Heroku for example.
 
