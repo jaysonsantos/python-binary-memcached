@@ -3,8 +3,11 @@ import logging
 import re
 import socket
 import struct
+import thread
+import threading
 from urllib import splitport
 import zlib
+
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 
 
@@ -58,9 +61,23 @@ class Server(object):
 
     COMPRESSION_THRESHOLD = 128
 
+    _thread_instances = {}
+
+    def __new__(cls, *args, **kw):
+        """
+        Server singleton
+        """
+        instance_key = '%s-%s-%s' % (thread.get_ident(), str(args), str(kw))
+        if instance_key not in cls._thread_instances:
+            cls._thread_instances[instance_key] = super(Server, cls).__new__(
+                cls, *args, **kw)
+
+        return cls._thread_instances[instance_key]
+
     def __init__(self, server, username=None, password=None):
         self.server = server
         self.authenticated = False
+        self._lock = threading.Lock()
 
         if server.startswith('/'):
             self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -73,6 +90,17 @@ class Server(object):
 
         if username and password:
             self.authenticate(username, password)
+
+    def lock(f):
+        def _f(self, *args, **kwargs):
+            self._lock.acquire()
+            try:
+                rv = f(self, *args, **kwargs)
+            finally:
+                self._lock.release()
+
+            return rv
+        return _f
 
     def split_host_port(self, server):
         """
