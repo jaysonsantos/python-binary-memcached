@@ -1,5 +1,5 @@
 import logging
-from bmemcached.server import Server
+from bmemcached.protocol import Protocol
 
 try:
     from cPickle import loads, dumps
@@ -29,11 +29,11 @@ class Client(object):
     @property
     def servers(self):
         for server in self._servers:
-            yield Server(server, self.username, self.password)
+            yield Protocol(server, self.username, self.password)
 
     def set_servers(self, servers):
         """
-        Iter to a list of servers and instantiate Server class.
+        Iter to a list of servers and instantiate Protocol class.
 
         :param servers: A list of servers
         :type servers: list
@@ -48,7 +48,7 @@ class Client(object):
 
         # Forcing connection to detect early errors
         for server in self.servers:
-            pass
+            assert server
 
     def get(self, key):
         """

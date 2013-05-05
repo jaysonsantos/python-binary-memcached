@@ -14,7 +14,7 @@ from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials
 logger = logging.getLogger(__name__)
 
 
-class Server(object):
+class Protocol(object):
     """
     This class is used by Client class to communicate with server.
     """
@@ -69,7 +69,7 @@ class Server(object):
         """
         instance_key = '%s-%s-%s' % (thread.get_ident(), str(args), str(kw))
         if instance_key not in cls._thread_instances:
-            cls._thread_instances[instance_key] = super(Server, cls).__new__(
+            cls._thread_instances[instance_key] = super(Protocol, cls).__new__(
                 cls, *args, **kw)
 
         return cls._thread_instances[instance_key]
