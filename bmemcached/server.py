@@ -3,6 +3,7 @@ import logging
 import re
 import socket
 import struct
+from threading import Lock
 from urllib import splitport
 import zlib
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
@@ -61,6 +62,7 @@ class Server(object):
     def __init__(self, server, username=None, password=None):
         self.server = server
         self.authenticated = False
+        self._lock = Lock()
 
         if server.startswith('/'):
             self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -73,6 +75,17 @@ class Server(object):
 
         if username and password:
             self.authenticate(username, password)
+
+    def lock(f):
+        def _f(self, *args, **kwargs):
+            self._lock.acquire()
+            try:
+                rv = f(self, *args, **kwargs)
+            finally:
+                self._lock.release()
+
+            return rv
+        return _f
 
     def split_host_port(self, server):
         """
@@ -234,6 +247,7 @@ class Server(object):
 
         return value
 
+    @lock
     def get(self, key):
         """
         Get a key from server.
@@ -268,6 +282,7 @@ class Server(object):
 
         return self.deserialize(value, flags)
 
+    @lock
     def get_multi(self, keys):
         """
         Get multiple keys from server.
@@ -311,6 +326,7 @@ class Server(object):
 
         return d
 
+    @lock
     def _set_add_replace(self, command, key, value, time):
         """
         Function to set/add/replace commands.
@@ -393,6 +409,7 @@ class Server(object):
         """
         return self._set_add_replace('replace', key, value, time)
 
+    @lock
     def set_multi(self, mappings, time=100):
         """
         Set multiple keys with it's values on server.
@@ -442,6 +459,7 @@ class Server(object):
 
         return retval
 
+    @lock
     def _incr_decr(self, command, key, value, default, time):
         """
         Function which increments and decrements.
@@ -508,6 +526,7 @@ class Server(object):
         """
         return self._incr_decr('decr', key, value, default, time)
 
+    @lock
     def delete(self, key):
         """
         Delete a key/value from server. If key does not exist, it returns True.
@@ -533,6 +552,7 @@ class Server(object):
         logger.debug('Key deleted %s' % key)
         return True
 
+    @lock
     def flush_all(self, time):
         """
         Send a command to server flush|delete all keys.
@@ -558,6 +578,7 @@ class Server(object):
         logger.debug('Memcached flushed')
         return True
 
+    @lock
     def stats(self, key=None):
         """
         Return server stats.
@@ -601,6 +622,7 @@ class Server(object):
 
         return value
 
+    @lock
     def disconnect(self):
         """
         Disconnects from server.
