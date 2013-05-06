@@ -77,7 +77,6 @@ class Protocol(object):
     def __init__(self, server, username=None, password=None):
         self.server = server
         self.authenticated = False
-        self._lock = threading.Lock()
 
         if server.startswith('/'):
             self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -90,17 +89,6 @@ class Protocol(object):
 
         if username and password:
             self.authenticate(username, password)
-
-    def lock(f):
-        def _f(self, *args, **kwargs):
-            self._lock.acquire()
-            try:
-                rv = f(self, *args, **kwargs)
-            finally:
-                self._lock.release()
-
-            return rv
-        return _f
 
     def split_host_port(self, server):
         """
