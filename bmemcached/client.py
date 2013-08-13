@@ -26,11 +26,6 @@ class Client(object):
         self.password = password
         self.set_servers(servers)
 
-    @property
-    def servers(self):
-        for server in self._servers:
-            yield Protocol(server, self.username, self.password)
-
     def set_servers(self, servers):
         """
         Iter to a list of servers and instantiate Protocol class.
@@ -45,10 +40,7 @@ class Client(object):
 
         assert servers, "No memcached servers supplied"
         self._servers = servers
-
-        # Forcing connection to detect early errors
-        for server in self.servers:
-            assert server
+        self.servers = [Protocol(server, self.username, self.password) for server in self._servers]
 
     def get(self, key):
         """
