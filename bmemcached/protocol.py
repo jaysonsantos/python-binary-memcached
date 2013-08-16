@@ -119,7 +119,7 @@ class Protocol(object):
         port = parsed_server.port
         try:
             port = int(port)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             port = 11211
 
         if re.search(r':.*$', host):
