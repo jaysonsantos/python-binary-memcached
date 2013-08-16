@@ -116,8 +116,8 @@ class Protocol(object):
         """
         parsed_server = urlparse('//{}'.format(server))
         host = parsed_server.hostname
-        port = parsed_server.port
         try:
+            port = parsed_server.port
             port = int(port)
         except (TypeError, ValueError):
             port = 11211
