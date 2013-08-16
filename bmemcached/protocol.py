@@ -117,9 +117,11 @@ class Protocol(object):
         parsed_server = urlparse('//{}'.format(server))
         host = parsed_server.hostname
         port = parsed_server.port
-        if port is None:
+        try:
+            port = int(port)
+        except TypeError, ValueError:
             port = 11211
-        port = int(port)
+
         if re.search(r':.*$', host):
             host = re.sub(r':.*$', '', host)
         return host, port
