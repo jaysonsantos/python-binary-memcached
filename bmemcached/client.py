@@ -1,36 +1,10 @@
 import logging
-from threading import Lock as TLock
-from multiprocessing import Lock as PLock
-
 from bmemcached.protocol import Protocol
 
 try:
     from cPickle import loads, dumps
 except ImportError:
     from pickle import loads, dumps
-
-logger = logging.getLogger(__name__)
-tlock, plock = TLock(), PLock()
-
-
-def _acquire_client_lock():
-    for lock in (tlock, plock):
-        lock.acquire()
-
-
-def _release_client_lock():
-    for lock in (tlock, plock):
-        lock.release()
-
-
-def _lock(fn):
-    def l(*args, **kwargs):
-        _acquire_client_lock()
-        try:
-            return fn(*args, **kwargs)
-        finally:
-            _release_client_lock()
-    return l
 
 
 class Client(object):
@@ -49,8 +23,8 @@ class Client(object):
         self.username = username
         self.password = password
         self.set_servers(servers)
-        
-        
+
+
     @property
     def servers(self):
         for server in self._servers:
@@ -72,7 +46,6 @@ class Client(object):
         self._servers = [Protocol(server, self.username, self.password) for\
                         server in servers]
 
-    @_lock
     def get(self, key):
         """
         Get a key from server.
@@ -87,7 +60,6 @@ class Client(object):
             if value is not None:
                 return value
 
-    @_lock
     def get_multi(self, keys):
         """
         Get multiple keys from server.
@@ -106,7 +78,6 @@ class Client(object):
                     break
         return d
 
-    @_lock
     def set(self, key, value, time=100):
         """
         Set a value for a key on server.
@@ -126,7 +97,6 @@ class Client(object):
 
         return any(returns)
 
-    @_lock
     def set_multi(self, mappings, time=100):
         """
         Set multiple keys with it's values on server.
@@ -145,7 +115,6 @@ class Client(object):
 
         return all(returns)
 
-    @_lock
     def add(self, key, value, time=100):
         """
         Add a key/value to server ony if it does not exist.
@@ -165,7 +134,6 @@ class Client(object):
 
         return any(returns)
 
-    @_lock
     def replace(self, key, value, time=100):
         """
         Replace a key/value to server ony if it does exist.
@@ -185,7 +153,6 @@ class Client(object):
 
         return any(returns)
 
-    @_lock
     def delete(self, key):
         """
         Delete a key/value from server. If key does not exist, it returns True.
@@ -201,7 +168,6 @@ class Client(object):
 
         return any(returns)
 
-    @_lock
     def incr(self, key, value):
         """
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
@@ -219,7 +185,6 @@ class Client(object):
 
         return returns[0]
 
-    @_lock
     def decr(self, key, value):
         """
         Decrement a key, if it exists, returns it's actual value, if it don't, return 0.
@@ -238,7 +203,6 @@ class Client(object):
 
         return returns[0]
 
-    @_lock
     def flush_all(self, time=0):
         """
         Send a command to server flush|delete all keys.
@@ -254,7 +218,6 @@ class Client(object):
 
         return any(returns)
 
-    @_lock
     def stats(self, key=None):
         """
         Return server stats.
@@ -281,4 +244,3 @@ class Client(object):
         """
         for server in self.servers:
             server.disconnect()
-
