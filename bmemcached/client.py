@@ -8,6 +8,10 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+try:
+    unicode
+except NameError:
+    unicode = str
 
 class Client(object):
     """
@@ -40,7 +44,7 @@ class Client(object):
         :return: Returns nothing
         :rtype: None
         """
-        if isinstance(servers, basestring):
+        if isinstance(servers, (str, unicode)):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
@@ -82,7 +86,7 @@ class Client(object):
                     break
         return d
 
-    def set(self, key, value, time=100):
+    def set(self, key, value, time=0):
         """
         Set a value for a key on server.
 
@@ -101,7 +105,7 @@ class Client(object):
 
         return any(returns)
 
-    def set_multi(self, mappings, time=100):
+    def set_multi(self, mappings, time=0):
         """
         Set multiple keys with it's values on server.
 
@@ -119,7 +123,7 @@ class Client(object):
 
         return all(returns)
 
-    def add(self, key, value, time=100):
+    def add(self, key, value, time=0):
         """
         Add a key/value to server ony if it does not exist.
 
@@ -138,7 +142,7 @@ class Client(object):
 
         return any(returns)
 
-    def replace(self, key, value, time=100):
+    def replace(self, key, value, time=0):
         """
         Replace a key/value to server ony if it does exist.
 

@@ -1,15 +1,28 @@
-from cPickle import dumps, loads
+try:
+    from cPickle import dumps, loads
+except ImportError:
+    from pickle import dumps, loads
 import logging
 import re
 import socket
 import struct
-import thread
+try:
+    import thread
+except ImportError:
+    import _thread as thread
 import threading
-from urllib import splitport
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
 import zlib
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 
+try:
+    long
+except NameError:
+    long = int
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +83,7 @@ class Protocol(object):
         instance_key = '%s-%s-%s' % (thread.get_ident(), str(args), str(kw))
         if instance_key not in cls._thread_instances:
             cls._thread_instances[instance_key] = super(Protocol, cls).__new__(
-                cls, *args, **kw)
+                cls)
 
         return cls._thread_instances[instance_key]
 
@@ -101,12 +114,16 @@ class Protocol(object):
         >>> split_host_port('127.0.0.1')
         ('127.0.0.1', 11211)
         """
-        host, port = splitport(server)
-        if port is None:
+        parsed_server = urlparse('//{0}'.format(server))
+        host = parsed_server.hostname
+        try:
+            port = parsed_server.port
+            port = int(port)
+        except (TypeError, ValueError):
             port = 11211
-        port = int(port)
-        if re.search(':.*$', host):
-            host = re.sub(':.*$', '', host)
+
+        if re.search(r':.*$', host):
+            host = re.sub(r':.*$', '', host)
         return host, port
 
     def _read_socket(self, size):
@@ -118,7 +135,7 @@ class Protocol(object):
         :return: Data from socket
         :rtype: basestring
         """
-        value = ''
+        value = b''
         while len(value) < size:
             data = self.connection.recv(size - len(value))
             if not data:
@@ -211,11 +228,11 @@ class Protocol(object):
         flags = 0
         if isinstance(value, str):
             pass
-        elif isinstance(value, int):
-            flags |= self.FLAGS['integer']
-            value = str(value)
         elif isinstance(value, long):
             flags |= self.FLAGS['long']
+            value = str(value)
+        elif isinstance(value, int):
+            flags |= self.FLAGS['integer']
             value = str(value)
         else:
             flags |= self.FLAGS['pickle']
@@ -420,7 +437,7 @@ class Protocol(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        mappings = mappings.items()
+        mappings = list(mappings.items())
         mappings, last = mappings[:-1], mappings[-1]
         msg = []
         for key, value in mappings:
