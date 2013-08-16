@@ -114,7 +114,7 @@ class Protocol(object):
         >>> split_host_port('127.0.0.1')
         ('127.0.0.1', 11211)
         """
-        parsed_server = urlparse('//{}'.format(server))
+        parsed_server = urlparse('//{0}'.format(server))
         host = parsed_server.hostname
         try:
             port = parsed_server.port
