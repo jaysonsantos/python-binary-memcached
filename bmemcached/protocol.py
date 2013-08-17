@@ -74,9 +74,11 @@ class Protocol(object):
 
         return cls._thread_instances[instance_key]
 
-    def __init__(self, server, username=None, password=None):
+    def __init__(self, server, username=None, password=None,
+                 compression=None):
         self.server = server
         self.authenticated = False
+        self.compression = zlib if compression is None else compression
 
         if server.startswith('/'):
             self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -222,7 +224,7 @@ class Protocol(object):
             value = dumps(value)
 
         if len(value) > self.COMPRESSION_THRESHOLD:
-            value = zlib.compress(value)
+            value = self.compression.compress(value)
             flags |= self.FLAGS['compressed']
 
         return flags, value
@@ -239,7 +241,7 @@ class Protocol(object):
         :rtype: basestring|int
         """
         if flags & self.FLAGS['compressed']:  # pragma: no branch
-            value = zlib.decompress(value)
+            value = self.compression.decompress(value)
 
         if flags & self.FLAGS['integer']:
             return int(value)
