@@ -28,6 +28,5 @@ class MemcachedTests(unittest.TestCase):
         self.bzclient.set(b'test_key2', self.data)
         self.assertEqual(self.client.get(b'test_key'),
                 self.bzclient.get(b'test_key2'))
-        with self.assertRaises(IOError):
-            self.bzclient.get(b'test_key')
+        self.assertRaises(IOError, self.bzclient.get, b'test_key')
 
