@@ -1,6 +1,7 @@
 import unittest
 import bmemcached
 
+# Python2/3 compatibility
 try:
     long
 except NameError:

@@ -1,28 +1,27 @@
 import sys
-try:
-    from cPickle import dumps, loads
-except ImportError:
-    from pickle import dumps, loads
 import logging
 import re
 import socket
 import struct
-try:
-    import thread
-except ImportError:
-    import _thread as thread
 import threading
-try:
-    from urlparse import urlparse
-except ImportError:
-    from urllib.parse import urlparse
 import zlib
+
+# Python2/3 compatibility
+if sys.version_info[0] == 2:
+    import thread
+    from urlparse import urlparse
+    from cPickle import dumps, loads
+
+else:
+    long = int
+    unicode = str
+    import _thread as thread
+    from pickle import dumps, loads
+    from urllib.parse import urlparse
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 
-if sys.version_info[0] != 2:
-    long = int
-    unicode = str
+logger = logging.getLogger(__name__)
 
 def to_bytes(data):
     try:
@@ -30,8 +29,6 @@ def to_bytes(data):
 
     except AttributeError:
         return data
-
-logger = logging.getLogger(__name__)
 
 
 class Protocol(object):
@@ -202,7 +199,7 @@ class Protocol(object):
             raise AuthenticationNotSupported('This module only supports '
                                              'PLAIN auth for now.')
 
-        method = unicode('PLAIN').encode('ascii')
+        method = to_bytes('PLAIN')
         username = to_bytes(username)
         password = to_bytes(password)
         auth = b''.join([b'\x00', username, b'\x00', password])

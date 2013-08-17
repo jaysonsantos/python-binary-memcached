@@ -1,3 +1,4 @@
+import sys
 import logging
 from bmemcached.protocol import Protocol
 
@@ -8,10 +9,9 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-try:
-    unicode
-except NameError:
-    unicode = str
+# Python2/3 compatibility
+if sys.version_info[0] != 2:
+    basestring = str
 
 class Client(object):
     """
@@ -44,7 +44,7 @@ class Client(object):
         :return: Returns nothing
         :rtype: None
         """
-        if isinstance(servers, (str, unicode)):
+        if isinstance(servers, basestring):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
