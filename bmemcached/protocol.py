@@ -1,3 +1,4 @@
+import sys
 try:
     from cPickle import dumps, loads
 except ImportError:
@@ -19,10 +20,16 @@ import zlib
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 
-try:
-    long
-except NameError:
+if sys.version_info[0] != 2:
     long = int
+    unicode = str
+
+def to_bytes(data):
+    try:
+        return data.encode('utf-8', 'surrogateescape')
+
+    except AttributeError:
+        return data
 
 logger = logging.getLogger(__name__)
 
@@ -191,12 +198,14 @@ class Protocol(object):
 
         methods = extra_content
 
-        if not 'PLAIN' in methods:
+        if 'PLAIN' not in methods:
             raise AuthenticationNotSupported('This module only supports '
                                              'PLAIN auth for now.')
 
-        method = 'PLAIN'
-        auth = '\x00%s\x00%s' % (username, password)
+        method = unicode('PLAIN').encode('ascii')
+        username = to_bytes(username)
+        password = to_bytes(password)
+        auth = b''.join([b'\x00', username, b'\x00', password])
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
                                          self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
@@ -230,10 +239,10 @@ class Protocol(object):
             pass
         elif isinstance(value, long):
             flags |= self.FLAGS['long']
-            value = str(value)
+            value = unicode(value).encode()
         elif isinstance(value, int):
             flags |= self.FLAGS['integer']
-            value = str(value)
+            value = unicode(value).encode()
         else:
             flags |= self.FLAGS['pickle']
             value = dumps(value)
@@ -313,7 +322,7 @@ class Protocol(object):
         # pipeline N-1 getkq requests, followed by a regular getk to uncork the
         # server
         keys, last = keys[:-1], keys[-1]
-        msg = ''.join([
+        msg = b''.join([
             struct.pack(self.HEADER_STRUCT +
                         self.COMMANDS['getkq']['struct'] % (len(key)),
                         self.MAGIC['request'],
@@ -357,7 +366,7 @@ class Protocol(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        logger.info('Setting/adding/replacing key %s.' % key)
+        logger.info(b''.join([b'Setting/adding/replacing key ', key]))
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
 
@@ -461,7 +470,7 @@ class Protocol(object):
                                8, 0, 0, len(key) + len(value) + 8, 0, 0,
                                flags, time, key, value))
 
-        msg = ''.join(msg)
+        msg = b''.join(msg)
 
         self.connection.send(msg)
 
