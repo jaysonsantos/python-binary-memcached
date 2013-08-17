@@ -8,6 +8,10 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+try:
+    unicode
+except NameError:
+    unicode = str
 
 class Client(object):
     """
@@ -40,7 +44,7 @@ class Client(object):
         :return: Returns nothing
         :rtype: None
         """
-        if isinstance(servers, basestring):
+        if isinstance(servers, (str, unicode)):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
