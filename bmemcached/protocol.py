@@ -83,7 +83,6 @@ class Protocol(object):
             self.connection.connect(server)
         else:
             self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.connection.settimeout(5)
             self.host, self.port = self.split_host_port(self.server)
             self.connection.connect((self.host, self.port))
 
@@ -160,7 +159,7 @@ class Protocol(object):
         :rtype: bool
         """
         logger.info('Authenticating as %s' % username)
-        self.connection.send(struct.pack(self.HEADER_STRUCT,
+        self.connection.sendall(struct.pack(self.HEADER_STRUCT,
                                          self.MAGIC['request'],
                                          self.COMMANDS['auth_negotiation']['command'],
                                          0, 0, 0, 0, 0, 0, 0))
@@ -180,7 +179,7 @@ class Protocol(object):
 
         method = 'PLAIN'
         auth = '\x00%s\x00%s' % (username, password)
-        self.connection.send(struct.pack(self.HEADER_STRUCT +
+        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
                                          self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
                                          len(method), 0, 0, 0, len(method) + len(auth), 0, 0, method, auth))
@@ -260,7 +259,7 @@ class Protocol(object):
         :rtype: object
         """
         logger.info('Getting key %s' % key)
-        self.connection.send(struct.pack(self.HEADER_STRUCT +
+        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['get']['struct'] % (len(key)),
                                          self.MAGIC['request'],
                                          self.COMMANDS['get']['command'],
@@ -309,7 +308,7 @@ class Protocol(object):
                            self.COMMANDS['getk']['command'],
                            len(last), 0, 0, 0, len(last), 0, 0, last)
 
-        self.connection.send(msg)
+        self.connection.sendall(msg)
 
         d = {}
         opcode = -1
@@ -344,7 +343,7 @@ class Protocol(object):
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
 
-        self.connection.send(struct.pack(self.HEADER_STRUCT +
+        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS[command]['struct'] % (len(key), len(value)),
                                          self.MAGIC['request'],
                                          self.COMMANDS[command]['command'],
@@ -446,7 +445,7 @@ class Protocol(object):
 
         msg = ''.join(msg)
 
-        self.connection.send(msg)
+        self.connection.sendall(msg)
 
         opcode = -1
         retval = True
@@ -473,7 +472,7 @@ class Protocol(object):
         :return: Actual value of the key on server
         :rtype: int
         """
-        self.connection.send(struct.pack(self.HEADER_STRUCT +
+        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS[command]['struct'] % len(key),
                                          self.MAGIC['request'],
                                          self.COMMANDS[command]['command'],
@@ -534,7 +533,7 @@ class Protocol(object):
         :rtype: bool
         """
         logger.info('Deletting key %s' % key)
-        self.connection.send(struct.pack(self.HEADER_STRUCT +
+        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['delete']['struct'] % len(key),
                                          self.MAGIC['request'],
                                          self.COMMANDS['delete']['command'],
@@ -559,7 +558,7 @@ class Protocol(object):
         :rtype: bool
         """
         logger.info('Flushing memcached')
-        self.connection.send(struct.pack(self.HEADER_STRUCT +
+        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['flush']['struct'],
                                          self.MAGIC['request'],
                                          self.COMMANDS['flush']['command'],
@@ -598,7 +597,7 @@ class Protocol(object):
                 self.COMMANDS['stat']['command'],
                 0, 0, 0, 0, 0, 0, 0)
 
-        self.connection.send(packed)
+        self.connection.sendall(packed)
 
         value = {}
 
