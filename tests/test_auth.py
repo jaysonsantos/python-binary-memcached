@@ -14,7 +14,7 @@ class TestServerAuth(unittest.TestCase):
         mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
         server = bmemcached.client.Protocol('127.0.0.1')
         # can pass anything and it'll work
-        self.assertTrue(server.authenticate('user', 'badpassword'))
+        self.assertTrue(server.authenticate('user', b'badpassword'))
 
     @mock.patch.object(bmemcached.client.Protocol, '_get_response')
     def testNotUsingPlainAuth(self, mocked_response):

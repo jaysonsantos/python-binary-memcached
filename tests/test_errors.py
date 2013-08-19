@@ -13,7 +13,7 @@ class TestMemcachedErrors(unittest.TestCase):
         client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
         with mock.patch.object(bmemcached.client.Protocol, '_get_response') as mocked_response:
             mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
-            self.assertRaises(MemcachedException, client.get, 'foo')
+            self.assertRaises(MemcachedException, client.get, b'foo')
 
     def testSet(self):
         """
@@ -23,7 +23,7 @@ class TestMemcachedErrors(unittest.TestCase):
         client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
         with mock.patch.object(bmemcached.client.Protocol, '_get_response') as mocked_response:
             mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
-            self.assertRaises(MemcachedException, client.set, 'foo', 'bar', 300)
+            self.assertRaises(MemcachedException, client.set, b'foo', b'bar', 300)
 
     def testIncrDecr(self):
         """
@@ -31,11 +31,11 @@ class TestMemcachedErrors(unittest.TestCase):
         successful.
         """
         client = bmemcached.Client('127.0.0.1:11211', 'user', 'password')
-        client.set('foo', 1)
+        client.set(b'foo', 1)
         with mock.patch.object(bmemcached.client.Protocol, '_get_response') as mocked_response:
             mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 2)
-            self.assertRaises(MemcachedException, client.incr, 'foo', 1)
-            self.assertRaises(MemcachedException, client.decr, 'foo', 1)
+            self.assertRaises(MemcachedException, client.incr, b'foo', 1)
+            self.assertRaises(MemcachedException, client.decr, b'foo', 1)
 
     def testDelete(self):
         """
@@ -45,7 +45,7 @@ class TestMemcachedErrors(unittest.TestCase):
         client.flush_all()
         with mock.patch.object(bmemcached.client.Protocol, '_get_response') as mocked_response:
             mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
-            self.assertRaises(MemcachedException, client.delete, 'foo')
+            self.assertRaises(MemcachedException, client.delete, b'foo')
 
     def testFlushAll(self):
         """

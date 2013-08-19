@@ -1,3 +1,4 @@
+import sys
 import logging
 from bmemcached.protocol import Protocol
 
@@ -8,6 +9,9 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Python2/3 compatibility
+if sys.version_info[0] != 2:
+    basestring = str
 
 class Client(object):
     """

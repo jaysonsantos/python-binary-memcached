@@ -1,2 +1,2 @@
 __all__ = ['Client']
-from .client import Client
+from bmemcached.client import Client

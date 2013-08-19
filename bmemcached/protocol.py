@@ -1,17 +1,34 @@
-from cPickle import dumps, loads
+import sys
 import logging
 import re
 import socket
 import struct
-import thread
 import threading
-from urllib import splitport
 import zlib
+
+# Python2/3 compatibility
+if sys.version_info[0] == 2:
+    import thread
+    from urlparse import urlparse
+    from cPickle import dumps, loads
+
+else:
+    long = int
+    unicode = str
+    import _thread as thread
+    from pickle import dumps, loads
+    from urllib.parse import urlparse
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 
-
 logger = logging.getLogger(__name__)
+
+def to_bytes(data):
+    try:
+        return data.encode('utf-8', 'surrogateescape')
+
+    except AttributeError:
+        return data
 
 
 class Protocol(object):
@@ -70,7 +87,7 @@ class Protocol(object):
         instance_key = '%s-%s-%s' % (thread.get_ident(), str(args), str(kw))
         if instance_key not in cls._thread_instances:
             cls._thread_instances[instance_key] = super(Protocol, cls).__new__(
-                cls, *args, **kw)
+                cls)
 
         return cls._thread_instances[instance_key]
 
@@ -103,12 +120,16 @@ class Protocol(object):
         >>> split_host_port('127.0.0.1')
         ('127.0.0.1', 11211)
         """
-        host, port = splitport(server)
-        if port is None:
+        parsed_server = urlparse('//{0}'.format(server))
+        host = parsed_server.hostname
+        try:
+            port = parsed_server.port
+            port = int(port)
+        except (TypeError, ValueError):
             port = 11211
-        port = int(port)
-        if re.search(':.*$', host):
-            host = re.sub(':.*$', '', host)
+
+        if re.search(r':.*$', host):
+            host = re.sub(r':.*$', '', host)
         return host, port
 
     def _read_socket(self, size):
@@ -120,7 +141,7 @@ class Protocol(object):
         :return: Data from socket
         :rtype: basestring
         """
-        value = ''
+        value = b''
         while len(value) < size:
             data = self.connection.recv(size - len(value))
             if not data:
@@ -176,12 +197,14 @@ class Protocol(object):
 
         methods = extra_content
 
-        if not 'PLAIN' in methods:
+        if 'PLAIN' not in methods:
             raise AuthenticationNotSupported('This module only supports '
                                              'PLAIN auth for now.')
 
-        method = 'PLAIN'
-        auth = '\x00%s\x00%s' % (username, password)
+        method = to_bytes('PLAIN')
+        username = to_bytes(username)
+        password = to_bytes(password)
+        auth = b''.join([b'\x00', username, b'\x00', password])
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
                                          self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
@@ -213,12 +236,12 @@ class Protocol(object):
         flags = 0
         if isinstance(value, str):
             pass
-        elif isinstance(value, int):
-            flags |= self.FLAGS['integer']
-            value = str(value)
         elif isinstance(value, long):
             flags |= self.FLAGS['long']
-            value = str(value)
+            value = unicode(value).encode()
+        elif isinstance(value, int):
+            flags |= self.FLAGS['integer']
+            value = unicode(value).encode()
         else:
             flags |= self.FLAGS['pickle']
             value = dumps(value)
@@ -298,7 +321,7 @@ class Protocol(object):
         # pipeline N-1 getkq requests, followed by a regular getk to uncork the
         # server
         keys, last = keys[:-1], keys[-1]
-        msg = ''.join([
+        msg = b''.join([
             struct.pack(self.HEADER_STRUCT +
                         self.COMMANDS['getkq']['struct'] % (len(key)),
                         self.MAGIC['request'],
@@ -342,7 +365,7 @@ class Protocol(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        logger.info('Setting/adding/replacing key %s.' % key)
+        logger.info(b''.join([b'Setting/adding/replacing key ', key]))
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
 
@@ -422,7 +445,7 @@ class Protocol(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        mappings = mappings.items()
+        mappings = list(mappings.items())
         mappings, last = mappings[:-1], mappings[-1]
         msg = []
         for key, value in mappings:
@@ -446,7 +469,7 @@ class Protocol(object):
                                8, 0, 0, len(key) + len(value) + 8, 0, 0,
                                flags, time, key, value))
 
-        msg = ''.join(msg)
+        msg = b''.join(msg)
 
         self.connection.send(msg)
 
