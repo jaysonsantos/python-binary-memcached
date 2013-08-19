@@ -22,7 +22,7 @@ class MemcachedTests(unittest.TestCase):
 
     def testSetMultiBigData(self):
         self.client.set_multi(dict(
-                (unicode(k).encode(), b'value') for k in range(1000000)))
+                (unicode(k).encode(), b'value') for k in range(32767)))
 
     def testGet(self):
         self.client.set('test_key', 'test')
