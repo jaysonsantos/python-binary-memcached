@@ -1,8 +1,8 @@
 import bmemcached
-from tests.test_simple_functions import MemcachedTests
+from tests import test_simple_functions
 
 
-class SocketMemcachedTests(MemcachedTests):
+class SocketMemcachedTests(test_simple_functions.MemcachedTests):
     """
     Same tests as above, just make sure it works with sockets.
     """
