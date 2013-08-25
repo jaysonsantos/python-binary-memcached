@@ -1,3 +1,8 @@
+import sys
+PY2 = sys.version_info[0] == 2
+if not PY2:
+    long = int
+    
 import unittest
 import bmemcached
 
@@ -39,9 +44,9 @@ class MemcachedTests(unittest.TestCase):
                          self.client.get_multi(['test_key', 'test_key2', 'nothere']))
 
     def testGetLong(self):
-        self.client.set('test_key', 1L)
+        self.client.set('test_key', long(1))
         value = self.client.get('test_key')
-        self.assertEqual(1L, value)
+        self.assertEqual(long(1), value)
         self.assertTrue(isinstance(value, long))
 
     def testGetInteger(self):

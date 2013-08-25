@@ -1,10 +1,10 @@
+import sys
+PY2 = sys.version_info[0] == 2
+if not PY2:
+    basestring = (bytes, str)
+    
 import logging
-from bmemcached.protocol import Protocol
-
-try:
-    from cPickle import loads, dumps
-except ImportError:
-    from pickle import loads, dumps
+from bmemcached.protocol import Protocol, loads, dumps
 
 logger = logging.getLogger(__name__)
 

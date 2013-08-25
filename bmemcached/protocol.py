@@ -1,11 +1,26 @@
-from cPickle import dumps, loads
+import sys
+PY2 = sys.version_info[0] == 2
+if PY2:
+    from cPickle import dumps, loads
+    import thread
+    from urllib import splitport
+    to_bytes = lambda s: s
+    to_str = lambda s: s
+else:
+    from pickle import dumps, loads
+    import _thread as thread
+    from urllib.parse import splitport
+    to_bytes = lambda s: s if isinstance(s, bytes) else s.encode('utf-8')
+    to_str = lambda s: s.decode('utf-8') if isinstance(s, bytes) else s
+    basestring = (bytes, str)
+    long = int
+
+    
 import logging
 import re
 import socket
 import struct
-import thread
 import threading
-from urllib import splitport
 import zlib
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
@@ -56,7 +71,8 @@ class Protocol(object):
         'pickle': 1 << 0,
         'integer': 1 << 1,
         'long': 1 << 2,
-        'compressed': 1 << 3
+        'compressed': 1 << 3,
+        'str': 1 << 4
     }
 
     COMPRESSION_THRESHOLD = 128
@@ -70,7 +86,7 @@ class Protocol(object):
         instance_key = '%s-%s-%s' % (thread.get_ident(), str(args), str(kw))
         if instance_key not in cls._thread_instances:
             cls._thread_instances[instance_key] = super(Protocol, cls).__new__(
-                cls, *args, **kw)
+                cls)
 
         return cls._thread_instances[instance_key]
 
@@ -120,7 +136,7 @@ class Protocol(object):
         :return: Data from socket
         :rtype: basestring
         """
-        value = ''
+        value = b''
         while len(value) < size:
             data = self.connection.recv(size - len(value))
             if not data:
@@ -180,8 +196,8 @@ class Protocol(object):
             raise AuthenticationNotSupported('This module only supports '
                                              'PLAIN auth for now.')
 
-        method = 'PLAIN'
-        auth = '\x00%s\x00%s' % (username, password)
+        method = b'PLAIN'
+        auth = to_bytes('\x00%s\x00%s' % (username, password))
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
                                          self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
@@ -211,14 +227,17 @@ class Protocol(object):
         :rtype: str
         """
         flags = 0
-        if isinstance(value, str):
+        if isinstance(value, bytes):
             pass
         elif isinstance(value, int):
             flags |= self.FLAGS['integer']
-            value = str(value)
+            value = to_bytes(str(value))
         elif isinstance(value, long):
             flags |= self.FLAGS['long']
-            value = str(value)
+            value = to_bytes(str(value))
+        elif isinstance(value, str):
+            flags |= self.FLAGS['str']
+            value = to_bytes(value)
         else:
             flags |= self.FLAGS['pickle']
             value = dumps(value)
@@ -249,6 +268,8 @@ class Protocol(object):
             return long(value)
         elif flags & self.FLAGS['pickle']:
             return loads(value)
+        elif flags & self.FLAGS['str']:
+            return to_str(value)
 
         return value
 
@@ -262,6 +283,8 @@ class Protocol(object):
         :rtype: object
         """
         logger.info('Getting key %s' % key)
+        
+        key = to_bytes(key)
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['get']['struct'] % (len(key)),
                                          self.MAGIC['request'],
@@ -297,8 +320,9 @@ class Protocol(object):
         """
         # pipeline N-1 getkq requests, followed by a regular getk to uncork the
         # server
+        keys = [to_bytes(key) for key in keys]
         keys, last = keys[:-1], keys[-1]
-        msg = ''.join([
+        msg = b''.join([
             struct.pack(self.HEADER_STRUCT +
                         self.COMMANDS['getkq']['struct'] % (len(key)),
                         self.MAGIC['request'],
@@ -323,7 +347,7 @@ class Protocol(object):
                 flags, key, value = struct.unpack('!L%ds%ds' %
                                                   (keylen, bodylen - keylen - 4),
                                                   extra_content)
-                d[key] = self.deserialize(value, flags)
+                d[to_str(key)] = self.deserialize(value, flags)
             elif status != self.STATUS['key_not_found']:
                 raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
@@ -345,7 +369,7 @@ class Protocol(object):
         logger.info('Setting/adding/replacing key %s.' % key)
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
-
+        key = to_bytes(key)
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS[command]['struct'] % (len(key), len(value)),
                                          self.MAGIC['request'],
@@ -422,7 +446,7 @@ class Protocol(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        mappings = mappings.items()
+        mappings = [(to_bytes(key), value) for key, value in mappings.items()]
         mappings, last = mappings[:-1], mappings[-1]
         msg = []
         for key, value in mappings:
@@ -446,7 +470,7 @@ class Protocol(object):
                                8, 0, 0, len(key) + len(value) + 8, 0, 0,
                                flags, time, key, value))
 
-        msg = ''.join(msg)
+        msg = b''.join(msg)
 
         self.connection.send(msg)
 
@@ -475,6 +499,7 @@ class Protocol(object):
         :return: Actual value of the key on server
         :rtype: int
         """
+        key = to_bytes(key)
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS[command]['struct'] % len(key),
                                          self.MAGIC['request'],
@@ -536,6 +561,7 @@ class Protocol(object):
         :rtype: bool
         """
         logger.info('Deletting key %s' % key)
+        key = to_bytes(key)
         self.connection.send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['delete']['struct'] % len(key),
                                          self.MAGIC['request'],
@@ -587,6 +613,7 @@ class Protocol(object):
         """
         # TODO: Stats with key is not working.
         if key is not None:
+            key = to_bytes(key)
             keylen = len(key)
             packed = struct.pack(
                 self.HEADER_STRUCT + '%ds' % keylen,
@@ -613,8 +640,8 @@ class Protocol(object):
                 break
 
             extra_content = response[-1]
-            key = extra_content[:keylen]
-            body = extra_content[keylen:bodylen]
+            key = to_str(extra_content[:keylen])
+            body = to_str(extra_content[keylen:bodylen])
             value[key] = body
 
         return value
