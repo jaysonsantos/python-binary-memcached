@@ -3,7 +3,6 @@ import logging
 import re
 import socket
 import struct
-import thread
 import threading
 from urllib import splitport
 import zlib
@@ -14,7 +13,7 @@ from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials
 logger = logging.getLogger(__name__)
 
 
-class Protocol(object):
+class Protocol(threading.local):
     """
     This class is used by Client class to communicate with server.
     """
@@ -61,21 +60,7 @@ class Protocol(object):
 
     COMPRESSION_THRESHOLD = 128
 
-    _thread_instances = {}
-
-    def __new__(cls, *args, **kw):
-        """
-        Server singleton
-        """
-        instance_key = '%s-%s-%s' % (thread.get_ident(), str(args), str(kw))
-        if instance_key not in cls._thread_instances:
-            cls._thread_instances[instance_key] = super(Protocol, cls).__new__(
-                cls, *args, **kw)
-
-        return cls._thread_instances[instance_key]
-
-    def __init__(self, server, username=None, password=None,
-                 compression=None):
+    def __init__(self, server, username=None, password=None):
         self.server = server
         self.authenticated = False
         self.compression = zlib if compression is None else compression

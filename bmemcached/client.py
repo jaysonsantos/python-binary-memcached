@@ -6,8 +6,6 @@ try:
 except ImportError:
     from pickle import loads, dumps
 
-logger = logging.getLogger(__name__)
-
 
 class Client(object):
     """
@@ -28,11 +26,11 @@ class Client(object):
         self.compression = compression
         self.set_servers(servers)
 
+
     @property
     def servers(self):
         for server in self._servers:
-            yield Protocol(
-                    server, self.username, self.password, self.compression)
+            yield server
 
     def set_servers(self, servers):
         """
@@ -47,11 +45,8 @@ class Client(object):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
-        self._servers = servers
-
-        # Forcing connection to detect early errors
-        for server in self.servers:
-            assert server
+        self._servers = [Protocol(server, self.username, self.password) for\
+                        server in servers]
 
     def get(self, key):
         """
@@ -251,4 +246,3 @@ class Client(object):
         """
         for server in self.servers:
             server.disconnect()
-

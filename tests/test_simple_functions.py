@@ -1,5 +1,6 @@
 import unittest
 import bmemcached
+from bmemcached.protocol import Protocol
 
 
 class MemcachedTests(unittest.TestCase):
@@ -11,7 +12,7 @@ class MemcachedTests(unittest.TestCase):
         self.client.delete('test_key')
         self.client.delete('test_key2')
         self.client.disconnect_all()
-
+        
     def testSet(self):
         self.assertTrue(self.client.set('test_key', 'test'))
 
