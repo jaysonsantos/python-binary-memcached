@@ -60,7 +60,7 @@ class Protocol(threading.local):
 
     COMPRESSION_THRESHOLD = 128
 
-    def __init__(self, server, username=None, password=None):
+    def __init__(self, server, username=None, password=None, compression=None):
         self.server = server
         self.authenticated = False
         self.compression = zlib if compression is None else compression

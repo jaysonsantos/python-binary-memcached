@@ -45,8 +45,8 @@ class Client(object):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
-        self._servers = [Protocol(server, self.username, self.password) for\
-                        server in servers]
+        self._servers = [Protocol(server, self.username, self.password,
+                                  self.compression) for server in servers]
 
     def get(self, key):
         """
