@@ -54,4 +54,4 @@ If you want to use it with Django, go to `django-bmemcached <https://github.com/
 Tests Status
 ------------
 .. image:: https://travis-ci.org/jaysonsantos/python-binary-memcached.png?branch=master
-:target: https://travis-ci.org/jaysonsantos/python-binary-memcached
+    :target: https://travis-ci.org/jaysonsantos/python-binary-memcached
