@@ -4,5 +4,5 @@ memcached -d
 memcached -s/tmp/memcached.sock -d
 memcached -p5000 -d
 py.test --version
-py.test --cov=bmemcached
+PYTHONPATH=. py.test --cov=bmemcached
 exit $?
