@@ -1,5 +1,5 @@
 import bmemcached
-from tests import test_simple_functions
+from test import test_simple_functions
 
 
 class SocketMemcachedTests(test_simple_functions.MemcachedTests):
