@@ -25,7 +25,7 @@ bmemcached Package
     :undoc-members:
     :show-inheritance:
 
-:mod:`server` Module
+:mod:`protocol` Module
 --------------------
 
 .. automodule:: bmemcached.protocol
