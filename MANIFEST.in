@@ -1,0 +1,4 @@
+exclude *.pyc *.pyo
+recursive-include docs *
+recusrive-include tests *
+prune docs/_build
