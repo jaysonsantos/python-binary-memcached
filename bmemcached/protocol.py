@@ -33,11 +33,13 @@ class Protocol(threading.local):
         'set': {'command': 0x01, 'struct': 'LL%ds%ds'},
         'setq': {'command': 0x11, 'struct': 'LL%ds%ds'},
         'add': {'command': 0x02, 'struct': 'LL%ds%ds'},
+        'addq': {'command': 0x12, 'struct': 'LL%ds%ds'},
         'replace': {'command': 0x03, 'struct': 'LL%ds%ds'},
         'delete': {'command': 0x04, 'struct': '%ds'},
         'incr': {'command': 0x05, 'struct': 'QQL%ds'},
         'decr': {'command': 0x06, 'struct': 'QQL%ds'},
         'flush': {'command': 0x08, 'struct': 'I'},
+        'noop': {'command': 0x0a, 'struct': ''},
         'stat': {'command': 0x10},
         'auth_negotiation': {'command': 0x20},
         'auth_request': {'command': 0x21, 'struct': '%ds%ds'},
@@ -238,19 +240,21 @@ class Protocol(threading.local):
 
     def get(self, key):
         """
-        Get a key from server.
+        Get a key and its CAS value from server.  If the value isn't cached, return
+        (None, None).
 
         :param key: Key's name
         :type key: basestring
-        :return: Returns a key data from server.
+        :return: Returns (value, cas).
         :rtype: object
         """
         logger.info('Getting key %s' % key)
-        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
+        data = struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['get']['struct'] % (len(key)),
                                          self.MAGIC['request'],
                                          self.COMMANDS['get']['command'],
-                                         len(key), 0, 0, 0, len(key), 0, 0, key))
+                                         len(key), 0, 0, 0, len(key), 0, 0, key)
+        self.connection.sendall(data)
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -262,13 +266,13 @@ class Protocol(threading.local):
             if status == self.STATUS['key_not_found']:
                 logger.debug('Key not found. Message: %s'
                              % extra_content)
-                return None
+                return None, None
 
             raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
         flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
 
-        return self.deserialize(value, flags)
+        return self.deserialize(value, flags), cas
 
     def get_multi(self, keys):
         """
@@ -307,13 +311,13 @@ class Protocol(threading.local):
                 flags, key, value = struct.unpack('!L%ds%ds' %
                                                   (keylen, bodylen - keylen - 4),
                                                   extra_content)
-                d[key] = self.deserialize(value, flags)
+                d[key] = self.deserialize(value, flags), cas
             elif status != self.STATUS['key_not_found']:
                 raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
         return d
 
-    def _set_add_replace(self, command, key, value, time):
+    def _set_add_replace(self, command, key, value, time, cas=0):
         """
         Function to set/add/replace commands.
 
@@ -323,6 +327,8 @@ class Protocol(threading.local):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param cas: The CAS value that must be matched for this operation to complete, or 0 for no CAS.
+        :type cas: int
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
@@ -335,7 +341,7 @@ class Protocol(threading.local):
                                          self.MAGIC['request'],
                                          self.COMMANDS[command]['command'],
                                          len(key),
-                                         8, 0, 0, len(key) + len(value) + 8, 0, 0, flags,
+                                         8, 0, 0, len(key) + len(value) + 8, 0, cas, flags,
                                          time, key, value))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
@@ -364,6 +370,31 @@ class Protocol(threading.local):
         :rtype: bool
         """
         return self._set_add_replace('set', key, value, time)
+
+    def cas(self, key, value, cas, time):
+        """
+        Add a key/value to server ony if it does not exist.
+
+        :param key: Key's name
+        :type key: basestring
+        :param value: A value to be stored on server.
+        :type value: object
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :return: True if key is added False if key already exists and has a different CAS
+        :rtype: bool
+        """
+        # The protocol CAS value 0 means "no cas".  Calling cas() with that value is
+        # probably unintentional.  Don't allow it, since it would overwrite the value
+        # without performing CAS at all.
+        assert cas != 0, '0 is an invalid CAS value'
+
+        # If we get a cas of None, interpret that as "compare against nonexistant and set",
+        # which is simply Add.
+        if cas is None:
+            return self._set_add_replace('add', key, value, time)
+        else:
+            return self._set_add_replace('set', key, value, time, cas=cas)
 
     def add(self, key, value, time):
         """
@@ -397,38 +428,51 @@ class Protocol(threading.local):
 
     def set_multi(self, mappings, time=100):
         """
-        Set multiple keys with it's values on server.
+        Set multiple keys with its values on server.
+
+        If a key is a (key, cas) tuple, insert as if cas(key, value, cas) had
+        been called.
 
         :param mappings: A dict with keys/values
         :type mappings: dict
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :return: True in case of success and False in case of failure
+        :return: True
         :rtype: bool
         """
         mappings = mappings.items()
-        mappings, last = mappings[:-1], mappings[-1]
         msg = []
+
         for key, value in mappings:
+            if isinstance(key, tuple):
+                key, cas = key
+            else:
+                cas = None
+
+            final = False
+            if cas == 0:
+                # Like cas(), if the cas value is 0, treat it as compare-and-set against not
+                # existing.
+                command = 'addq'
+            else:
+                command = 'setq'
+
             flags, value = self.serialize(value)
             m = struct.pack(self.HEADER_STRUCT +
-                            self.COMMANDS['setq']['struct'] % (len(key), len(value)),
+                            self.COMMANDS[command]['struct'] % (len(key), len(value)),
                             self.MAGIC['request'],
-                            self.COMMANDS['setq']['command'],
+                            self.COMMANDS[command]['command'],
                             len(key),
-                            8, 0, 0, len(key) + len(value) + 8, 0, 0,
+                            8, 0, 0, len(key) + len(value) + 8, 0, cas or 0,
                             flags, time, key, value)
             msg.append(m)
 
-        key, value = last
-        flags, value = self.serialize(value)
-        msg.append(struct.pack(self.HEADER_STRUCT +
-                               self.COMMANDS['set']['struct'] % (len(key), len(value)),
-                               self.MAGIC['request'],
-                               self.COMMANDS['set']['command'],
-                               len(key),
-                               8, 0, 0, len(key) + len(value) + 8, 0, 0,
-                               flags, time, key, value))
+        m = struct.pack(self.HEADER_STRUCT +
+                        self.COMMANDS['noop']['struct'],
+                        self.MAGIC['request'],
+                        self.COMMANDS['noop']['command'],
+                        0, 0, 0, 0, 0, 0, 0)
+        msg.append(m)
 
         msg = ''.join(msg)
 
@@ -436,7 +480,7 @@ class Protocol(threading.local):
 
         opcode = -1
         retval = True
-        while opcode != self.COMMANDS['set']['command']:
+        while opcode != self.COMMANDS['noop']['command']:
             (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
              cas, extra_content) = self._get_response()
             if status != self.STATUS['success']:
@@ -510,30 +554,32 @@ class Protocol(threading.local):
         """
         return self._incr_decr('decr', key, value, default, time)
 
-    def delete(self, key):
+    def delete(self, key, cas=0):
         """
         Delete a key/value from server. If key does not exist, it returns True.
 
         :param key: Key's name to be deleted
         :type key: basestring
+        :param cas: If set, only delete the key if its CAS value matches.
+        :type cas: int
         :return: True in case o success and False in case of failure.
         :rtype: bool
         """
-        logger.info('Deletting key %s' % key)
+        logger.info('Deleting key %s' % key)
         self.connection.sendall(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['delete']['struct'] % len(key),
                                          self.MAGIC['request'],
                                          self.COMMANDS['delete']['command'],
-                                         len(key), 0, 0, 0, len(key), 0, 0, key))
+                                         len(key), 0, 0, 0, len(key), 0, cas, key))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
 
-        if status != self.STATUS['success'] and status != self.STATUS['key_not_found']:
+        if status != self.STATUS['success'] and status not in (self.STATUS['key_not_found'], self.STATUS['key_exists']):
             raise MemcachedException('Code: %d message: %s' % (status, extra_content))
 
         logger.debug('Key deleted %s' % key)
-        return True
+        return status != self.STATUS['key_exists']
 
     def flush_all(self, time):
         """
