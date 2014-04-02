@@ -64,19 +64,25 @@ class Protocol(threading.local):
 
     def __init__(self, server, username=None, password=None, compression=None):
         self.server = server
-        self.authenticated = False
+        self._username = username
+        self._password = password
+
         self.compression = zlib if compression is None else compression
 
-        if server.startswith('/'):
-            self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.connection.connect(server)
+        self.connect()
+
+    def connect(self):
+        self.authenticated = False
+        if self.server.startswith('/'):
+            self._connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.connection.connect(self.server)
         else:
-            self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self._connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.host, self.port = self.split_host_port(self.server)
             self.connection.connect((self.host, self.port))
 
-        if username and password:
-            self.authenticate(username, password)
+        if self._username and self._password:
+            self.authenticate(self._username, self._password)
 
     def split_host_port(self, server):
         """
@@ -649,6 +655,12 @@ class Protocol(threading.local):
 
         return value
 
+    @property
+    def connection(self):
+        if not self._connection:
+            self.connect()
+        return self._connection
+
     def disconnect(self):
         """
         Disconnects from server.
@@ -657,3 +669,4 @@ class Protocol(threading.local):
         :rtype: None
         """
         self.connection.close()
+        self._connection = None
