@@ -186,3 +186,8 @@ class MemcachedTests(unittest.TestCase):
 
         stats = self.client.stats('slabs')[self.server]
         self.assertTrue('1:get_hits' in stats)
+
+    def testReconnect(self):
+        self.client.set('test_key', 'test')
+        self.client.disconnect_all()
+        self.assertEqual('test', self.client.get('test_key'))
