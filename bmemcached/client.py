@@ -58,12 +58,14 @@ class Client(object):
         if self.consistent_hashing:
             self._servers = HashRing(self._servers)
 
-    def get(self, key):
+    def get(self, key, get_cas=False):
         """
         Get a key from server.
 
         :param key: Key's name
         :type key: basestring
+        :param get_cas: If true, return (value, cas), where cas is the new CAS value.
+        :type get_cas: boolean
         :return: Returns a key data from server.
         :rtype: object
         """
@@ -71,16 +73,38 @@ class Client(object):
             return self.get_server(key).get(key)
 
         for server in self.servers:
-            value = server.get(key)
+            value, cas = server.get(key)
             if value is not None:
-                return value
+                if get_cas:
+                    return value, cas
+                else:
+                    return value
 
-    def get_multi(self, keys):
+    def gets(self, key):
+        """
+        Get a key from server, returning the value and its CAS key.
+
+        This method is for API compatibility with other implementations.
+
+        :param key: Key's name
+        :type key: basestring
+        :return: Returns (key data, value), or (None, None) if the value is not in cache.
+        :rtype: object
+        """
+        for server in self.servers:
+            value, cas = server.get(key)
+            if value is not None:
+                return value, cas
+        return None, None
+
+    def get_multi(self, keys, get_cas=False):
         """
         Get multiple keys from server.
 
         :param keys: A list of keys to from server.
         :type keys: list
+        :param get_cas: If get_cas is true, each value is (data, cas), with each result's CAS value.
+        :type get_cas: boolean
         :return: A dict with all requested keys.
         :rtype: dict
         """
@@ -91,7 +115,11 @@ class Client(object):
         d = {}
         if keys:
             for server in self.servers:
-                d.update(server.get_multi(keys))
+                results = server.get_multi(keys)
+                if not get_cas:
+                    for key, (value, cas) in results.items():
+                        results[key] = value
+                d.update(results)
                 keys = [_ for _ in keys if not _ in d]
                 if not keys:
                     break
@@ -116,6 +144,25 @@ class Client(object):
         returns = []
         for server in self.servers:
             returns.append(server.set(key, value, time))
+
+        return any(returns)
+
+    def cas(self, key, value, cas, time=0):
+        """
+        Set a value for a key on server if its CAS value matches cas.
+
+        :param key: Key's name
+        :type key: basestring
+        :param value: A value to be stored on server.
+        :type value: object
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :return: True in case of success and False in case of failure
+        :rtype: bool
+        """
+        returns = []
+        for server in self.servers:
+            returns.append(server.cas(key, value, cas, time))
 
         return any(returns)
 
@@ -184,7 +231,7 @@ class Client(object):
 
         return any(returns)
 
-    def delete(self, key):
+    def delete(self, key, cas=0):
         """
         Delete a key/value from server. If key does not exist, it returns True.
 
@@ -198,7 +245,7 @@ class Client(object):
 
         returns = []
         for server in self.servers:
-            returns.append(server.delete(key))
+            returns.append(server.delete(key, cas))
 
         return any(returns)
 
