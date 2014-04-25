@@ -13,7 +13,7 @@ class Client(object):
     This is intended to be a client class which implement standard cache interface that common libs do.
     """
     def __init__(self, servers=['127.0.0.1:11211'], username=None,
-                 password=None, compression=None, consistent_hashing=False):
+                 password=None, compression=None):
         """
         :param servers: A list of servers with ip[:port] or unix socket.
         :type servers: list
@@ -25,16 +25,12 @@ class Client(object):
         self.username = username
         self.password = password
         self.compression = compression
-        self.consistent_hashing = consistent_hashing
         self.set_servers(servers)
 
 
     @property
     def servers(self):
-        if self.consistent_hashing:
-            raise RuntimeError(u'Accessing servers property on bmemcached.Client using '
-                               u'consistent hashing is not allowed')
-        for server in self._servers:
+        for server in self._servers.nodes:
             yield server
 
     def get_server(self, key):
@@ -53,10 +49,8 @@ class Client(object):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
-        self._servers = [Protocol(server, self.username, self.password,
-                                  self.compression) for server in servers]
-        if self.consistent_hashing:
-            self._servers = HashRing(self._servers)
+        self._servers = HashRing([Protocol(server, self.username, self.password,
+                                 self.compression) for server in servers])
 
     def get(self, key, get_cas=False):
         """
@@ -69,16 +63,11 @@ class Client(object):
         :return: Returns a key data from server.
         :rtype: object
         """
-        if self.consistent_hashing:
-            return self.get_server(key).get(key)
+        value, cas = self.get_server(key).get(key)
+        if get_cas:
+            return value, cas
 
-        for server in self.servers:
-            value, cas = server.get(key)
-            if value is not None:
-                if get_cas:
-                    return value, cas
-                else:
-                    return value
+        return value
 
     def gets(self, key):
         """
@@ -91,10 +80,11 @@ class Client(object):
         :return: Returns (key data, value), or (None, None) if the value is not in cache.
         :rtype: object
         """
-        for server in self.servers:
-            value, cas = server.get(key)
-            if value is not None:
-                return value, cas
+        value, cas = self.get(key, True)
+
+        if value is not None:
+            return value, cas
+
         return None, None
 
     def get_multi(self, keys, get_cas=False):
@@ -109,8 +99,7 @@ class Client(object):
         :rtype: dict
         """
 
-        if self.consistent_hashing:
-            raise NotImplementedError()
+        raise NotImplementedError()
 
         d = {}
         if keys:
@@ -138,14 +127,7 @@ class Client(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        if self.consistent_hashing:
-            return self.get_server(key).set(key, value, time)
-
-        returns = []
-        for server in self.servers:
-            returns.append(server.set(key, value, time))
-
-        return any(returns)
+        return self.get_server(key).set(key, value, time)
 
     def cas(self, key, value, cas, time=0):
         """
@@ -160,11 +142,7 @@ class Client(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        returns = []
-        for server in self.servers:
-            returns.append(server.cas(key, value, cas, time))
-
-        return any(returns)
+        return self.get_server(key).cas(key, value, cas, time) is not None
 
     def set_multi(self, mappings, time=0):
         """
@@ -177,8 +155,7 @@ class Client(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        if self.consistent_hashing:
-            raise NotImplementedError()
+        raise NotImplementedError()
 
         returns = []
         if mappings:
@@ -200,14 +177,7 @@ class Client(object):
         :return: True if key is added False if key already exists
         :rtype: bool
         """
-        if self.consistent_hashing:
-            return self.get_server(key).add(key, value, time)
-
-        returns = []
-        for server in self.servers:
-            returns.append(server.add(key, value, time))
-
-        return any(returns)
+        return self.get_server(key).add(key, value, time)
 
     def replace(self, key, value, time=0):
         """
@@ -222,14 +192,7 @@ class Client(object):
         :return: True if key is replace False if key does not exists
         :rtype: bool
         """
-        if self.consistent_hashing:
-            return self.get_server(key).replace(key, value, time)
-
-        returns = []
-        for server in self.servers:
-            returns.append(server.replace(key, value, time))
-
-        return any(returns)
+        return self.get_server(key).replace(key, value, time)
 
     def delete(self, key, cas=0):
         """
@@ -240,14 +203,7 @@ class Client(object):
         :return: True in case o success and False in case of failure.
         :rtype: bool
         """
-        if self.consistent_hashing:
-            return self.get_server(key).delete(key)
-
-        returns = []
-        for server in self.servers:
-            returns.append(server.delete(key, cas))
-
-        return any(returns)
+        return self.get_server(key).delete(key)
 
     def incr(self, key, value):
         """
@@ -260,14 +216,7 @@ class Client(object):
         :return: Actual value of the key on server
         :rtype: int
         """
-        if self.consistent_hashing:
-            return self.get_server(key).incr(key, value)
-
-        returns = []
-        for server in self.servers:
-            returns.append(server.incr(key, value))
-
-        return returns[0]
+        return self.get_server(key).incr(key, value)
 
     def decr(self, key, value):
         """
@@ -281,14 +230,7 @@ class Client(object):
         :return: Actual value of the key on server
         :rtype: int
         """
-        if self.consistent_hashing:
-            return self.get_server(key).decr(key, value)
-
-        returns = []
-        for server in self.servers:
-            returns.append(server.decr(key, value))
-
-        return returns[0]
+        return self.get_server(key).decr(key, value)
 
     def flush_all(self, time=0):
         """
@@ -314,9 +256,6 @@ class Client(object):
         :return: A dict with server stats
         :rtype: dict
         """
-        if self.consistent_hashing:
-            raise NotImplementedError()
-
         # TODO: Stats with key is not working.
 
         returns = {}

@@ -12,7 +12,7 @@ class MemcachedTests(unittest.TestCase):
     def tearDown(self):
         self.reset()
         self.client.disconnect_all()
-        
+
     def reset(self):
         self.client.delete('test_key')
         self.client.delete('test_key2')
