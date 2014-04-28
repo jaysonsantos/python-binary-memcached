@@ -48,6 +48,25 @@ class Client(object):
         self._servers = [Protocol(server, self.username, self.password,
                                   self.compression) for server in servers]
 
+    def _set_retry_delay(self, value):
+        for server in self._servers:
+            server.set_retry_delay(value)
+
+    def enable_retry_delay(self, enable):
+        """
+        Enable or disable delaying between reconnection attempts.
+
+        The first reconnection attempt will always happen immediately, so intermittent network
+        errors don't cause caching to turn off.  The retry delay takes effect after the first
+        reconnection fails.
+
+        The reconnection delay is enabled by default for TCP connections, and disabled by
+        default for Unix socket connections.
+        """
+        # The public API only allows enabling or disabling the delay, so it'll be easier to
+        # add exponential falloff in the future.  _set_retry_delay is exposed for tests.
+        self._set_retry_delay(5 if enable else 0)
+
     def get(self, key, get_cas=False):
         """
         Get a key from server.

@@ -1,4 +1,5 @@
 from cPickle import dumps, loads
+from datetime import datetime, timedelta
 import logging
 import re
 import socket
@@ -50,7 +51,11 @@ class Protocol(threading.local):
         'key_not_found': 0x01,
         'key_exists': 0x02,
         'auth_error': 0x08,
-        'unknown_command': 0x81
+        'unknown_command': 0x81,
+
+        # This is used internally, and is never returned by the server.  (The server returns a 16-bit
+        # value, so it's not capable of returning this value.)
+        'server_disconnected': 0xFFFFFFFF,
     }
 
     FLAGS = {
@@ -68,23 +73,55 @@ class Protocol(threading.local):
         self._password = password
 
         self.compression = zlib if compression is None else compression
-
-        self.connect()
-
-    def connect(self):
+        self.connection = None
         self.authenticated = False
-        if self.server.startswith('/'):
-            self._connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.connection.connect(self.server)
-        else:
-            self._connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        self.reconnects_deferred_until = None
+
+        if not server.startswith('/'):
             self.host, self.port = self.split_host_port(self.server)
-            self.connection.connect((self.host, self.port))
+            self.set_retry_delay(5)
+        else:
+            self.host = self.port = None
+            self.set_retry_delay(0)
 
-        if self._username and self._password:
-            self.authenticate(self._username, self._password)
+    @property
+    def server_uses_unix_socket(self):
+        return self.host is None
 
-    def split_host_port(self, server):
+    def set_retry_delay(self, value):
+        self.retry_delay = value
+
+    def _open_connection(self):
+        if self.connection:
+            return
+
+        self.authenticated = False
+
+        # If we're deferring a reconnection attempt, wait.
+        if self.reconnects_deferred_until and self.reconnects_deferred_until > datetime.now():
+            return
+
+        try:
+            if self.host:
+                self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.connection.connect((self.host, self.port))
+            else:
+                self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self.connection.connect(self.server)
+
+            self._send_authentication()
+        except socket.error:
+            # If the connection attempt fails, start delaying retries.
+            self.reconnects_deferred_until = datetime.now() + timedelta(seconds=self.retry_delay)
+            raise
+
+    def _connection_error(self, exception):
+        # On error, clear our dead connection.
+        self.disconnect()
+
+    @classmethod
+    def split_host_port(cls, server):
         """
         Return (host, port) from server.
 
@@ -118,7 +155,11 @@ class Protocol(threading.local):
             if not data:
                 break
             value += data
-        assert len(value) == size, "Asked for %d bytes, got %d" % (size, len(value))
+
+        # If we got less data than we requested, the server disconnected.
+        if len(value) < size:
+            raise socket.error()
+
         return value
 
     def _get_response(self):
@@ -128,18 +169,42 @@ class Protocol(threading.local):
         :return: A tuple with binary values from memcached.
         :rtype: tuple
         """
-        header = self._read_socket(self.HEADER_SIZE)
-        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-         cas) = struct.unpack(self.HEADER_STRUCT, header)
+        try:
+            self._open_connection()
+            if self.connection is None:
+                # The connection wasn't opened, which means we're deferring a reconnection attempt.
+                # Raise a socket.error, so we'll return the same server_disconnected message as we
+                # do below.
+                raise socket.error('Delaying reconnection attempt')
 
-        assert magic == self.MAGIC['response']
+            header = self._read_socket(self.HEADER_SIZE)
+            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+             cas) = struct.unpack(self.HEADER_STRUCT, header)
 
-        extra_content = None
-        if bodylen:
-            extra_content = self._read_socket(bodylen)
+            assert magic == self.MAGIC['response']
 
-        return (magic, opcode, keylen, extlen, datatype, status, bodylen,
-                opaque, cas, extra_content)
+            extra_content = None
+            if bodylen:
+                extra_content = self._read_socket(bodylen)
+
+            return (magic, opcode, keylen, extlen, datatype, status, bodylen,
+                    opaque, cas, extra_content)
+        except socket.error as e:
+            self._connection_error(e)
+
+            # (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content)
+            message = str(e)
+            return (self.MAGIC['response'], -1, 0, 0, 0, self.STATUS['server_disconnected'], 0, 0, 0, message)
+
+    def _send(self, data):
+        try:
+            self._open_connection()
+            if self.connection is None:
+                return
+
+            self.connection.sendall(data)
+        except socket.error as e:
+            self._connection_error(e)
 
     def authenticate(self, username, password):
         """
@@ -153,8 +218,20 @@ class Protocol(threading.local):
         :raises: InvalidCredentials, AuthenticationNotSupported, MemcachedException
         :rtype: bool
         """
-        logger.info('Authenticating as %s' % username)
-        self.connection.sendall(struct.pack(self.HEADER_STRUCT,
+        self._username = username
+        self._password = password
+
+        # Reopen the connection with the new credentials.
+        self.disconnect()
+        self._open_connection()
+        return self.authenticated
+
+    def _send_authentication(self):
+        if not self._username or not self._password:
+            return False
+
+        logger.info('Authenticating as %s' % self._username)
+        self._send(struct.pack(self.HEADER_STRUCT,
                                          self.MAGIC['request'],
                                          self.COMMANDS['auth_negotiation']['command'],
                                          0, 0, 0, 0, 0, 0, 0))
@@ -162,8 +239,12 @@ class Protocol(threading.local):
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
 
+        if status == self.STATUS['server_disconnected']:
+            return False
+
         if status == self.STATUS['unknown_command']:
             logger.debug('Server does not requires authentication.')
+            self.authenticated = True
             return True
 
         methods = extra_content
@@ -173,14 +254,17 @@ class Protocol(threading.local):
                                              'PLAIN auth for now.')
 
         method = 'PLAIN'
-        auth = '\x00%s\x00%s' % (username, password)
-        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
+        auth = '\x00%s\x00%s' % (self._username, self._password)
+        self._send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
                                          self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
                                          len(method), 0, 0, 0, len(method) + len(auth), 0, 0, method, auth))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
+
+        if status == self.STATUS['server_disconnected']:
+            return False
 
         if status == self.STATUS['auth_error']:
             raise InvalidCredentials("Incorrect username or password")
@@ -260,7 +344,7 @@ class Protocol(threading.local):
                                          self.MAGIC['request'],
                                          self.COMMANDS['get']['command'],
                                          len(key), 0, 0, 0, len(key), 0, 0, key)
-        self.connection.sendall(data)
+        self._send(data)
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -272,6 +356,9 @@ class Protocol(threading.local):
             if status == self.STATUS['key_not_found']:
                 logger.debug('Key not found. Message: %s'
                              % extra_content)
+                return None, None
+
+            if status == self.STATUS['server_disconnected']:
                 return None, None
 
             raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
@@ -305,7 +392,7 @@ class Protocol(threading.local):
                            self.COMMANDS['getk']['command'],
                            len(last), 0, 0, 0, len(last), 0, 0, last)
 
-        self.connection.sendall(msg)
+        self._send(msg)
 
         d = {}
         opcode = -1
@@ -318,6 +405,8 @@ class Protocol(threading.local):
                                                   (keylen, bodylen - keylen - 4),
                                                   extra_content)
                 d[key] = self.deserialize(value, flags), cas
+            elif status == self.STATUS['server_disconnected']:
+                break
             elif status != self.STATUS['key_not_found']:
                 raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
@@ -342,7 +431,7 @@ class Protocol(threading.local):
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
 
-        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
+        self._send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS[command]['struct'] % (len(key), len(value)),
                                          self.MAGIC['request'],
                                          self.COMMANDS[command]['command'],
@@ -357,6 +446,8 @@ class Protocol(threading.local):
             if status == self.STATUS['key_exists']:
                 return False
             elif status == self.STATUS['key_not_found']:
+                return False
+            elif status == self.STATUS['server_disconnected']:
                 return False
             raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
@@ -482,7 +573,7 @@ class Protocol(threading.local):
 
         msg = ''.join(msg)
 
-        self.connection.sendall(msg)
+        self._send(msg)
 
         opcode = -1
         retval = True
@@ -491,6 +582,8 @@ class Protocol(threading.local):
              cas, extra_content) = self._get_response()
             if status != self.STATUS['success']:
                 retval = False
+            if status == self.STATUS['server_disconnected']:
+                break
 
         return retval
 
@@ -509,7 +602,7 @@ class Protocol(threading.local):
         :return: Actual value of the key on server
         :rtype: int
         """
-        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
+        self._send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS[command]['struct'] % len(key),
                                          self.MAGIC['request'],
                                          self.COMMANDS[command]['command'],
@@ -520,8 +613,10 @@ class Protocol(threading.local):
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
 
-        if status != self.STATUS['success']:
+        if status not in (self.STATUS['success'], self.STATUS['server_disconnected']):
             raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
+        if status == self.STATUS['server_disconnected']:
+            return 0
 
         return struct.unpack('!Q', extra_content)[0]
 
@@ -562,7 +657,7 @@ class Protocol(threading.local):
 
     def delete(self, key, cas=0):
         """
-        Delete a key/value from server. If key does not exist, it returns True.
+        Delete a key/value from server. If key existed and was deleted, it returns True.
 
         :param key: Key's name to be deleted
         :type key: basestring
@@ -572,7 +667,7 @@ class Protocol(threading.local):
         :rtype: bool
         """
         logger.info('Deleting key %s' % key)
-        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
+        self._send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['delete']['struct'] % len(key),
                                          self.MAGIC['request'],
                                          self.COMMANDS['delete']['command'],
@@ -581,6 +676,8 @@ class Protocol(threading.local):
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
 
+        if status == self.STATUS['server_disconnected']:
+            return False
         if status != self.STATUS['success'] and status not in (self.STATUS['key_not_found'], self.STATUS['key_exists']):
             raise MemcachedException('Code: %d message: %s' % (status, extra_content))
 
@@ -597,7 +694,7 @@ class Protocol(threading.local):
         :rtype: bool
         """
         logger.info('Flushing memcached')
-        self.connection.sendall(struct.pack(self.HEADER_STRUCT +
+        self._send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['flush']['struct'],
                                          self.MAGIC['request'],
                                          self.COMMANDS['flush']['command'],
@@ -606,7 +703,7 @@ class Protocol(threading.local):
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
 
-        if status != self.STATUS['success']:
+        if status not in (self.STATUS['success'], self.STATUS['server_disconnected']):
             raise MemcachedException('Code: %d message: %s' % (status, extra_content))
 
         logger.debug('Memcached flushed')
@@ -636,12 +733,17 @@ class Protocol(threading.local):
                 self.COMMANDS['stat']['command'],
                 0, 0, 0, 0, 0, 0, 0)
 
-        self.connection.sendall(packed)
+        self._send(packed)
 
         value = {}
 
         while True:
             response = self._get_response()
+
+            status = response[5]
+            if status == self.STATUS['server_disconnected']:
+                break
+
             keylen = response[2]
             bodylen = response[6]
 
@@ -655,18 +757,14 @@ class Protocol(threading.local):
 
         return value
 
-    @property
-    def connection(self):
-        if not self._connection:
-            self.connect()
-        return self._connection
-
     def disconnect(self):
         """
-        Disconnects from server.
+        Disconnects from server.  A new connection will be established the next time a request is made.
 
         :return: Nothing
         :rtype: None
         """
-        self.connection.close()
-        self._connection = None
+        if self.connection:
+            self.connection.close()
+            self.connection = None
+

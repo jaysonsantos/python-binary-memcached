@@ -40,6 +40,11 @@ class TestServerParsing(unittest.TestCase):
         client = bmemcached.Client('127.0.0.1:11211', username='user',
                                    password='password')
         server = list(client.servers)[0]
+
+        # Force a connection.  Normally this is only done when we make a request to the
+        # server.
+        server._send_authentication()
+
         self.assertTrue(server.authenticated)
 
     @mock.patch.object(bmemcached.client.Protocol, '_get_response')
@@ -47,6 +52,11 @@ class TestServerParsing(unittest.TestCase):
         mocked_response.return_value = (0, 0, 0, 0, 0, 0x01, 0, 0, 0, ['PLAIN'])
         client = bmemcached.Client('127.0.0.1:11211')
         server = list(client.servers)[0]
+
+        # Force a connection.  Normally this is only done when we make a request to the
+        # server.
+        server._send_authentication()
+
         self.assertFalse(server.authenticated)
 
     def testNoServersSupplied(self):
