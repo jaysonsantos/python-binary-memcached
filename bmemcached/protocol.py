@@ -289,7 +289,7 @@ class Protocol(threading.local):
         flags = 0
         if isinstance(value, str):
             pass
-        elif isinstance(value, int):
+        elif isinstance(value, int) and isinstance(value, bool) is False:
             flags |= self.FLAGS['integer']
             value = str(value)
         elif isinstance(value, long):

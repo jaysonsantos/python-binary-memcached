@@ -134,6 +134,10 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual(1, value)
         self.assertTrue(isinstance(value, int))
 
+    def testGetBoolean(self):
+        self.client.set('test_key', True)
+        self.assertTrue(self.client.get('test_key') is True)
+
     def testGetObject(self):
         self.client.set('test_key', {'a': 1})
         value = self.client.get('test_key')
