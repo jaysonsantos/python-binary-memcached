@@ -1,4 +1,8 @@
-from cPickle import dumps, loads
+try:
+    from cPickle import dumps, loads
+except ImportError:
+    from pickle import dumps, loads
+
 from datetime import datetime, timedelta
 import logging
 import re
