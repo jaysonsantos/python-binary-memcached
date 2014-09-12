@@ -1,8 +1,3 @@
-try:
-    from cPickle import dumps, loads
-except ImportError:
-    from pickle import dumps, loads
-
 from datetime import datetime, timedelta
 import logging
 import re
@@ -11,14 +6,12 @@ import struct
 import threading
 from urllib import splitport
 import zlib
+from io import BytesIO
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 
 
 logger = logging.getLogger(__name__)
-
-
-_SOCKET_TIMEOUT = 3
 
 
 class Protocol(threading.local):
@@ -75,7 +68,8 @@ class Protocol(threading.local):
     COMPRESSION_THRESHOLD = 128
 
     def __init__(self, server, username=None, password=None, compression=None,
-                 socket_timeout=_SOCKET_TIMEOUT):
+                 socket_timeout=0, pickleProtocol=0,
+                 pickler=None, unpickler=None):
         self.server = server
         self._username = username
         self._password = password
@@ -84,6 +78,9 @@ class Protocol(threading.local):
         self.connection = None
         self.authenticated = False
         self.socket_timeout = socket_timeout
+        self.pickleProtocol = pickleProtocol
+        self.pickler = pickler
+        self.unpickler = unpickler
 
         self.reconnects_deferred_until = None
 
@@ -307,7 +304,10 @@ class Protocol(threading.local):
             value = str(value)
         else:
             flags |= self.FLAGS['pickle']
-            value = dumps(value)
+            buf = BytesIO()
+            pickler = self.pickler(buf, self.pickleProtocol)
+            pickler.dump(value)
+            value = buf.getvalue()
 
         if len(value) > self.COMPRESSION_THRESHOLD:
             value = self.compression.compress(value)
@@ -334,7 +334,9 @@ class Protocol(threading.local):
         elif flags & self.FLAGS['long']:
             return long(value)
         elif flags & self.FLAGS['pickle']:
-            return loads(value)
+            buf = BytesIO(value)
+            unpickler = self.unpickler(buf)
+            return unpickler.load()
 
         return value
 
