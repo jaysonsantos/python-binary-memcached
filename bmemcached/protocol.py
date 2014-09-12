@@ -18,6 +18,9 @@ from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials
 logger = logging.getLogger(__name__)
 
 
+_SOCKET_TIMEOUT = 3
+
+
 class Protocol(threading.local):
     """
     This class is used by Client class to communicate with server.
@@ -71,7 +74,8 @@ class Protocol(threading.local):
 
     COMPRESSION_THRESHOLD = 128
 
-    def __init__(self, server, username=None, password=None, compression=None):
+    def __init__(self, server, username=None, password=None, compression=None,
+                 socket_timeout=_SOCKET_TIMEOUT):
         self.server = server
         self._username = username
         self._password = password
@@ -79,6 +83,7 @@ class Protocol(threading.local):
         self.compression = zlib if compression is None else compression
         self.connection = None
         self.authenticated = False
+        self.socket_timeout = socket_timeout
 
         self.reconnects_deferred_until = None
 
@@ -109,6 +114,7 @@ class Protocol(threading.local):
         try:
             if self.host:
                 self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.connection.settimeout(self.socket_timeout)
                 self.connection.connect((self.host, self.port))
             else:
                 self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

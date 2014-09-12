@@ -6,7 +6,8 @@ class Client(object):
     This is intended to be a client class which implement standard cache interface that common libs do.
     """
     def __init__(self, servers=None, username=None,
-                 password=None, compression=None):
+                 password=None, compression=None,
+                 socket_timeout=None):
         """
         :param servers: A list of servers with ip[:port] or unix socket.
         :type servers: list
@@ -20,8 +21,8 @@ class Client(object):
         self.username = username
         self.password = password
         self.compression = compression
+        self.socket_timeout = socket_timeout
         self.set_servers(servers)
-
 
     @property
     def servers(self):
@@ -41,8 +42,11 @@ class Client(object):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
-        self._servers = [Protocol(server, self.username, self.password,
-                                  self.compression) for server in servers]
+        self._servers = [Protocol(server,
+                                  self.username,
+                                  self.password,
+                                  self.compression,
+                                  self.socket_timeout) for server in servers]
 
     def _set_retry_delay(self, value):
         for server in self._servers:
