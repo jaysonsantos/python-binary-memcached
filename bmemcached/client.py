@@ -1,17 +1,11 @@
-import logging
 from bmemcached.protocol import Protocol
-
-try:
-    from cPickle import loads, dumps
-except ImportError:
-    from pickle import loads, dumps
 
 
 class Client(object):
     """
     This is intended to be a client class which implement standard cache interface that common libs do.
     """
-    def __init__(self, servers=['127.0.0.1:11211'], username=None,
+    def __init__(self, servers=None, username=None,
                  password=None, compression=None):
         """
         :param servers: A list of servers with ip[:port] or unix socket.
@@ -21,6 +15,8 @@ class Client(object):
         :param password: If your server have auth activated, provide it's password.
         :type password: basestring
         """
+        if servers is None:
+            servers = ['127.0.0.1:11211']
         self.username = username
         self.password = password
         self.compression = compression
