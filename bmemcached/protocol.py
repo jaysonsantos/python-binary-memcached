@@ -68,7 +68,7 @@ class Protocol(threading.local):
     COMPRESSION_THRESHOLD = 128
 
     def __init__(self, server, username=None, password=None, compression=None,
-                 socket_timeout=0, pickleProtocol=0,
+                 socket_timeout=None, pickleProtocol=0,
                  pickler=None, unpickler=None):
         self.server = server
         self._username = username
