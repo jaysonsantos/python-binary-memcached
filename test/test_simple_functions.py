@@ -1,6 +1,5 @@
 import unittest
 import bmemcached
-from bmemcached.protocol import Protocol
 
 
 class MemcachedTests(unittest.TestCase):
@@ -195,3 +194,29 @@ class MemcachedTests(unittest.TestCase):
         self.client.set('test_key', 'test')
         self.client.disconnect_all()
         self.assertEqual('test', self.client.get('test_key'))
+
+
+class TimeoutMemcachedTests(unittest.TestCase):
+    def setUp(self):
+        self.server = '127.0.0.1:11211'
+        self.client = None
+
+    def tearDown(self):
+        self.client.disconnect_all()
+        client = bmemcached.Client(self.server, 'user', 'password',
+                                   socket_timeout=None)
+        client.delete('timeout_key')
+        client.delete('timeout_key_none')
+        client.disconnect_all()
+
+    def testTimeout(self):
+        self.client = bmemcached.Client(self.server, 'user', 'password',
+                                        socket_timeout=0.00000000000001)
+        self.client.set('timeout_key', 'test')
+        self.assertEqual(self.client.get('timeout_key'), None)
+
+    def testTimeoutNone(self):
+        self.client = bmemcached.Client(self.server, 'user', 'password',
+                                        socket_timeout=None)
+        self.client.set('test_key_none', 'test')
+        self.assertEqual(self.client.get('test_key_none'), 'test')
