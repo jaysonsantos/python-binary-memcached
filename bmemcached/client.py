@@ -1,18 +1,24 @@
-import logging
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+
 from bmemcached.protocol import Protocol
 
-try:
-    from cPickle import loads, dumps
-except ImportError:
-    from pickle import loads, dumps
+
+_SOCKET_TIMEOUT = 3
 
 
 class Client(object):
     """
     This is intended to be a client class which implement standard cache interface that common libs do.
     """
-    def __init__(self, servers=['127.0.0.1:11211'], username=None,
-                 password=None, compression=None):
+    def __init__(self, servers=('127.0.0.1:11211',), username=None,
+                 password=None, compression=None,
+                 socket_timeout=_SOCKET_TIMEOUT,
+                 pickleProtocol=0,
+                 pickler=pickle.Pickler, unpickler=pickle.Unpickler):
         """
         :param servers: A list of servers with ip[:port] or unix socket.
         :type servers: list
@@ -24,8 +30,11 @@ class Client(object):
         self.username = username
         self.password = password
         self.compression = compression
+        self.socket_timeout = socket_timeout
+        self.pickleProtocol = pickleProtocol
+        self.pickler = pickler
+        self.unpickler = unpickler
         self.set_servers(servers)
-
 
     @property
     def servers(self):
@@ -45,8 +54,14 @@ class Client(object):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
-        self._servers = [Protocol(server, self.username, self.password,
-                                  self.compression) for server in servers]
+        self._servers = [Protocol(server,
+                                  self.username,
+                                  self.password,
+                                  self.compression,
+                                  self.socket_timeout,
+                                  self.pickleProtocol,
+                                  self.pickler,
+                                  self.unpickler) for server in servers]
 
     def _set_retry_delay(self, value):
         for server in self._servers:

@@ -1,12 +1,13 @@
 import unittest
-import bmemcached
 import bz2
+import bmemcached
 
 class MemcachedTests(unittest.TestCase):
     def setUp(self):
         self.server = '127.0.0.1:11211'
         self.client = bmemcached.Client(self.server, 'user', 'password')
-        self.bzclient = bmemcached.Client(self.server, 'user', 'password', bz2)
+        self.bzclient = bmemcached.Client(self.server, 'user', 'password',
+                                          compression=bz2)
         self.data = b'this is test data. ' * 32
 
     def tearDown(self):
@@ -29,4 +30,3 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual(self.client.get(b'test_key'),
                 self.bzclient.get(b'test_key2'))
         self.assertRaises(IOError, self.bzclient.get, b'test_key')
-
