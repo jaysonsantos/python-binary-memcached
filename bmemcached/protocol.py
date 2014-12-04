@@ -706,9 +706,35 @@ class Protocol(threading.local):
         :rtype: bool
         """
         logger.info('Deleting keys %r' % keys)
-
+        msg = ''
         for key in keys:
-            pass
+            msg += struct.pack(
+                self.HEADER_STRUCT +
+                self.COMMANDS['delete']['struct'] % len(key),
+                self.MAGIC['request'],
+                self.COMMANDS['delete']['command'],
+                len(key), 0, 0, 0, len(key), 0, 0, key)
+
+        msg += struct.pack(
+            self.HEADER_STRUCT +
+            self.COMMANDS['noop']['struct'],
+            self.MAGIC['request'],
+            self.COMMANDS['noop']['command'],
+            0, 0, 0, 0, 0, 0, 0)
+
+        self._send(msg)
+
+        opcode = -1
+        retval = True
+        while opcode != self.COMMANDS['noop']['command']:
+            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+             cas, extra_content) = self._get_response()
+            if status != self.STATUS['success']:
+                retval = False
+            if status == self.STATUS['server_disconnected']:
+                break
+
+        return retval
 
     def flush_all(self, time):
         """
