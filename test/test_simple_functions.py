@@ -6,12 +6,12 @@ class MemcachedTests(unittest.TestCase):
     def setUp(self):
         self.server = '127.0.0.1:11211'
         self.server = '/tmp/memcached.sock'
-        self.client = bmemcached.Client(self.server) #, 'user', 'password')
+        self.client = bmemcached.Client(self.server)
 
     def tearDown(self):
         self.reset()
         self.client.disconnect_all()
-        
+
     def reset(self):
         self.client.delete('test_key')
         self.client.delete('test_key2')
@@ -25,8 +25,8 @@ class MemcachedTests(unittest.TestCase):
             'test_key2': 'value2'}))
 
     def testSetMultiBigData(self):
-        self.client.set_multi(dict(
-                (unicode(k).encode(), b'value') for k in range(32767)))
+        self.client.set_multi(
+            dict((unicode(k).encode(), b'value') for k in range(32767)))
 
     def testGet(self):
         self.client.set('test_key', 'test')
@@ -148,6 +148,13 @@ class MemcachedTests(unittest.TestCase):
         self.client.set('test_key', 'test')
         self.assertTrue(self.client.delete('test_key'))
         self.assertEqual(None, self.client.get('test_key'))
+
+    def testDeleteMulti(self):
+        self.client.set_multi({
+            'test_key': 'value',
+            'test_key2': 'value2'})
+
+        self.assertTrue(self.client.delete_multi(['test_key', 'test_key2']))
 
     def testDeleteUnknownKey(self):
         self.assertTrue(self.client.delete('test_key'))

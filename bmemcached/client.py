@@ -251,6 +251,13 @@ class Client(object):
 
         return any(returns)
 
+    def delete_multi(self, keys):
+        returns = []
+        for server in self.servers:
+            returns.append(server.delete_multi(keys))
+
+        return all(returns)
+
     def incr(self, key, value):
         """
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.

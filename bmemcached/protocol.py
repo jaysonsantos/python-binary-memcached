@@ -696,6 +696,20 @@ class Protocol(threading.local):
         logger.debug('Key deleted %s' % key)
         return status != self.STATUS['key_exists']
 
+    def delete_multi(self, keys):
+        """
+        Delete multiple keys from server in one command.
+
+        :param keys: A list of keys to be deleted
+        :type keys: list
+        :return: True in case of success and False in case of failure.
+        :rtype: bool
+        """
+        logger.info('Deleting keys %r' % keys)
+
+        for key in keys:
+            pass
+
     def flush_all(self, time):
         """
         Send a command to server flush|delete all keys.
