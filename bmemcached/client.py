@@ -139,7 +139,7 @@ class Client(object):
 
         result = {}
         for server, keys in itertools.groupby(keys, key=self.get_server):
-            result.update(server.get_multi(keys))
+            result.update(server.get_multi(list(keys)))
 
         return result
 
@@ -235,7 +235,7 @@ class Client(object):
     def delete_multi(self, keys):
         returns = []
         for server, keys in itertools.groupby(keys, key=self.get_server):
-            returns.append(server.delete_multi(keys))
+            returns.append(server.delete_multi(list(keys)))
 
         return all(returns)
 
