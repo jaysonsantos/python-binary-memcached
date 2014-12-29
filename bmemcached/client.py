@@ -1,4 +1,5 @@
 import logging
+import itertools
 from hash_ring.hash_ring import HashRing
 from bmemcached.protocol import Protocol
 
@@ -136,20 +137,11 @@ class Client(object):
         :rtype: dict
         """
 
-        raise NotImplementedError()
+        result = {}
+        for server, keys in itertools.groupby(keys, key=self.get_server):
+            result.update(server.get_multi(keys, get_cas=get_cas))
 
-        d = {}
-        if keys:
-            for server in self.servers:
-                results = server.get_multi(keys)
-                if not get_cas:
-                    for key, (value, cas) in results.items():
-                        results[key] = value
-                d.update(results)
-                keys = [_ for _ in keys if not _ in d]
-                if not keys:
-                    break
-        return d
+        return result
 
     def set(self, key, value, time=0):
         """
@@ -192,12 +184,10 @@ class Client(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        raise NotImplementedError()
 
         returns = []
-        if mappings:
-            for server in self.servers:
-                returns.append(server.set_multi(mappings, time))
+        for server, keys in itertools.groupby(mappings.iterkeys(), key=self.get_server):
+            returns.append(server.set_multi({k: mappings[k] for k in keys}))
 
         return all(returns)
 
@@ -243,10 +233,8 @@ class Client(object):
         return self.get_server(key).delete(key)
 
     def delete_multi(self, keys):
-        raise NotImplementedError()
-
         returns = []
-        for server in self.servers:
+        for server, keys in itertools.groupby(keys, key=self.get_server):
             returns.append(server.delete_multi(keys))
 
         return all(returns)
