@@ -139,7 +139,7 @@ class Client(object):
 
         result = {}
         for server, keys in itertools.groupby(keys, key=self.get_server):
-            result.update(server.get_multi(keys, get_cas=get_cas))
+            result.update(server.get_multi(keys))
 
         return result
 
@@ -187,7 +187,7 @@ class Client(object):
 
         returns = []
         for server, keys in itertools.groupby(mappings.iterkeys(), key=self.get_server):
-            returns.append(server.set_multi({k: mappings[k] for k in keys}))
+            returns.append(server.set_multi({k: mappings[k] for k in keys}, time=time))
 
         return all(returns)
 
