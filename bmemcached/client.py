@@ -139,7 +139,9 @@ class Client(object):
 
         result = {}
         for server, keys in itertools.groupby(keys, key=self.get_server):
-            result.update(server.get_multi(list(keys)))
+            for key, value_and_cas in server.get_multi(list(keys)).iteritems():
+                # Protocol#get_multi returns both value and cas, so we need to discard the cas
+                result[key] = value_and_cas[0]
 
         return result
 
