@@ -8,7 +8,7 @@ from urllib import splitport
 import zlib
 from io import BytesIO
 
-from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
+from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException, ValueTooBig
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,8 @@ class Protocol(threading.local):
         'success': 0x00,
         'key_not_found': 0x01,
         'key_exists': 0x02,
-        'auth_error': 0x08,
+        '2big': 0x03,
+        'auth_error': 0x20,
         'unknown_command': 0x81,
 
         # This is used internally, and is never returned by the server.  (The server returns a 16-bit
@@ -461,7 +462,11 @@ class Protocol(threading.local):
                 return False
             elif status == self.STATUS['server_disconnected']:
                 return False
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
+            elif status == self.STATUS['2big']:
+                raise ValueTooBig('Value is too big: %d bytes. (Code: %d Message: %s)' % (
+                    len(value), status, extra_content))
+            else:
+                raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
         return True
 
