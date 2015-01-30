@@ -4,11 +4,22 @@ import re
 import socket
 import struct
 import threading
-from urllib import splitport
+try:
+    from urllib import splitport
+except ImportError:
+    from urllib.parse import splitport
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 import zlib
-from io import BytesIO
+from io import BytesIO, StringIO
+import six
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
+from bmemcached.compat import *
 
 
 logger = logging.getLogger(__name__)
@@ -154,9 +165,9 @@ class Protocol(threading.local):
         :param size: Size in bytes to be read.
         :type size: int
         :return: Data from socket
-        :rtype: basestring
+        :rtype: six.string_type
         """
-        value = ''
+        value = b''
         while len(value) < size:
             data = self.connection.recv(size - len(value))
             if not data:
@@ -218,9 +229,9 @@ class Protocol(threading.local):
         Authenticate user on server.
 
         :param username: Username used to be authenticated.
-        :type username: basestring
+        :type username: six.string_type
         :param password: Password used to be authenticated.
-        :type password: basestring
+        :type password: six.string_type
         :return: True if successful.
         :raises: InvalidCredentials, AuthenticationNotSupported, MemcachedException
         :rtype: bool
@@ -260,8 +271,11 @@ class Protocol(threading.local):
             raise AuthenticationNotSupported('This module only supports '
                                              'PLAIN auth for now.')
 
-        method = 'PLAIN'
+        method = b'PLAIN'
         auth = '\x00%s\x00%s' % (self._username, self._password)
+        if six.PY3:
+            auth = auth.encode()
+
         self._send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
                                          self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
@@ -289,7 +303,7 @@ class Protocol(threading.local):
         Serializes a value based on it's type.
 
         :param value: Something to be serialized
-        :type value: basestring, int, long, object
+        :type value: six.string_type, int, long, object
         :return: Serialized type
         :rtype: str
         """
@@ -304,10 +318,16 @@ class Protocol(threading.local):
             value = str(value)
         else:
             flags |= self.FLAGS['pickle']
-            buf = BytesIO()
+            if six.PY2:
+                buf = BytesIO()
+            else:
+                buf = StringIO()
             pickler = self.pickler(buf, self.pickleProtocol)
             pickler.dump(value)
-            value = buf.getvalue()
+            if six.PY2:
+                value = buf.getvalue()
+            else:
+                value = buf.getvalue().encode('utf-8')
 
         if len(value) > self.COMPRESSION_THRESHOLD:
             value = self.compression.compress(value)
@@ -320,11 +340,11 @@ class Protocol(threading.local):
         Deserialized values based on flags or just return it if it is not serialized.
 
         :param value: Serialized or not value.
-        :type value: basestring, int
+        :type value: six.string_type, int
         :param flags: Value flags
         :type flags: int
         :return: Deserialized value
-        :rtype: basestring|int
+        :rtype: six.string_type|int
         """
         if flags & self.FLAGS['compressed']:  # pragma: no branch
             value = self.compression.decompress(value)
@@ -334,11 +354,15 @@ class Protocol(threading.local):
         elif flags & self.FLAGS['long']:
             return long(value)
         elif flags & self.FLAGS['pickle']:
-            buf = BytesIO(value)
+            if six.PY2 or self.unpickler == pickle.Pickler:
+                buf = BytesIO(value)
+            else:
+                buf = StringIO(value.decode())
+
             unpickler = self.unpickler(buf)
             return unpickler.load()
 
-        return value
+        return str(value)
 
     def get(self, key):
         """
@@ -346,7 +370,7 @@ class Protocol(threading.local):
         (None, None).
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :return: Returns (value, cas).
         :rtype: object
         """
@@ -429,7 +453,7 @@ class Protocol(threading.local):
         Function to set/add/replace commands.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -470,7 +494,7 @@ class Protocol(threading.local):
         Set a value for a key on server.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -485,7 +509,7 @@ class Protocol(threading.local):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -510,7 +534,7 @@ class Protocol(threading.local):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -525,7 +549,7 @@ class Protocol(threading.local):
         Replace a key/value to server ony if it does exist.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -604,7 +628,7 @@ class Protocol(threading.local):
         Function which increments and decrements.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: Number to be (de|in)cremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -637,7 +661,7 @@ class Protocol(threading.local):
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: Number to be incremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -655,7 +679,7 @@ class Protocol(threading.local):
         Minimum value of decrement return is 0.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: Number to be decremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -672,7 +696,7 @@ class Protocol(threading.local):
         Delete a key/value from server. If key existed and was deleted, it returns True.
 
         :param key: Key's name to be deleted
-        :type key: basestring
+        :type key: six.string_type
         :param cas: If set, only delete the key if its CAS value matches.
         :type cas: int
         :return: True in case o success and False in case of failure.
@@ -766,7 +790,7 @@ class Protocol(threading.local):
         Return server stats.
 
         :param key: Optional if you want status from a key.
-        :type key: basestring
+        :type key: six.string_type
         :return: A dict with server stats
         :rtype: dict
         """

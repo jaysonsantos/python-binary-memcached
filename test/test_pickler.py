@@ -6,7 +6,9 @@ import json
 import unittest
 import bmemcached
 
+
 class JsonPickler(object):
+
     def __init__(self, f, protocol=0):
         self.f = f
 
@@ -16,7 +18,9 @@ class JsonPickler(object):
     def load(self):
         return json.load(self.f)
 
+
 class MemcachedTests(unittest.TestCase):
+
     def setUp(self):
         self.server = '127.0.0.1:11211'
         self.dclient = bmemcached.Client(self.server, 'user', 'password')

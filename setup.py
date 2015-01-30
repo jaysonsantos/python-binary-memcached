@@ -12,5 +12,8 @@ setup(
         'Development Status :: 4 - Beta',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
+    ],
+    install_requires=[
+        'six'
     ]
 )
