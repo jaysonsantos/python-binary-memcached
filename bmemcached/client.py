@@ -1,3 +1,8 @@
+import logging
+import itertools
+from hash_ring.hash_ring import HashRing
+from bmemcached.protocol import Protocol
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -38,8 +43,11 @@ class Client(object):
 
     @property
     def servers(self):
-        for server in self._servers:
+        for server in self._servers.nodes:
             yield server
+
+    def get_server(self, key):
+        return self._servers.get_node(key)
 
     def set_servers(self, servers):
         """
@@ -54,14 +62,14 @@ class Client(object):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
-        self._servers = [Protocol(server,
-                                  self.username,
-                                  self.password,
-                                  self.compression,
-                                  self.socket_timeout,
-                                  self.pickleProtocol,
-                                  self.pickler,
-                                  self.unpickler) for server in servers]
+        self._servers = HashRing([Protocol(server,
+                                           self.username,
+                                           self.password,
+                                           self.compression,
+                                           self.socket_timeout,
+                                           self.pickleProtocol,
+                                           self.pickler,
+                                           self.unpickler) for server in servers])
 
     def _set_retry_delay(self, value):
         for server in self._servers:
@@ -93,13 +101,11 @@ class Client(object):
         :return: Returns a key data from server.
         :rtype: object
         """
-        for server in self.servers:
-            value, cas = server.get(key)
-            if value is not None:
-                if get_cas:
-                    return value, cas
-                else:
-                    return value
+        value, cas = self.get_server(key).get(key)
+        if get_cas:
+            return value, cas
+
+        return value
 
     def gets(self, key):
         """
@@ -112,10 +118,11 @@ class Client(object):
         :return: Returns (key data, value), or (None, None) if the value is not in cache.
         :rtype: object
         """
-        for server in self.servers:
-            value, cas = server.get(key)
-            if value is not None:
-                return value, cas
+        value, cas = self.get(key, True)
+
+        if value is not None:
+            return value, cas
+
         return None, None
 
     def get_multi(self, keys, get_cas=False):
@@ -129,18 +136,14 @@ class Client(object):
         :return: A dict with all requested keys.
         :rtype: dict
         """
-        d = {}
-        if keys:
-            for server in self.servers:
-                results = server.get_multi(keys)
-                if not get_cas:
-                    for key, (value, cas) in results.items():
-                        results[key] = value
-                d.update(results)
-                keys = [_ for _ in keys if not _ in d]
-                if not keys:
-                    break
-        return d
+
+        result = {}
+        for server, keys in itertools.groupby(keys, key=self.get_server):
+            for key, value_and_cas in server.get_multi(list(keys)).iteritems():
+                # Protocol#get_multi returns both value and cas, so we need to discard the cas
+                result[key] = value_and_cas[0]
+
+        return result
 
     def set(self, key, value, time=0):
         """
@@ -155,11 +158,7 @@ class Client(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        returns = []
-        for server in self.servers:
-            returns.append(server.set(key, value, time))
-
-        return any(returns)
+        return self.get_server(key).set(key, value, time)
 
     def cas(self, key, value, cas, time=0):
         """
@@ -174,11 +173,7 @@ class Client(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        returns = []
-        for server in self.servers:
-            returns.append(server.cas(key, value, cas, time))
-
-        return any(returns)
+        return self.get_server(key).cas(key, value, cas, time) is not None
 
     def set_multi(self, mappings, time=0):
         """
@@ -191,10 +186,10 @@ class Client(object):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
+
         returns = []
-        if mappings:
-            for server in self.servers:
-                returns.append(server.set_multi(mappings, time))
+        for server, keys in itertools.groupby(mappings.iterkeys(), key=self.get_server):
+            returns.append(server.set_multi({k: mappings[k] for k in keys}, time=time))
 
         return all(returns)
 
@@ -211,11 +206,7 @@ class Client(object):
         :return: True if key is added False if key already exists
         :rtype: bool
         """
-        returns = []
-        for server in self.servers:
-            returns.append(server.add(key, value, time))
-
-        return any(returns)
+        return self.get_server(key).add(key, value, time)
 
     def replace(self, key, value, time=0):
         """
@@ -230,11 +221,7 @@ class Client(object):
         :return: True if key is replace False if key does not exists
         :rtype: bool
         """
-        returns = []
-        for server in self.servers:
-            returns.append(server.replace(key, value, time))
-
-        return any(returns)
+        return self.get_server(key).replace(key, value, time)
 
     def delete(self, key, cas=0):
         """
@@ -245,16 +232,12 @@ class Client(object):
         :return: True in case o success and False in case of failure.
         :rtype: bool
         """
-        returns = []
-        for server in self.servers:
-            returns.append(server.delete(key, cas))
-
-        return any(returns)
+        return self.get_server(key).delete(key)
 
     def delete_multi(self, keys):
         returns = []
-        for server in self.servers:
-            returns.append(server.delete_multi(keys))
+        for server, keys in itertools.groupby(keys, key=self.get_server):
+            returns.append(server.delete_multi(list(keys)))
 
         return all(returns)
 
@@ -269,11 +252,7 @@ class Client(object):
         :return: Actual value of the key on server
         :rtype: int
         """
-        returns = []
-        for server in self.servers:
-            returns.append(server.incr(key, value))
-
-        return returns[0]
+        return self.get_server(key).incr(key, value)
 
     def decr(self, key, value):
         """
@@ -287,11 +266,7 @@ class Client(object):
         :return: Actual value of the key on server
         :rtype: int
         """
-        returns = []
-        for server in self.servers:
-            returns.append(server.decr(key, value))
-
-        return returns[0]
+        return self.get_server(key).decr(key, value)
 
     def flush_all(self, time=0):
         """
