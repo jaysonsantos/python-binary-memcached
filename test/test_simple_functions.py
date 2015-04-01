@@ -1,5 +1,6 @@
 import unittest
 import bmemcached
+from bmemcached.compat import long, unicode
 
 
 class MemcachedTests(unittest.TestCase):
@@ -26,7 +27,7 @@ class MemcachedTests(unittest.TestCase):
 
     def testSetMultiBigData(self):
         self.client.set_multi(
-            dict((unicode(k).encode(), b'value') for k in range(32767)))
+            dict((unicode(k), b'value') for k in range(32767)))
 
     def testGet(self):
         self.client.set('test_key', 'test')
@@ -122,9 +123,9 @@ class MemcachedTests(unittest.TestCase):
                          self.client.get_multi(['test_key', 'test_key2', 'nothere']))
 
     def testGetLong(self):
-        self.client.set('test_key', 1L)
+        self.client.set('test_key', long(1))
         value = self.client.get('test_key')
-        self.assertEqual(1L, value)
+        self.assertEqual(long(1), value)
         self.assertTrue(isinstance(value, long))
 
     def testGetInteger(self):

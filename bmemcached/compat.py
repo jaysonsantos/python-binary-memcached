@@ -4,5 +4,7 @@ __all__ = ('long', )
 
 if six.PY3:
     long = int
+    unicode = str
 else:
-	long = long
+    long = long
+    unicode = unicode
