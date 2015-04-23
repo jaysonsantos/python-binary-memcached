@@ -55,3 +55,7 @@ Tests Status
 ------------
 .. image:: https://travis-ci.org/jaysonsantos/python-binary-memcached.png?branch=master
     :target: https://travis-ci.org/jaysonsantos/python-binary-memcached
+
+.. image:: https://d2weczhvl823v0.cloudfront.net/jaysonsantos/python-binary-memcached/trend.png
+   :alt: Bitdeli badge
+   :target: https://bitdeli.com/free
