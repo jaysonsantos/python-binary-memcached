@@ -1,6 +1,13 @@
-import mock
 import unittest
+
+import six
+
 import bmemcached
+
+if six.PY3:
+    from unittest import mock
+else:
+    import mock
 
 
 class TestServerParsing(unittest.TestCase):
