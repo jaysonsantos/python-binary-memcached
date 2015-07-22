@@ -30,18 +30,18 @@ class MemcachedTests(unittest.TestCase):
         self.data = {'a': 'b'}
 
     def tearDown(self):
-        self.jclient.delete(b'test_key')
+        self.jclient.delete('test_key')
         self.jclient.disconnect_all()
         self.dclient.disconnect_all()
 
     def testJson(self):
-        self.jclient.set(b'test_key', self.data)
-        self.assertEqual(self.data, self.jclient.get(b'test_key'))
+        self.jclient.set('test_key', self.data)
+        self.assertEqual(self.data, self.jclient.get('test_key'))
 
     def testDefaultVsJson(self):
-        self.dclient.set(b'test_key', self.data)
-        self.assertRaises(ValueError, self.jclient.get, b'test_key')
+        self.dclient.set('test_key', self.data)
+        self.assertRaises(ValueError, self.jclient.get, 'test_key')
 
     def testJsonVsDefault(self):
-        self.jclient.set(b'test_key', self.data)
-        self.assertRaises(pickle.UnpicklingError, self.dclient.get, b'test_key')
+        self.jclient.set('test_key', self.data)
+        self.assertRaises(pickle.UnpicklingError, self.dclient.get, 'test_key')

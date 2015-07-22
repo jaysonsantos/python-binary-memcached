@@ -341,13 +341,15 @@ class Protocol(threading.local):
         :return: Deserialized value
         :rtype: six.string_type|int
         """
+        to_str = lambda v: v.decode() if six.PY3 else v
+
         if flags & self.FLAGS['compressed']:  # pragma: no branch
             value = self.compression.decompress(value)
 
         if flags & self.FLAGS['integer']:
-            return int(value)
+            return int(to_str(value))
         elif flags & self.FLAGS['long']:
-            return long(value)
+            return long(to_str(value))
         elif flags & self.FLAGS['pickle']:
             buf = BytesIO(value)
 
@@ -462,6 +464,8 @@ class Protocol(threading.local):
         logger.info('Setting/adding/replacing key %s.' % key)
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
+        if six.PY3 and isinstance(value, str):
+            value = value.encode()
 
         self._send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS[command]['struct'] % (len(key), len(value)),
