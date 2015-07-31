@@ -195,8 +195,6 @@ class MemcachedTests(unittest.TestCase):
         stats = self.client.stats('settings')[self.server]
         self.assertTrue('verbosity' in stats)
 
-        stats = self.client.stats('slabs')[self.server]
-
     def testReconnect(self):
         self.client.set('test_key', 'test')
         self.client.disconnect_all()
