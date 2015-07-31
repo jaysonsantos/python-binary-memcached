@@ -3,6 +3,7 @@ try:
 except ImportError:
     import pickle
 
+import six
 
 from bmemcached.protocol import Protocol
 
@@ -17,21 +18,21 @@ class Client(object):
     def __init__(self, servers=('127.0.0.1:11211',), username=None,
                  password=None, compression=None,
                  socket_timeout=_SOCKET_TIMEOUT,
-                 pickleProtocol=0,
+                 pickle_protocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler):
         """
         :param servers: A list of servers with ip[:port] or unix socket.
         :type servers: list
         :param username: If your server have auth activated, provide it's username.
-        :type username: basestring
+        :type username: six.string_type
         :param password: If your server have auth activated, provide it's password.
-        :type password: basestring
+        :type password: six.string_type
         """
         self.username = username
         self.password = password
         self.compression = compression
         self.socket_timeout = socket_timeout
-        self.pickleProtocol = pickleProtocol
+        self.pickle_protocol = pickle_protocol
         self.pickler = pickler
         self.unpickler = unpickler
         self.set_servers(servers)
@@ -50,7 +51,7 @@ class Client(object):
         :return: Returns nothing
         :rtype: None
         """
-        if isinstance(servers, basestring):
+        if isinstance(servers, six.string_types):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
@@ -59,7 +60,7 @@ class Client(object):
                                   self.password,
                                   self.compression,
                                   self.socket_timeout,
-                                  self.pickleProtocol,
+                                  self.pickle_protocol,
                                   self.pickler,
                                   self.unpickler) for server in servers]
 
@@ -87,7 +88,7 @@ class Client(object):
         Get a key from server.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param get_cas: If true, return (value, cas), where cas is the new CAS value.
         :type get_cas: boolean
         :return: Returns a key data from server.
@@ -108,7 +109,7 @@ class Client(object):
         This method is for API compatibility with other implementations.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :return: Returns (key data, value), or (None, None) if the value is not in cache.
         :rtype: object
         """
@@ -147,7 +148,7 @@ class Client(object):
         Set a value for a key on server.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -166,7 +167,7 @@ class Client(object):
         Set a value for a key on server if its CAS value matches cas.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -203,7 +204,7 @@ class Client(object):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -222,7 +223,7 @@ class Client(object):
         Replace a key/value to server ony if it does exist.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -241,7 +242,7 @@ class Client(object):
         Delete a key/value from server. If key does not exist, it returns True.
 
         :param key: Key's name to be deleted
-        :type key: basestring
+        :type key: six.string_type
         :return: True in case o success and False in case of failure.
         :rtype: bool
         """
@@ -263,7 +264,7 @@ class Client(object):
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: Number to be incremented
         :type value: int
         :return: Actual value of the key on server
@@ -281,7 +282,7 @@ class Client(object):
         Minimum value of decrement return is 0.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: Number to be decremented
         :type value: int
         :return: Actual value of the key on server
@@ -313,7 +314,7 @@ class Client(object):
         Return server stats.
 
         :param key: Optional if you want status from a key.
-        :type key: basestring
+        :type key: six.string_type
         :return: A dict with server stats
         :rtype: dict
         """

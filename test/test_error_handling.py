@@ -39,10 +39,10 @@ class _CacheProxy(multiprocessing.Process):
         client_sock = None
 
         # Data waiting to be sent to client_sock:
-        data_for_client = ''
+        data_for_client = b''
 
         # Data waiting to be sent to server_sock:
-        data_for_server = ''
+        data_for_server = b''
 
         while True:
             read_sockets = [listen_sock]

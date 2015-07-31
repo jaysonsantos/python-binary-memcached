@@ -4,11 +4,22 @@ import re
 import socket
 import struct
 import threading
-from urllib import splitport
+try:
+    from urllib import splitport
+except ImportError:
+    from urllib.parse import splitport
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 import zlib
-from io import BytesIO
+from io import BytesIO, StringIO
+import six
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
+from bmemcached.compat import *
 
 
 logger = logging.getLogger(__name__)
@@ -67,9 +78,9 @@ class Protocol(threading.local):
 
     COMPRESSION_THRESHOLD = 128
 
-    def __init__(self, server, username=None, password=None, compression=None,
-                 socket_timeout=None, pickleProtocol=0,
+    def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None, pickle_protocol=0,
                  pickler=None, unpickler=None):
+        super(Protocol, self).__init__()
         self.server = server
         self._username = username
         self._password = password
@@ -78,7 +89,7 @@ class Protocol(threading.local):
         self.connection = None
         self.authenticated = False
         self.socket_timeout = socket_timeout
-        self.pickleProtocol = pickleProtocol
+        self.pickle_rotocol = pickle_protocol
         self.pickler = pickler
         self.unpickler = unpickler
 
@@ -154,9 +165,9 @@ class Protocol(threading.local):
         :param size: Size in bytes to be read.
         :type size: int
         :return: Data from socket
-        :rtype: basestring
+        :rtype: six.string_type
         """
-        value = ''
+        value = b''
         while len(value) < size:
             data = self.connection.recv(size - len(value))
             if not data:
@@ -218,9 +229,9 @@ class Protocol(threading.local):
         Authenticate user on server.
 
         :param username: Username used to be authenticated.
-        :type username: basestring
+        :type username: six.string_type
         :param password: Password used to be authenticated.
-        :type password: basestring
+        :type password: six.string_type
         :return: True if successful.
         :raises: InvalidCredentials, AuthenticationNotSupported, MemcachedException
         :rtype: bool
@@ -260,8 +271,11 @@ class Protocol(threading.local):
             raise AuthenticationNotSupported('This module only supports '
                                              'PLAIN auth for now.')
 
-        method = 'PLAIN'
+        method = b'PLAIN'
         auth = '\x00%s\x00%s' % (self._username, self._password)
+        if six.PY3:
+            auth = auth.encode()
+
         self._send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
                                          self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
@@ -289,23 +303,24 @@ class Protocol(threading.local):
         Serializes a value based on it's type.
 
         :param value: Something to be serialized
-        :type value: basestring, int, long, object
+        :type value: six.string_type, int, long, object
         :return: Serialized type
         :rtype: str
         """
         flags = 0
         if isinstance(value, str):
-            pass
+            if six.PY3:
+                value = value.encode()
         elif isinstance(value, int) and isinstance(value, bool) is False:
             flags |= self.FLAGS['integer']
             value = str(value)
-        elif isinstance(value, long):
+        elif isinstance(value, long) and isinstance(value, bool) is False:
             flags |= self.FLAGS['long']
             value = str(value)
         else:
             flags |= self.FLAGS['pickle']
             buf = BytesIO()
-            pickler = self.pickler(buf, self.pickleProtocol)
+            pickler = self.pickler(buf, self.pickle_rotocol)
             pickler.dump(value)
             value = buf.getvalue()
 
@@ -320,25 +335,28 @@ class Protocol(threading.local):
         Deserialized values based on flags or just return it if it is not serialized.
 
         :param value: Serialized or not value.
-        :type value: basestring, int
+        :type value: six.string_type, int
         :param flags: Value flags
         :type flags: int
         :return: Deserialized value
-        :rtype: basestring|int
+        :rtype: six.string_type|int
         """
+        to_str = lambda v: v.decode() if six.PY3 else v
+
         if flags & self.FLAGS['compressed']:  # pragma: no branch
             value = self.compression.decompress(value)
 
         if flags & self.FLAGS['integer']:
-            return int(value)
+            return int(to_str(value))
         elif flags & self.FLAGS['long']:
-            return long(value)
+            return long(to_str(value))
         elif flags & self.FLAGS['pickle']:
             buf = BytesIO(value)
+
             unpickler = self.unpickler(buf)
             return unpickler.load()
 
-        return value
+        return value.decode()
 
     def get(self, key):
         """
@@ -346,7 +364,7 @@ class Protocol(threading.local):
         (None, None).
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :return: Returns (value, cas).
         :rtype: object
         """
@@ -355,7 +373,7 @@ class Protocol(threading.local):
                                          self.COMMANDS['get']['struct'] % (len(key)),
                                          self.MAGIC['request'],
                                          self.COMMANDS['get']['command'],
-                                         len(key), 0, 0, 0, len(key), 0, 0, key)
+                                         len(key), 0, 0, 0, len(key), 0, 0, key.encode())
         self._send(data)
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
@@ -391,18 +409,22 @@ class Protocol(threading.local):
         # pipeline N-1 getkq requests, followed by a regular getk to uncork the
         # server
         keys, last = keys[:-1], keys[-1]
-        msg = ''.join([
+        if six.PY2:
+            msg = ''
+        else:
+            msg = b''
+        msg = msg.join([
             struct.pack(self.HEADER_STRUCT +
                         self.COMMANDS['getkq']['struct'] % (len(key)),
                         self.MAGIC['request'],
                         self.COMMANDS['getkq']['command'],
-                        len(key), 0, 0, 0, len(key), 0, 0, key)
+                        len(key), 0, 0, 0, len(key), 0, 0, key.encode())
             for key in keys])
         msg += struct.pack(self.HEADER_STRUCT +
                            self.COMMANDS['getk']['struct'] % (len(last)),
                            self.MAGIC['request'],
                            self.COMMANDS['getk']['command'],
-                           len(last), 0, 0, 0, len(last), 0, 0, last)
+                           len(last), 0, 0, 0, len(last), 0, 0, last.encode())
 
         self._send(msg)
 
@@ -416,7 +438,7 @@ class Protocol(threading.local):
                 flags, key, value = struct.unpack('!L%ds%ds' %
                                                   (keylen, bodylen - keylen - 4),
                                                   extra_content)
-                d[key] = self.deserialize(value, flags), cas
+                d[key.decode()] = self.deserialize(value, flags), cas
             elif status == self.STATUS['server_disconnected']:
                 break
             elif status != self.STATUS['key_not_found']:
@@ -429,7 +451,7 @@ class Protocol(threading.local):
         Function to set/add/replace commands.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -442,6 +464,8 @@ class Protocol(threading.local):
         logger.info('Setting/adding/replacing key %s.' % key)
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
+        if six.PY3 and isinstance(value, str):
+            value = value.encode()
 
         self._send(struct.pack(self.HEADER_STRUCT +
                                          self.COMMANDS[command]['struct'] % (len(key), len(value)),
@@ -449,7 +473,7 @@ class Protocol(threading.local):
                                          self.COMMANDS[command]['command'],
                                          len(key),
                                          8, 0, 0, len(key) + len(value) + 8, 0, cas, flags,
-                                         time, key, value))
+                                         time, key.encode(), value))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -470,7 +494,7 @@ class Protocol(threading.local):
         Set a value for a key on server.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -485,7 +509,7 @@ class Protocol(threading.local):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -510,7 +534,7 @@ class Protocol(threading.local):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -525,7 +549,7 @@ class Protocol(threading.local):
         Replace a key/value to server ony if it does exist.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -573,7 +597,7 @@ class Protocol(threading.local):
                             self.COMMANDS[command]['command'],
                             len(key),
                             8, 0, 0, len(key) + len(value) + 8, 0, cas or 0,
-                            flags, time, key, value)
+                            flags, time, key.encode(), value)
             msg.append(m)
 
         m = struct.pack(self.HEADER_STRUCT +
@@ -583,7 +607,10 @@ class Protocol(threading.local):
                         0, 0, 0, 0, 0, 0, 0)
         msg.append(m)
 
-        msg = ''.join(msg)
+        if six.PY2:
+            msg = ''.join(msg)
+        else:
+            msg = b''.join(msg)
 
         self._send(msg)
 
@@ -604,7 +631,7 @@ class Protocol(threading.local):
         Function which increments and decrements.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: Number to be (de|in)cremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -620,7 +647,7 @@ class Protocol(threading.local):
                                          self.COMMANDS[command]['command'],
                                          len(key),
                                          20, 0, 0, len(key) + 20, 0, 0, value,
-                                         default, time, key))
+                                         default, time, key.encode()))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -637,7 +664,7 @@ class Protocol(threading.local):
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: Number to be incremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -655,7 +682,7 @@ class Protocol(threading.local):
         Minimum value of decrement return is 0.
 
         :param key: Key's name
-        :type key: basestring
+        :type key: six.string_type
         :param value: Number to be decremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -672,7 +699,7 @@ class Protocol(threading.local):
         Delete a key/value from server. If key existed and was deleted, it returns True.
 
         :param key: Key's name to be deleted
-        :type key: basestring
+        :type key: six.string_type
         :param cas: If set, only delete the key if its CAS value matches.
         :type cas: int
         :return: True in case o success and False in case of failure.
@@ -683,7 +710,7 @@ class Protocol(threading.local):
                                          self.COMMANDS['delete']['struct'] % len(key),
                                          self.MAGIC['request'],
                                          self.COMMANDS['delete']['command'],
-                                         len(key), 0, 0, 0, len(key), 0, cas, key))
+                                         len(key), 0, 0, 0, len(key), 0, cas, key.encode()))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -706,14 +733,17 @@ class Protocol(threading.local):
         :rtype: bool
         """
         logger.info('Deleting keys %r' % keys)
-        msg = ''
+        if six.PY2:
+            msg = ''
+        else:
+            msg = b''
         for key in keys:
             msg += struct.pack(
                 self.HEADER_STRUCT +
                 self.COMMANDS['delete']['struct'] % len(key),
                 self.MAGIC['request'],
                 self.COMMANDS['delete']['command'],
-                len(key), 0, 0, 0, len(key), 0, 0, key)
+                len(key), 0, 0, 0, len(key), 0, 0, key.encode())
 
         msg += struct.pack(
             self.HEADER_STRUCT +
@@ -766,12 +796,14 @@ class Protocol(threading.local):
         Return server stats.
 
         :param key: Optional if you want status from a key.
-        :type key: basestring
+        :type key: six.string_type
         :return: A dict with server stats
         :rtype: dict
         """
         # TODO: Stats with key is not working.
         if key is not None:
+            if isinstance(key, str) and six.PY3:
+                key = key.encode()
             keylen = len(key)
             packed = struct.pack(
                 self.HEADER_STRUCT + '%ds' % keylen,
@@ -805,7 +837,7 @@ class Protocol(threading.local):
             extra_content = response[-1]
             key = extra_content[:keylen]
             body = extra_content[keylen:bodylen]
-            value[key] = body
+            value[key.decode() if isinstance(key, bytes) else key] = body
 
         return value
 

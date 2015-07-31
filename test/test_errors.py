@@ -1,7 +1,11 @@
+import six
 import unittest
-import mock
 import bmemcached
 from bmemcached.exceptions import MemcachedException
+if six.PY3:
+    from unittest import mock
+else:
+    import mock
 
 
 class TestMemcachedErrors(unittest.TestCase):
