@@ -802,6 +802,8 @@ class Protocol(threading.local):
         """
         # TODO: Stats with key is not working.
         if key is not None:
+            if isinstance(key, str) and six.PY3:
+                key = key.encode()
             keylen = len(key)
             packed = struct.pack(
                 self.HEADER_STRUCT + '%ds' % keylen,
@@ -835,7 +837,7 @@ class Protocol(threading.local):
             extra_content = response[-1]
             key = extra_content[:keylen]
             body = extra_content[keylen:bodylen]
-            value[key] = body
+            value[key.decode() if isinstance(key, bytes) else key] = body
 
         return value
 
