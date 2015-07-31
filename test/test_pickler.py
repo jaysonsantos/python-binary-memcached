@@ -1,3 +1,5 @@
+from io import BytesIO
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -13,9 +15,17 @@ class JsonPickler(object):
         self.f = f
 
     def dump(self, obj):
+        # if isinstance(obj, str):
+        #     obj = obj.encode()
+
+        if isinstance(self.f, BytesIO):
+            return self.f.write(json.dumps(obj).encode())
+
         return json.dump(obj, self.f)
 
     def load(self):
+        if isinstance(self.f, BytesIO):
+            return json.loads(self.f.read().decode())
         return json.load(self.f)
 
 

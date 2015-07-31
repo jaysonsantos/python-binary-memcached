@@ -18,7 +18,7 @@ class Client(object):
     def __init__(self, servers=('127.0.0.1:11211',), username=None,
                  password=None, compression=None,
                  socket_timeout=_SOCKET_TIMEOUT,
-                 pickleProtocol=0,
+                 pickle_protocol=0,
                  pickler=pickle.Pickler, unpickler=pickle.Unpickler):
         """
         :param servers: A list of servers with ip[:port] or unix socket.
@@ -32,7 +32,7 @@ class Client(object):
         self.password = password
         self.compression = compression
         self.socket_timeout = socket_timeout
-        self.pickleProtocol = pickleProtocol
+        self.pickle_protocol = pickle_protocol
         self.pickler = pickler
         self.unpickler = unpickler
         self.set_servers(servers)
@@ -60,7 +60,7 @@ class Client(object):
                                   self.password,
                                   self.compression,
                                   self.socket_timeout,
-                                  self.pickleProtocol,
+                                  self.pickle_protocol,
                                   self.pickler,
                                   self.unpickler) for server in servers]
 

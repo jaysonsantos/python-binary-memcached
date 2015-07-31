@@ -78,9 +78,9 @@ class Protocol(threading.local):
 
     COMPRESSION_THRESHOLD = 128
 
-    def __init__(self, server, username=None, password=None, compression=None,
-                 socket_timeout=None, pickleProtocol=0,
+    def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None, pickle_protocol=0,
                  pickler=None, unpickler=None):
+        super(Protocol, self).__init__()
         self.server = server
         self._username = username
         self._password = password
@@ -89,7 +89,7 @@ class Protocol(threading.local):
         self.connection = None
         self.authenticated = False
         self.socket_timeout = socket_timeout
-        self.pickleProtocol = pickleProtocol
+        self.pickle_rotocol = pickle_protocol
         self.pickler = pickler
         self.unpickler = unpickler
 
@@ -314,13 +314,13 @@ class Protocol(threading.local):
         elif isinstance(value, int) and isinstance(value, bool) is False:
             flags |= self.FLAGS['integer']
             value = str(value)
-        elif isinstance(value, long):
+        elif isinstance(value, long) and isinstance(value, bool) is False:
             flags |= self.FLAGS['long']
             value = str(value)
         else:
             flags |= self.FLAGS['pickle']
             buf = BytesIO()
-            pickler = self.pickler(buf, self.pickleProtocol)
+            pickler = self.pickler(buf, self.pickle_rotocol)
             pickler.dump(value)
             value = buf.getvalue()
 
