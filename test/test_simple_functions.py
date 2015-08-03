@@ -112,6 +112,10 @@ class MemcachedTests(unittest.TestCase):
         self.client.set('test_key', '')
         self.assertEqual('', self.client.get('test_key'))
 
+    def testGetUnicodeString(self):
+        self.client.set('test_key', '\xac')
+        self.assertEqual('\xac', self.client.get('test_key'))
+
     def testGetMulti(self):
         self.assertTrue(self.client.set_multi({
             'test_key': 'value',
