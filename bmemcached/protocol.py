@@ -13,13 +13,14 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+    assert pickle
 
 import zlib
 from io import BytesIO
 import six
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
-from bmemcached.compat import *
+from bmemcached.compat import long
 
 
 logger = logging.getLogger(__name__)
@@ -250,9 +251,9 @@ class Protocol(threading.local):
 
         logger.info('Authenticating as %s' % self._username)
         self._send(struct.pack(self.HEADER_STRUCT,
-                                         self.MAGIC['request'],
-                                         self.COMMANDS['auth_negotiation']['command'],
-                                         0, 0, 0, 0, 0, 0, 0))
+                               self.MAGIC['request'],
+                               self.COMMANDS['auth_negotiation']['command'],
+                               0, 0, 0, 0, 0, 0, 0))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -267,7 +268,7 @@ class Protocol(threading.local):
 
         methods = extra_content
 
-        if not 'PLAIN' in methods:
+        if 'PLAIN' not in methods:
             raise AuthenticationNotSupported('This module only supports '
                                              'PLAIN auth for now.')
 
@@ -277,9 +278,9 @@ class Protocol(threading.local):
             auth = auth.encode()
 
         self._send(struct.pack(self.HEADER_STRUCT +
-                                         self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
-                                         self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
-                                         len(method), 0, 0, 0, len(method) + len(auth), 0, 0, method, auth))
+                               self.COMMANDS['auth_request']['struct'] % (len(method), len(auth)),
+                               self.MAGIC['request'], self.COMMANDS['auth_request']['command'],
+                               len(method), 0, 0, 0, len(method) + len(auth), 0, 0, method, auth))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -370,10 +371,10 @@ class Protocol(threading.local):
         """
         logger.info('Getting key %s' % key)
         data = struct.pack(self.HEADER_STRUCT +
-                                         self.COMMANDS['get']['struct'] % (len(key)),
-                                         self.MAGIC['request'],
-                                         self.COMMANDS['get']['command'],
-                                         len(key), 0, 0, 0, len(key), 0, 0, key.encode())
+                           self.COMMANDS['get']['struct'] % (len(key)),
+                           self.MAGIC['request'],
+                           self.COMMANDS['get']['command'],
+                           len(key), 0, 0, 0, len(key), 0, 0, key.encode())
         self._send(data)
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
@@ -468,12 +469,11 @@ class Protocol(threading.local):
             value = value.encode()
 
         self._send(struct.pack(self.HEADER_STRUCT +
-                                         self.COMMANDS[command]['struct'] % (len(key), len(value)),
-                                         self.MAGIC['request'],
-                                         self.COMMANDS[command]['command'],
-                                         len(key),
-                                         8, 0, 0, len(key) + len(value) + 8, 0, cas, flags,
-                                         time, key.encode(), value))
+                               self.COMMANDS[command]['struct'] % (len(key), len(value)),
+                               self.MAGIC['request'],
+                               self.COMMANDS[command]['command'],
+                               len(key), 8, 0, 0, len(key) + len(value) + 8, 0, cas, flags,
+                               time, key.encode(), value))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -582,7 +582,6 @@ class Protocol(threading.local):
             else:
                 cas = None
 
-            final = False
             if cas == 0:
                 # Like cas(), if the cas value is 0, treat it as compare-and-set against not
                 # existing.
@@ -642,12 +641,12 @@ class Protocol(threading.local):
         :rtype: int
         """
         self._send(struct.pack(self.HEADER_STRUCT +
-                                         self.COMMANDS[command]['struct'] % len(key),
-                                         self.MAGIC['request'],
-                                         self.COMMANDS[command]['command'],
-                                         len(key),
-                                         20, 0, 0, len(key) + 20, 0, 0, value,
-                                         default, time, key.encode()))
+                               self.COMMANDS[command]['struct'] % len(key),
+                               self.MAGIC['request'],
+                               self.COMMANDS[command]['command'],
+                               len(key),
+                               20, 0, 0, len(key) + 20, 0, 0, value,
+                               default, time, key.encode()))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -707,10 +706,10 @@ class Protocol(threading.local):
         """
         logger.info('Deleting key %s' % key)
         self._send(struct.pack(self.HEADER_STRUCT +
-                                         self.COMMANDS['delete']['struct'] % len(key),
-                                         self.MAGIC['request'],
-                                         self.COMMANDS['delete']['command'],
-                                         len(key), 0, 0, 0, len(key), 0, cas, key.encode()))
+                               self.COMMANDS['delete']['struct'] % len(key),
+                               self.MAGIC['request'],
+                               self.COMMANDS['delete']['command'],
+                               len(key), 0, 0, 0, len(key), 0, cas, key.encode()))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -777,10 +776,10 @@ class Protocol(threading.local):
         """
         logger.info('Flushing memcached')
         self._send(struct.pack(self.HEADER_STRUCT +
-                                         self.COMMANDS['flush']['struct'],
-                                         self.MAGIC['request'],
-                                         self.COMMANDS['flush']['command'],
-                                         0, 4, 0, 0, 4, 0, 0, time))
+                               self.COMMANDS['flush']['struct'],
+                               self.MAGIC['request'],
+                               self.COMMANDS['flush']['command'],
+                               0, 4, 0, 0, 4, 0, 0, time))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -851,4 +850,3 @@ class Protocol(threading.local):
         if self.connection:
             self.connection.close()
             self.connection = None
-
