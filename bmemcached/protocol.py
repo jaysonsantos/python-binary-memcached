@@ -15,7 +15,7 @@ except ImportError:
     import pickle
 
 import zlib
-from io import BytesIO, StringIO
+from io import BytesIO
 import six
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
