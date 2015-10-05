@@ -138,7 +138,7 @@ class Client(object):
                     for key, (value, cas) in results.items():
                         results[key] = value
                 d.update(results)
-                keys = [_ for _ in keys if not _ in d]
+                keys = [_ for _ in keys if _ not in d]
                 if not keys:
                     break
         return d
