@@ -1,5 +1,7 @@
 #!/bin/bash
 sudo service memcached stop
 py.test --version
-PYTHONPATH=. py.test --cov=bmemcached
+export PYTHONPATH=.
+python setup.py develop
+py.test --cov=bmemcached
 exit $?
