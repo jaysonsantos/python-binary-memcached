@@ -19,8 +19,9 @@ import zlib
 from io import BytesIO
 import six
 
-from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 from bmemcached.compat import long
+from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
+from bmemcached.utils import str_to_bytes
 
 
 logger = logging.getLogger(__name__)
@@ -374,7 +375,7 @@ class Protocol(threading.local):
                            self.COMMANDS['get']['struct'] % (len(key)),
                            self.MAGIC['request'],
                            self.COMMANDS['get']['command'],
-                           len(key), 0, 0, 0, len(key), 0, 0, key.encode())
+                           len(key), 0, 0, 0, len(key), 0, 0, str_to_bytes(key))
         self._send(data)
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
@@ -419,7 +420,7 @@ class Protocol(threading.local):
                         self.COMMANDS['getkq']['struct'] % (len(key)),
                         self.MAGIC['request'],
                         self.COMMANDS['getkq']['command'],
-                        len(key), 0, 0, 0, len(key), 0, 0, key.encode())
+                        len(key), 0, 0, 0, len(key), 0, 0, str_to_bytes(key))
             for key in keys])
         msg += struct.pack(self.HEADER_STRUCT +
                            self.COMMANDS['getk']['struct'] % (len(last)),
@@ -473,7 +474,7 @@ class Protocol(threading.local):
                                self.MAGIC['request'],
                                self.COMMANDS[command]['command'],
                                len(key), 8, 0, 0, len(key) + len(value) + 8, 0, cas, flags,
-                               time, key.encode(), value))
+                               time, str_to_bytes(key), value))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -596,7 +597,7 @@ class Protocol(threading.local):
                             self.COMMANDS[command]['command'],
                             len(key),
                             8, 0, 0, len(key) + len(value) + 8, 0, cas or 0,
-                            flags, time, key.encode(), value)
+                            flags, time, str_to_bytes(key), value)
             msg.append(m)
 
         m = struct.pack(self.HEADER_STRUCT +
@@ -646,7 +647,7 @@ class Protocol(threading.local):
                                self.COMMANDS[command]['command'],
                                len(key),
                                20, 0, 0, len(key) + 20, 0, 0, value,
-                               default, time, key.encode()))
+                               default, time, str_to_bytes(key)))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -709,7 +710,7 @@ class Protocol(threading.local):
                                self.COMMANDS['delete']['struct'] % len(key),
                                self.MAGIC['request'],
                                self.COMMANDS['delete']['command'],
-                               len(key), 0, 0, 0, len(key), 0, cas, key.encode()))
+                               len(key), 0, 0, 0, len(key), 0, cas, str_to_bytes(key)))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -742,7 +743,7 @@ class Protocol(threading.local):
                 self.COMMANDS['delete']['struct'] % len(key),
                 self.MAGIC['request'],
                 self.COMMANDS['delete']['command'],
-                len(key), 0, 0, 0, len(key), 0, 0, key.encode())
+                len(key), 0, 0, 0, len(key), 0, 0, str_to_bytes(key))
 
         msg += struct.pack(
             self.HEADER_STRUCT +
@@ -802,7 +803,7 @@ class Protocol(threading.local):
         # TODO: Stats with key is not working.
         if key is not None:
             if isinstance(key, str) and six.PY3:
-                key = key.encode()
+                key = str_to_bytes(key)
             keylen = len(key)
             packed = struct.pack(
                 self.HEADER_STRUCT + '%ds' % keylen,
