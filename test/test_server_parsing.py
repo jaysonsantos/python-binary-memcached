@@ -43,7 +43,7 @@ class TestServerParsing(unittest.TestCase):
         """
         If username/password passed to Client, auto-authenticate.
         """
-        mocked_response.return_value = (0, 0, 0, 0, 0, 0, 0, 0, 0, ['PLAIN'])
+        mocked_response.return_value = (0, 0, 0, 0, 0, 0, 0, 0, 0, [b'PLAIN'])
         client = bmemcached.Client('127.0.0.1:11211', username='user',
                                    password='password')
         server = list(client.servers)[0]
@@ -56,7 +56,7 @@ class TestServerParsing(unittest.TestCase):
 
     @mock.patch.object(bmemcached.client.Protocol, '_get_response')
     def testNoCredentialsNoAuth(self, mocked_response):
-        mocked_response.return_value = (0, 0, 0, 0, 0, 0x01, 0, 0, 0, ['PLAIN'])
+        mocked_response.return_value = (0, 0, 0, 0, 0, 0x01, 0, 0, 0, [b'PLAIN'])
         client = bmemcached.Client('127.0.0.1:11211')
         server = list(client.servers)[0]
 
