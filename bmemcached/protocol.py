@@ -269,7 +269,7 @@ class Protocol(threading.local):
 
         methods = extra_content
 
-        if 'PLAIN' not in methods:
+        if b'PLAIN' not in methods:
             raise AuthenticationNotSupported('This module only supports '
                                              'PLAIN auth for now.')
 
