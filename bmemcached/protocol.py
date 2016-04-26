@@ -78,6 +78,8 @@ class Protocol(threading.local):
         'compressed': 1 << 3
     }
 
+    MAXIMUM_EXPIRE_TIME = 0xfffffffe
+
     COMPRESSION_THRESHOLD = 128
 
     def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None, pickle_protocol=0,
@@ -463,6 +465,7 @@ class Protocol(threading.local):
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
+        time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
         logger.info('Setting/adding/replacing key %s.' % key)
         flags, value = self.serialize(value)
         logger.info('Value bytes %d.' % len(value))
@@ -641,6 +644,7 @@ class Protocol(threading.local):
         :return: Actual value of the key on server
         :rtype: int
         """
+        time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
         self._send(struct.pack(self.HEADER_STRUCT +
                                self.COMMANDS[command]['struct'] % len(key),
                                self.MAGIC['request'],
