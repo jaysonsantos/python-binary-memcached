@@ -2,5 +2,5 @@ language: python
 python:
   - "2.7"
   - "3.4"
-install: pip install -r requirements_test.txt --use-mirrors && python setup.py develop
+install: pip install -r requirements_test.txt && python setup.py develop
 script: ./.travis-runs-tests.sh
