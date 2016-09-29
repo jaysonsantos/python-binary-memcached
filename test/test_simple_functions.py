@@ -2,12 +2,19 @@ import unittest
 import bmemcached
 from bmemcached.compat import long, unicode
 
+import six
+if six.PY3:
+    from unittest import mock
+else:
+    import mock
+
 
 class MemcachedTests(unittest.TestCase):
     def setUp(self):
         self.server = '127.0.0.1:11211'
         self.server = '/tmp/memcached.sock'
-        self.client = bmemcached.Client(self.server)
+        self.client = bmemcached.Client(self.server, 'user', 'password')
+        self.reset()
 
     def tearDown(self):
         self.reset()
@@ -29,9 +36,27 @@ class MemcachedTests(unittest.TestCase):
         self.client.set_multi(
             dict((unicode(k), b'value') for k in range(32767)))
 
-    def testGet(self):
+    def testGetSimple(self):
         self.client.set('test_key', 'test')
         self.assertEqual('test', self.client.get('test_key'))
+
+    def testGetRawBytes(self):
+        # Ensure the code is 8-bit clean.
+        value = b'\x01z\x7f\x00\x80\xfe\xff\x00'
+        self.client.set('test_key', value)
+        self.assertEqual(value, self.client.get('test_key', raw=True))
+
+    def testGetRawText(self):
+        self.client.set('test_key', u'\u30b7')
+        self.assertEqual(b'\xe3\x82\xb7', self.client.get('test_key', raw=True))
+
+    def testGetDecodedText(self):
+        self.client.set('test_key', u'\u30b7')
+        self.assertEqual(u'\u30b7', self.client.get('test_key'))
+
+    def testGetRawInt(self):
+        self.client.set('test_key', 1234)
+        self.assertEqual(b'1234', self.client.get('test_key', raw=True))
 
     def testCas(self):
         value, cas = self.client.gets('nonexistant')
@@ -113,8 +138,8 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual('', self.client.get('test_key'))
 
     def testGetUnicodeString(self):
-        self.client.set('test_key', '\xac')
-        self.assertEqual('\xac', self.client.get('test_key'))
+        self.client.set('test_key', u'\xac')
+        self.assertEqual(u'\xac', self.client.get('test_key'))
 
     def testGetMulti(self):
         self.assertTrue(self.client.set_multi({
@@ -221,6 +246,13 @@ class TimeoutMemcachedTests(unittest.TestCase):
     def testTimeout(self):
         self.client = bmemcached.Client(self.server, 'user', 'password',
                                         socket_timeout=0.00000000000001)
+
+        for proto in self.client._servers:
+            # Set up a mock connection that gives the impression of
+            # timing out in every recv() call.
+            proto.connection = mock.Mock()
+            proto.connection.recv.return_value = b''
+
         self.client.set('timeout_key', 'test')
         self.assertEqual(self.client.get('timeout_key'), None)
 
