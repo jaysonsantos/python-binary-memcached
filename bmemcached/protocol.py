@@ -354,22 +354,27 @@ class Protocol(threading.local):
         if raw:
             return value
 
-        if six.PY3:
-            to_str = lambda v: v.decode('utf8')
-        else:
-            to_str = lambda v: v
-
         if flags & self.FLAGS['integer']:
-            return int(to_str(value))
+            return int(value)
         elif flags & self.FLAGS['long']:
-            return long(to_str(value))
+            return long(value)
         elif flags & self.FLAGS['pickle']:
             buf = BytesIO(value)
 
             unpickler = self.unpickler(buf)
             return unpickler.load()
 
-        return to_str(value)
+        if six.PY3:
+            return value.decode('utf8')
+
+        # In Python 2, mimic the behavior of the json library: return a str
+        # unless the value contains unicode characters.
+        try:
+            value.decode('ascii')
+        except UnicodeDecodeError:
+            return value.decode('utf8')
+        else:
+            return value
 
     def get(self, key, raw=False):
         """
