@@ -83,7 +83,7 @@ class Client(object):
         # add exponential falloff in the future.  _set_retry_delay is exposed for tests.
         self._set_retry_delay(5 if enable else 0)
 
-    def get(self, key, get_cas=False):
+    def get(self, key, get_cas=False, raw=False):
         """
         Get a key from server.
 
@@ -91,11 +91,14 @@ class Client(object):
         :type key: six.string_type
         :param get_cas: If true, return (value, cas), where cas is the new CAS value.
         :type get_cas: boolean
+        :param raw: If true, the binary string value will be returned without
+            decoding or conversion (but with decompression). Default is false.
+        :type raw: bool
         :return: Returns a key data from server.
         :rtype: object
         """
         for server in self.servers:
-            value, cas = server.get(key)
+            value, cas = server.get(key, raw=raw)
             if value is not None:
                 if get_cas:
                     return value, cas
@@ -119,7 +122,7 @@ class Client(object):
                 return value, cas
         return None, None
 
-    def get_multi(self, keys, get_cas=False):
+    def get_multi(self, keys, get_cas=False, raw=False):
         """
         Get multiple keys from server.
 
@@ -127,13 +130,16 @@ class Client(object):
         :type keys: list
         :param get_cas: If get_cas is true, each value is (data, cas), with each result's CAS value.
         :type get_cas: boolean
+        :param raw: If true, the binary string value will be returned without
+            decoding or conversion (but with decompression). Default is false.
+        :type raw: bool
         :return: A dict with all requested keys.
         :rtype: dict
         """
         d = {}
         if keys:
             for server in self.servers:
-                results = server.get_multi(keys)
+                results = server.get_multi(keys, raw=raw)
                 if not get_cas:
                     for key, (value, cas) in results.items():
                         results[key] = value
@@ -143,7 +149,7 @@ class Client(object):
                     break
         return d
 
-    def set(self, key, value, time=0):
+    def set(self, key, value, time=0, compress=True):
         """
         Set a value for a key on server.
 
@@ -153,16 +159,18 @@ class Client(object):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param compress: If true, the value will be compressed if possible.
+        :type compress: bool
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
         returns = []
         for server in self.servers:
-            returns.append(server.set(key, value, time))
+            returns.append(server.set(key, value, time, compress=compress))
 
         return any(returns)
 
-    def cas(self, key, value, cas, time=0):
+    def cas(self, key, value, cas, time=0, compress=True):
         """
         Set a value for a key on server if its CAS value matches cas.
 
@@ -172,16 +180,18 @@ class Client(object):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param compress: If true, the value will be compressed if possible.
+        :type compress: bool
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
         returns = []
         for server in self.servers:
-            returns.append(server.cas(key, value, cas, time))
+            returns.append(server.cas(key, value, cas, time, compress=compress))
 
         return any(returns)
 
-    def set_multi(self, mappings, time=0):
+    def set_multi(self, mappings, time=0, compress=True):
         """
         Set multiple keys with it's values on server.
 
@@ -189,17 +199,19 @@ class Client(object):
         :type mappings: dict
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param compress: If true, the value will be compressed if possible.
+        :type compress: bool
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
         returns = []
         if mappings:
             for server in self.servers:
-                returns.append(server.set_multi(mappings, time))
+                returns.append(server.set_multi(mappings, time, compress=compress))
 
         return all(returns)
 
-    def add(self, key, value, time=0):
+    def add(self, key, value, time=0, compress=True):
         """
         Add a key/value to server ony if it does not exist.
 
@@ -209,6 +221,8 @@ class Client(object):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param compress: If true, the value will be compressed if possible.
+        :type compress: bool
         :return: True if key is added False if key already exists
         :rtype: bool
         """
@@ -218,7 +232,7 @@ class Client(object):
 
         return any(returns)
 
-    def replace(self, key, value, time=0):
+    def replace(self, key, value, time=0, compress=True):
         """
         Replace a key/value to server ony if it does exist.
 
@@ -228,12 +242,14 @@ class Client(object):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param compress: If true, the value will be compressed if possible.
+        :type compress: bool
         :return: True if key is replace False if key does not exists
         :rtype: bool
         """
         returns = []
         for server in self.servers:
-            returns.append(server.replace(key, value, time))
+            returns.append(server.replace(key, value, time, compress=compress))
 
         return any(returns)
 
