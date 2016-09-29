@@ -10,9 +10,9 @@ except ImportError:
     from urllib.parse import splitport
 
 import zlib
-from io import BytesIO
 import six
 from six import binary_type, text_type
+import json
 
 from bmemcached.compat import long
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
@@ -67,7 +67,7 @@ class Protocol(threading.local):
     }
 
     FLAGS = {
-        'pickle': 1 << 0,
+        'object': 1 << 0,
         'integer': 1 << 1,
         'long': 1 << 2,
         'compressed': 1 << 3
@@ -77,8 +77,8 @@ class Protocol(threading.local):
 
     COMPRESSION_THRESHOLD = 128
 
-    def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None, pickle_protocol=0,
-                 pickler=None, unpickler=None):
+    def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None,
+                 dumps=None, loads=None):
         super(Protocol, self).__init__()
         self.server = server
         self._username = username
@@ -88,9 +88,8 @@ class Protocol(threading.local):
         self.connection = None
         self.authenticated = False
         self.socket_timeout = socket_timeout
-        self.pickle_rotocol = pickle_protocol
-        self.pickler = pickler
-        self.unpickler = unpickler
+        self.dumps = dumps
+        self.loads = loads
 
         self.reconnects_deferred_until = None
 
@@ -319,11 +318,11 @@ class Protocol(threading.local):
             flags |= self.FLAGS['long']
             value = str(value)
         else:
-            flags |= self.FLAGS['pickle']
-            buf = BytesIO()
-            pickler = self.pickler(buf, self.pickle_rotocol)
-            pickler.dump(value)
-            value = buf.getvalue()
+            flags |= self.FLAGS['object']
+            dumps = self.dumps
+            if dumps is None:
+                dumps = self.json_dumps
+            value = dumps(value)
 
         if compress and len(value) > self.COMPRESSION_THRESHOLD:
             compressed_value = self.compression.compress(value)
@@ -348,28 +347,41 @@ class Protocol(threading.local):
         :return: Deserialized value
         :rtype: six.string_type|int
         """
-        if flags & self.FLAGS['compressed']:  # pragma: no branch
+        FLAGS = self.FLAGS
+
+        if flags & FLAGS['compressed']:  # pragma: no branch
             value = self.compression.decompress(value)
 
         if raw:
             return value
 
+        if flags & FLAGS['integer']:
+            return int(value)
+        elif flags & FLAGS['long']:
+            return long(value)
+        elif flags & FLAGS['object']:
+            loads = self.loads
+            if loads is None:
+                loads = self.json_loads
+            return loads(value)
+
         if six.PY3:
-            to_str = lambda v: v.decode('utf8')
+            return value.decode('utf8')
+
+        # In Python 2, mimic the behavior of the json library: return a str
+        # unless the value contains unicode characters.
+        try:
+            value.decode('ascii')
+        except UnicodeDecodeError:
+            return value.decode('utf8')
         else:
-            to_str = lambda v: v
+            return value
 
-        if flags & self.FLAGS['integer']:
-            return int(to_str(value))
-        elif flags & self.FLAGS['long']:
-            return long(to_str(value))
-        elif flags & self.FLAGS['pickle']:
-            buf = BytesIO(value)
+    def json_dumps(self, value):
+        return json.dumps(value).encode('utf8')
 
-            unpickler = self.unpickler(buf)
-            return unpickler.load()
-
-        return to_str(value)
+    def json_loads(self, value):
+        return json.loads(value.decode('utf8'))
 
     def get(self, key, raw=False):
         """

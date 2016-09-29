@@ -14,6 +14,7 @@ class MemcachedTests(unittest.TestCase):
         self.server = '127.0.0.1:11211'
         self.server = '/tmp/memcached.sock'
         self.client = bmemcached.Client(self.server, 'user', 'password')
+        self.reset()
 
     def tearDown(self):
         self.reset()
