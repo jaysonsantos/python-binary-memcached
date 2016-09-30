@@ -377,6 +377,12 @@ class Protocol(threading.local):
         else:
             return value
 
+    def json_dumps(self, value):
+        return json.dumps(value).encode('utf8')
+
+    def json_loads(self, value):
+        return json.loads(value.decode('utf8'))
+
     def get(self, key, raw=False):
         """
         Get a key and its CAS value from server.  If the value isn't cached, return
