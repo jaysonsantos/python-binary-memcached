@@ -246,7 +246,7 @@ class Protocol(threading.local):
         if not self._username or not self._password:
             return False
 
-        logger.info('Authenticating as %s' % self._username)
+        logger.info('Authenticating as %s', self._username)
         self._send(struct.pack(self.HEADER_STRUCT,
                                self.MAGIC['request'],
                                self.COMMANDS['auth_negotiation']['command'],
@@ -291,7 +291,7 @@ class Protocol(threading.local):
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
-        logger.debug('Auth OK. Code: %d Message: %s' % (status, extra_content))
+        logger.debug('Auth OK. Code: %d Message: %s', status, extra_content)
 
         self.authenticated = True
         return True
@@ -396,7 +396,7 @@ class Protocol(threading.local):
         :return: Returns (value, cas).
         :rtype: object
         """
-        logger.info('Getting key %s' % key)
+        logger.debug('Getting key %s', key)
         data = struct.pack(self.HEADER_STRUCT +
                            self.COMMANDS['get']['struct'] % (len(key)),
                            self.MAGIC['request'],
@@ -407,13 +407,12 @@ class Protocol(threading.local):
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
 
-        logger.debug('Value Length: %d. Body length: %d. Data type: %d' % (
-            extlen, bodylen, datatype))
+        logger.debug('Value Length: %d. Body length: %d. Data type: %d',
+                     extlen, bodylen, datatype)
 
         if status != self.STATUS['success']:
             if status == self.STATUS['key_not_found']:
-                logger.debug('Key not found. Message: %s'
-                             % extra_content)
+                logger.debug('Key not found. Message: %s', extra_content)
                 return None, None
 
             if status == self.STATUS['server_disconnected']:
@@ -495,9 +494,9 @@ class Protocol(threading.local):
         :rtype: bool
         """
         time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
-        logger.info('Setting/adding/replacing key %s.' % key)
+        logger.debug('Setting/adding/replacing key %s.', key)
         flags, value = self.serialize(value, compress=compress)
-        logger.info('Value bytes %d.' % len(value))
+        logger.debug('Value bytes %s.', len(value))
         if isinstance(value, text_type):
             value = value.encode('utf8')
 
@@ -748,7 +747,7 @@ class Protocol(threading.local):
         :return: True in case o success and False in case of failure.
         :rtype: bool
         """
-        logger.info('Deleting key %s' % key)
+        logger.debug('Deleting key %s', key)
         self._send(struct.pack(self.HEADER_STRUCT +
                                self.COMMANDS['delete']['struct'] % len(key),
                                self.MAGIC['request'],
@@ -763,7 +762,7 @@ class Protocol(threading.local):
         if status != self.STATUS['success'] and status not in (self.STATUS['key_not_found'], self.STATUS['key_exists']):
             raise MemcachedException('Code: %d message: %s' % (status, extra_content))
 
-        logger.debug('Key deleted %s' % key)
+        logger.debug('Key deleted %s', key)
         return status != self.STATUS['key_exists']
 
     def delete_multi(self, keys):
@@ -775,7 +774,7 @@ class Protocol(threading.local):
         :return: True in case of success and False in case of failure.
         :rtype: bool
         """
-        logger.info('Deleting keys %r' % keys)
+        logger.debug('Deleting keys %r', keys)
         if six.PY2:
             msg = ''
         else:
