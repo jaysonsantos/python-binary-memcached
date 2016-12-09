@@ -156,7 +156,7 @@ class Client(object):
                     break
         return d
 
-    def set(self, key, value, time=0, compress=True):
+    def set(self, key, value, time=0, compress_level=-1):
         """
         Set a value for a key on server.
 
@@ -166,18 +166,20 @@ class Client(object):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
         returns = []
         for server in self.servers:
-            returns.append(server.set(key, value, time, compress=compress))
+            returns.append(server.set(key, value, time, compress_level=compress_level))
 
         return any(returns)
 
-    def cas(self, key, value, cas, time=0, compress=True):
+    def cas(self, key, value, cas, time=0, compress_level=-1):
         """
         Set a value for a key on server if its CAS value matches cas.
 
@@ -187,18 +189,20 @@ class Client(object):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
         returns = []
         for server in self.servers:
-            returns.append(server.cas(key, value, cas, time, compress=compress))
+            returns.append(server.cas(key, value, cas, time, compress_level=compress_level))
 
         return any(returns)
 
-    def set_multi(self, mappings, time=0, compress=True):
+    def set_multi(self, mappings, time=0, compress_level=-1):
         """
         Set multiple keys with it's values on server.
 
@@ -206,19 +210,21 @@ class Client(object):
         :type mappings: dict
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
         returns = []
         if mappings:
             for server in self.servers:
-                returns.append(server.set_multi(mappings, time, compress=compress))
+                returns.append(server.set_multi(mappings, time, compress_level=compress_level))
 
         return all(returns)
 
-    def add(self, key, value, time=0, compress=True):
+    def add(self, key, value, time=0, compress_level=-1):
         """
         Add a key/value to server ony if it does not exist.
 
@@ -228,18 +234,20 @@ class Client(object):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True if key is added False if key already exists
         :rtype: bool
         """
         returns = []
         for server in self.servers:
-            returns.append(server.add(key, value, time))
+            returns.append(server.add(key, value, time, compress_level=compress_level))
 
         return any(returns)
 
-    def replace(self, key, value, time=0, compress=True):
+    def replace(self, key, value, time=0, compress_level=-1):
         """
         Replace a key/value to server ony if it does exist.
 
@@ -249,14 +257,16 @@ class Client(object):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True if key is replace False if key does not exists
         :rtype: bool
         """
         returns = []
         for server in self.servers:
-            returns.append(server.replace(key, value, time, compress=compress))
+            returns.append(server.replace(key, value, time, compress_level=compress_level))
 
         return any(returns)
 

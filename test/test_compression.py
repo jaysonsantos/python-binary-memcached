@@ -45,7 +45,7 @@ class MemcachedTests(unittest.TestCase):
         compression.decompress.side_effect = zlib.decompress
         for proto in self.client._servers:
             proto.compression = compression
-        self.client.set('test_key', self.data, compress=True)
+        self.client.set('test_key', self.data)
         self.assertEqual(self.data, self.client.get('test_key'))
         compression.compress.assert_called_with(self.data.encode('ascii'))
         self.assertEqual(1, compression.decompress.call_count)
@@ -54,7 +54,7 @@ class MemcachedTests(unittest.TestCase):
         compression = mock.Mock()
         for proto in self.client._servers:
             proto.compression = compression
-        self.client.set('test_key', self.data, compress=False)
+        self.client.set('test_key', self.data, compress_level=0)
         self.assertEqual(self.data, self.client.get('test_key'))
         compression.compress.assert_not_called()
         compression.decompress.assert_not_called()

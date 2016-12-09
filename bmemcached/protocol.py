@@ -296,12 +296,16 @@ class Protocol(threading.local):
         self.authenticated = True
         return True
 
-    def serialize(self, value, compress=True):
+    def serialize(self, value, compress_level=-1):
         """
         Serializes a value based on its type.
 
         :param value: Something to be serialized
         :type value: six.string_types, int, long, object
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: Serialized type
         :rtype: str
         """
@@ -324,8 +328,13 @@ class Protocol(threading.local):
                 dumps = self.json_dumps
             value = dumps(value)
 
-        if compress and len(value) > self.COMPRESSION_THRESHOLD:
-            compressed_value = self.compression.compress(value)
+        if compress_level != 0 and len(value) > self.COMPRESSION_THRESHOLD:
+            if compress_level is not None and compress_level > 0:
+                # Use the specified compression level.
+                compressed_value = self.compression.compress(value, compress_level)
+            else:
+                # Use the default compression level.
+                compressed_value = self.compression.compress(value)
             # Use the compressed value only if it is actually smaller.
             if compressed_value and len(compressed_value) < len(value):
                 value = compressed_value
@@ -476,7 +485,7 @@ class Protocol(threading.local):
 
         return d
 
-    def _set_add_replace(self, command, key, value, time, cas=0, compress=True):
+    def _set_add_replace(self, command, key, value, time, cas=0, compress_level=-1):
         """
         Function to set/add/replace commands.
 
@@ -488,14 +497,16 @@ class Protocol(threading.local):
         :type time: int
         :param cas: The CAS value that must be matched for this operation to complete, or 0 for no CAS.
         :type cas: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
         time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
         logger.debug('Setting/adding/replacing key %s.', key)
-        flags, value = self.serialize(value, compress=compress)
+        flags, value = self.serialize(value, compress_level=compress_level)
         logger.debug('Value bytes %s.', len(value))
         if isinstance(value, text_type):
             value = value.encode('utf8')
@@ -521,7 +532,7 @@ class Protocol(threading.local):
 
         return True
 
-    def set(self, key, value, time, compress=True):
+    def set(self, key, value, time, compress_level=-1):
         """
         Set a value for a key on server.
 
@@ -531,14 +542,16 @@ class Protocol(threading.local):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        return self._set_add_replace('set', key, value, time, compress=compress)
+        return self._set_add_replace('set', key, value, time, compress_level=compress_level)
 
-    def cas(self, key, value, cas, time, compress=True):
+    def cas(self, key, value, cas, time, compress_level=-1):
         """
         Add a key/value to server ony if it does not exist.
 
@@ -548,8 +561,10 @@ class Protocol(threading.local):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True if key is added False if key already exists and has a different CAS
         :rtype: bool
         """
@@ -561,11 +576,11 @@ class Protocol(threading.local):
         # If we get a cas of None, interpret that as "compare against nonexistant and set",
         # which is simply Add.
         if cas is None:
-            return self._set_add_replace('add', key, value, time, compress=compress)
+            return self._set_add_replace('add', key, value, time, compress_level=compress_level)
         else:
-            return self._set_add_replace('set', key, value, time, cas=cas, compress=compress)
+            return self._set_add_replace('set', key, value, time, cas=cas, compress_level=compress_level)
 
-    def add(self, key, value, time, compress=True):
+    def add(self, key, value, time, compress_level=-1):
         """
         Add a key/value to server ony if it does not exist.
 
@@ -575,14 +590,16 @@ class Protocol(threading.local):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True if key is added False if key already exists
         :rtype: bool
         """
-        return self._set_add_replace('add', key, value, time, compress=compress)
+        return self._set_add_replace('add', key, value, time, compress_level=compress_level)
 
-    def replace(self, key, value, time, compress=True):
+    def replace(self, key, value, time, compress_level=-1):
         """
         Replace a key/value to server ony if it does exist.
 
@@ -592,14 +609,16 @@ class Protocol(threading.local):
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True if key is replace False if key does not exists
         :rtype: bool
         """
-        return self._set_add_replace('replace', key, value, time, compress=compress)
+        return self._set_add_replace('replace', key, value, time, compress_level=compress_level)
 
-    def set_multi(self, mappings, time=100, compress=True):
+    def set_multi(self, mappings, time=100, compress_level=-1):
         """
         Set multiple keys with its values on server.
 
@@ -610,8 +629,10 @@ class Protocol(threading.local):
         :type mappings: dict
         :param time: Time in seconds that your key will expire.
         :type time: int
-        :param compress: If true, the value will be compressed if possible.
-        :type compress: bool
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True
         :rtype: bool
         """
@@ -631,7 +652,7 @@ class Protocol(threading.local):
             else:
                 command = 'setq'
 
-            flags, value = self.serialize(value, compress=compress)
+            flags, value = self.serialize(value, compress_level=compress_level)
             m = struct.pack(self.HEADER_STRUCT +
                             self.COMMANDS[command]['struct'] % (len(key), len(value)),
                             self.MAGIC['request'],
