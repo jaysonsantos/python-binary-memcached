@@ -163,7 +163,7 @@ class Protocol(threading.local):
         :param size: Size in bytes to be read.
         :type size: int
         :return: Data from socket
-        :rtype: six.string_type
+        :rtype: six.string_types
         """
         value = b''
         while len(value) < size:
@@ -227,9 +227,9 @@ class Protocol(threading.local):
         Authenticate user on server.
 
         :param username: Username used to be authenticated.
-        :type username: six.string_type
+        :type username: six.string_types
         :param password: Password used to be authenticated.
-        :type password: six.string_type
+        :type password: six.string_types
         :return: True if successful.
         :raises: InvalidCredentials, AuthenticationNotSupported, MemcachedException
         :rtype: bool
@@ -301,7 +301,7 @@ class Protocol(threading.local):
         Serializes a value based on its type.
 
         :param value: Something to be serialized
-        :type value: six.string_type, int, long, object
+        :type value: six.string_types, int, long, object
         :return: Serialized type
         :rtype: str
         """
@@ -338,14 +338,14 @@ class Protocol(threading.local):
         Deserialized values based on flags or just return it if it is not serialized.
 
         :param value: Serialized or not value.
-        :type value: six.string_type, int
+        :type value: six.string_types, int
         :param flags: Value flags
         :type flags: int
         :param raw: If true, the binary string value will be returned without
             decoding or conversion (but with decompression). Default is false.
         :type raw: bool
         :return: Deserialized value
-        :rtype: six.string_type|int
+        :rtype: six.string_types|int
         """
         FLAGS = self.FLAGS
 
@@ -389,7 +389,7 @@ class Protocol(threading.local):
         (None, None).
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param raw: If true, the binary string value will be returned without
             decoding or conversion (but with decompression). Default is false.
         :type raw: bool
@@ -481,7 +481,7 @@ class Protocol(threading.local):
         Function to set/add/replace commands.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -526,7 +526,7 @@ class Protocol(threading.local):
         Set a value for a key on server.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -543,7 +543,7 @@ class Protocol(threading.local):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -570,7 +570,7 @@ class Protocol(threading.local):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -587,7 +587,7 @@ class Protocol(threading.local):
         Replace a key/value to server ony if it does exist.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -672,7 +672,7 @@ class Protocol(threading.local):
         Function which increments and decrements.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: Number to be (de|in)cremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -706,7 +706,7 @@ class Protocol(threading.local):
         Increment a key, if it exists, returns its actual value, if it doesn't, return 0.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: Number to be incremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -724,7 +724,7 @@ class Protocol(threading.local):
         Minimum value of decrement return is 0.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: Number to be decremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -741,7 +741,7 @@ class Protocol(threading.local):
         Delete a key/value from server. If key existed and was deleted, return True.
 
         :param key: Key's name to be deleted
-        :type key: six.string_type
+        :type key: six.string_types
         :param cas: If set, only delete the key if its CAS value matches.
         :type cas: int
         :return: True in case o success and False in case of failure.
@@ -838,7 +838,7 @@ class Protocol(threading.local):
         Return server stats.
 
         :param key: Optional if you want status from a key.
-        :type key: six.string_type
+        :type key: six.string_types
         :return: A dict with server stats
         :rtype: dict
         """

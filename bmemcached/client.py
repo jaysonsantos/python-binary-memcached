@@ -14,9 +14,9 @@ class Client(object):
     :param servers: A list of servers with ip[:port] or unix socket.
     :type servers: list
     :param username: If your server requires SASL authentication, provide the username.
-    :type username: str
+    :type username: six.string_types
     :param password: If your server requires SASL authentication, provide the password.
-    :type password: str
+    :type password: six.string_types
     :param compression: This memcached client uses zlib compression by default,
         but you can change it to any Python module that provides
         `compress` and `decompress` functions, such as `bz2`.
@@ -95,7 +95,7 @@ class Client(object):
         Get a key from server.
 
         :param key: Key's name
-        :type key: str
+        :type key: six.string_types
         :param get_cas: If true, return (value, cas), where cas is the new CAS value.
         :type get_cas: boolean
         :param raw: If true, the binary string value will be returned without
@@ -119,7 +119,7 @@ class Client(object):
         This method is for API compatibility with other implementations.
 
         :param key: Key's name
-        :type key: str
+        :type key: six.string_types
         :return: Returns (key data, value), or (None, None) if the value is not in cache.
         :rtype: object
         """
@@ -182,7 +182,7 @@ class Client(object):
         Set a value for a key on server if its CAS value matches cas.
 
         :param key: Key's name
-        :type key: str
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -223,7 +223,7 @@ class Client(object):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: str
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -244,7 +244,7 @@ class Client(object):
         Replace a key/value to server ony if it does exist.
 
         :param key: Key's name
-        :type key: str
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -265,7 +265,7 @@ class Client(object):
         Delete a key/value from server. If key does not exist, it returns True.
 
         :param key: Key's name to be deleted
-        :type key: str
+        :type key: six.string_types
         :return: True in case o success and False in case of failure.
         :rtype: bool
         """
@@ -287,7 +287,7 @@ class Client(object):
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
 
         :param key: Key's name
-        :type key: str
+        :type key: six.string_types
         :param value: Number to be incremented
         :type value: int
         :return: Actual value of the key on server
@@ -305,7 +305,7 @@ class Client(object):
         Minimum value of decrement return is 0.
 
         :param key: Key's name
-        :type key: str
+        :type key: six.string_types
         :param value: Number to be decremented
         :type value: int
         :return: Actual value of the key on server
@@ -337,7 +337,7 @@ class Client(object):
         Return server stats.
 
         :param key: Optional if you want status from a key.
-        :type key: str
+        :type key: six.string_types
         :return: A dict with server stats
         :rtype: dict
         """
