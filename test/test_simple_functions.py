@@ -40,23 +40,15 @@ class MemcachedTests(unittest.TestCase):
         self.client.set('test_key', 'test')
         self.assertEqual('test', self.client.get('test_key'))
 
-    def testGetRawBytes(self):
+    def testGetBytes(self):
         # Ensure the code is 8-bit clean.
         value = b'\x01z\x7f\x00\x80\xfe\xff\x00'
         self.client.set('test_key', value)
-        self.assertEqual(value, self.client.get('test_key', raw=True))
-
-    def testGetRawText(self):
-        self.client.set('test_key', u'\u30b7')
-        self.assertEqual(b'\xe3\x82\xb7', self.client.get('test_key', raw=True))
+        self.assertEqual(value, self.client.get('test_key'))
 
     def testGetDecodedText(self):
         self.client.set('test_key', u'\u30b7')
         self.assertEqual(u'\u30b7', self.client.get('test_key'))
-
-    def testGetRawInt(self):
-        self.client.set('test_key', 1234)
-        self.assertEqual(b'1234', self.client.get('test_key', raw=True))
 
     def testCas(self):
         value, cas = self.client.gets('nonexistant')

@@ -90,7 +90,7 @@ class Client(object):
         # add exponential falloff in the future.  _set_retry_delay is exposed for tests.
         self._set_retry_delay(5 if enable else 0)
 
-    def get(self, key, get_cas=False, raw=False):
+    def get(self, key, get_cas=False):
         """
         Get a key from server.
 
@@ -98,14 +98,11 @@ class Client(object):
         :type key: six.string_types
         :param get_cas: If true, return (value, cas), where cas is the new CAS value.
         :type get_cas: boolean
-        :param raw: If true, the binary string value will be returned without
-            decoding or conversion (but with decompression). Default is false.
-        :type raw: bool
         :return: Returns a key data from server.
         :rtype: object
         """
         for server in self.servers:
-            value, cas = server.get(key, raw=raw)
+            value, cas = server.get(key)
             if value is not None:
                 if get_cas:
                     return value, cas
@@ -129,7 +126,7 @@ class Client(object):
                 return value, cas
         return None, None
 
-    def get_multi(self, keys, get_cas=False, raw=False):
+    def get_multi(self, keys, get_cas=False):
         """
         Get multiple keys from server.
 
@@ -137,16 +134,13 @@ class Client(object):
         :type keys: list
         :param get_cas: If get_cas is true, each value is (data, cas), with each result's CAS value.
         :type get_cas: boolean
-        :param raw: If true, the binary string value will be returned without
-            decoding or conversion (but with decompression). Default is false.
-        :type raw: bool
         :return: A dict with all requested keys.
         :rtype: dict
         """
         d = {}
         if keys:
             for server in self.servers:
-                results = server.get_multi(keys, raw=raw)
+                results = server.get_multi(keys)
                 if not get_cas:
                     for key, (value, cas) in results.items():
                         results[key] = value

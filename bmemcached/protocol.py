@@ -70,7 +70,8 @@ class Protocol(threading.local):
         'object': 1 << 0,
         'integer': 1 << 1,
         'long': 1 << 2,
-        'compressed': 1 << 3
+        'compressed': 1 << 3,
+        'binary': 1 << 4,
     }
 
     MAXIMUM_EXPIRE_TIME = 0xfffffffe
@@ -311,8 +312,7 @@ class Protocol(threading.local):
         """
         flags = 0
         if isinstance(value, binary_type):
-            # The value is already encoded.
-            pass
+            flags |= self.FLAGS['binary']
         elif isinstance(value, text_type):
             value = value.encode('utf8')
         elif isinstance(value, int) and isinstance(value, bool) is False:
@@ -342,7 +342,7 @@ class Protocol(threading.local):
 
         return flags, value
 
-    def deserialize(self, value, flags, raw=False):
+    def deserialize(self, value, flags):
         """
         Deserialized values based on flags or just return it if it is not serialized.
 
@@ -350,9 +350,6 @@ class Protocol(threading.local):
         :type value: six.string_types, int
         :param flags: Value flags
         :type flags: int
-        :param raw: If true, the binary string value will be returned without
-            decoding or conversion (but with decompression). Default is false.
-        :type raw: bool
         :return: Deserialized value
         :rtype: six.string_types|int
         """
@@ -361,7 +358,7 @@ class Protocol(threading.local):
         if flags & FLAGS['compressed']:  # pragma: no branch
             value = self.compression.decompress(value)
 
-        if raw:
+        if flags & FLAGS['binary']:
             return value
 
         if flags & FLAGS['integer']:
@@ -392,16 +389,13 @@ class Protocol(threading.local):
     def json_loads(self, value):
         return json.loads(value.decode('utf8'))
 
-    def get(self, key, raw=False):
+    def get(self, key):
         """
         Get a key and its CAS value from server.  If the value isn't cached, return
         (None, None).
 
         :param key: Key's name
         :type key: six.string_types
-        :param raw: If true, the binary string value will be returned without
-            decoding or conversion (but with decompression). Default is false.
-        :type raw: bool
         :return: Returns (value, cas).
         :rtype: object
         """
@@ -431,17 +425,14 @@ class Protocol(threading.local):
 
         flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
 
-        return self.deserialize(value, flags, raw=raw), cas
+        return self.deserialize(value, flags), cas
 
-    def get_multi(self, keys, raw=False):
+    def get_multi(self, keys):
         """
         Get multiple keys from server.
 
         :param keys: A list of keys to from server.
         :type keys: list
-        :param raw: If true, the binary string values will be returned without
-            decoding or conversion (but with decompression). Default is false.
-        :type raw: bool
         :return: A dict with all requested keys.
         :rtype: dict
         """
@@ -477,7 +468,7 @@ class Protocol(threading.local):
                 flags, key, value = struct.unpack('!L%ds%ds' %
                                                   (keylen, bodylen - keylen - 4),
                                                   extra_content)
-                d[key.decode()] = self.deserialize(value, flags, raw=raw), cas
+                d[key.decode()] = self.deserialize(value, flags), cas
             elif status == self.STATUS['server_disconnected']:
                 break
             elif status != self.STATUS['key_not_found']:
