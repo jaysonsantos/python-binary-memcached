@@ -95,7 +95,7 @@ class MemcachedTests(unittest.TestCase):
         self._stop_proxy()
         self._start_proxy()
 
-        self.client = bmemcached.Client(self.server)
+        self.client = bmemcached.Client(self.server, 'user', 'password')
 
         # Disable retry delays, so we can disconnect and reconnect from the
         # server without needing to put delays in most of the tests.

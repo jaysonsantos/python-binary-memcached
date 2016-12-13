@@ -3,3 +3,16 @@
 cover
 .tox
 *.egg-info
+.cache
+.eggs
+bin
+include
+lib
+lib64
+local
+man
+pip-selfcheck.json
+pyvenv.cfg
+share
+_build
+dist

@@ -9,15 +9,10 @@ try:
 except ImportError:
     from urllib.parse import splitport
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-    assert pickle
-
 import zlib
-from io import BytesIO
 import six
+from six import binary_type, text_type
+import json
 
 from bmemcached.compat import long
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
@@ -72,18 +67,19 @@ class Protocol(threading.local):
     }
 
     FLAGS = {
-        'pickle': 1 << 0,
+        'object': 1 << 0,
         'integer': 1 << 1,
         'long': 1 << 2,
-        'compressed': 1 << 3
+        'compressed': 1 << 3,
+        'binary': 1 << 4,
     }
 
     MAXIMUM_EXPIRE_TIME = 0xfffffffe
 
     COMPRESSION_THRESHOLD = 128
 
-    def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None, pickle_protocol=0,
-                 pickler=None, unpickler=None):
+    def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None,
+                 dumps=None, loads=None):
         super(Protocol, self).__init__()
         self.server = server
         self._username = username
@@ -93,9 +89,8 @@ class Protocol(threading.local):
         self.connection = None
         self.authenticated = False
         self.socket_timeout = socket_timeout
-        self.pickle_rotocol = pickle_protocol
-        self.pickler = pickler
-        self.unpickler = unpickler
+        self.dumps = dumps
+        self.loads = loads
 
         self.reconnects_deferred_until = None
 
@@ -169,7 +164,7 @@ class Protocol(threading.local):
         :param size: Size in bytes to be read.
         :type size: int
         :return: Data from socket
-        :rtype: six.string_type
+        :rtype: six.string_types
         """
         value = b''
         while len(value) < size:
@@ -233,9 +228,9 @@ class Protocol(threading.local):
         Authenticate user on server.
 
         :param username: Username used to be authenticated.
-        :type username: six.string_type
+        :type username: six.string_types
         :param password: Password used to be authenticated.
-        :type password: six.string_type
+        :type password: six.string_types
         :return: True if successful.
         :raises: InvalidCredentials, AuthenticationNotSupported, MemcachedException
         :rtype: bool
@@ -252,7 +247,7 @@ class Protocol(threading.local):
         if not self._username or not self._password:
             return False
 
-        logger.info('Authenticating as %s' % self._username)
+        logger.info('Authenticating as %s', self._username)
         self._send(struct.pack(self.HEADER_STRUCT,
                                self.MAGIC['request'],
                                self.COMMANDS['auth_negotiation']['command'],
@@ -277,7 +272,7 @@ class Protocol(threading.local):
 
         method = b'PLAIN'
         auth = '\x00%s\x00%s' % (self._username, self._password)
-        if six.PY3:
+        if isinstance(auth, text_type):
             auth = auth.encode()
 
         self._send(struct.pack(self.HEADER_STRUCT +
@@ -297,24 +292,29 @@ class Protocol(threading.local):
         if status != self.STATUS['success']:
             raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
 
-        logger.debug('Auth OK. Code: %d Message: %s' % (status, extra_content))
+        logger.debug('Auth OK. Code: %d Message: %s', status, extra_content)
 
         self.authenticated = True
         return True
 
-    def serialize(self, value):
+    def serialize(self, value, compress_level=-1):
         """
-        Serializes a value based on it's type.
+        Serializes a value based on its type.
 
         :param value: Something to be serialized
-        :type value: six.string_type, int, long, object
+        :type value: six.string_types, int, long, object
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: Serialized type
         :rtype: str
         """
         flags = 0
-        if isinstance(value, str):
-            if six.PY3:
-                value = value.encode('utf8')
+        if isinstance(value, binary_type):
+            flags |= self.FLAGS['binary']
+        elif isinstance(value, text_type):
+            value = value.encode('utf8')
         elif isinstance(value, int) and isinstance(value, bool) is False:
             flags |= self.FLAGS['integer']
             value = str(value)
@@ -322,15 +322,23 @@ class Protocol(threading.local):
             flags |= self.FLAGS['long']
             value = str(value)
         else:
-            flags |= self.FLAGS['pickle']
-            buf = BytesIO()
-            pickler = self.pickler(buf, self.pickle_rotocol)
-            pickler.dump(value)
-            value = buf.getvalue()
+            flags |= self.FLAGS['object']
+            dumps = self.dumps
+            if dumps is None:
+                dumps = self.json_dumps
+            value = dumps(value)
 
-        if len(value) > self.COMPRESSION_THRESHOLD:
-            value = self.compression.compress(value)
-            flags |= self.FLAGS['compressed']
+        if compress_level != 0 and len(value) > self.COMPRESSION_THRESHOLD:
+            if compress_level is not None and compress_level > 0:
+                # Use the specified compression level.
+                compressed_value = self.compression.compress(value, compress_level)
+            else:
+                # Use the default compression level.
+                compressed_value = self.compression.compress(value)
+            # Use the compressed value only if it is actually smaller.
+            if compressed_value and len(compressed_value) < len(value):
+                value = compressed_value
+                flags |= self.FLAGS['compressed']
 
         return flags, value
 
@@ -339,28 +347,47 @@ class Protocol(threading.local):
         Deserialized values based on flags or just return it if it is not serialized.
 
         :param value: Serialized or not value.
-        :type value: six.string_type, int
+        :type value: six.string_types, int
         :param flags: Value flags
         :type flags: int
         :return: Deserialized value
-        :rtype: six.string_type|int
+        :rtype: six.string_types|int
         """
-        to_str = lambda v: v.decode('utf8') if six.PY3 else v
+        FLAGS = self.FLAGS
 
-        if flags & self.FLAGS['compressed']:  # pragma: no branch
+        if flags & FLAGS['compressed']:  # pragma: no branch
             value = self.compression.decompress(value)
 
-        if flags & self.FLAGS['integer']:
-            return int(to_str(value))
-        elif flags & self.FLAGS['long']:
-            return long(to_str(value))
-        elif flags & self.FLAGS['pickle']:
-            buf = BytesIO(value)
+        if flags & FLAGS['binary']:
+            return value
 
-            unpickler = self.unpickler(buf)
-            return unpickler.load()
+        if flags & FLAGS['integer']:
+            return int(value)
+        elif flags & FLAGS['long']:
+            return long(value)
+        elif flags & FLAGS['object']:
+            loads = self.loads
+            if loads is None:
+                loads = self.json_loads
+            return loads(value)
 
-        return to_str(value)
+        if six.PY3:
+            return value.decode('utf8')
+
+        # In Python 2, mimic the behavior of the json library: return a str
+        # unless the value contains unicode characters.
+        try:
+            value.decode('ascii')
+        except UnicodeDecodeError:
+            return value.decode('utf8')
+        else:
+            return value
+
+    def json_dumps(self, value):
+        return json.dumps(value).encode('utf8')
+
+    def json_loads(self, value):
+        return json.loads(value.decode('utf8'))
 
     def get(self, key):
         """
@@ -368,11 +395,11 @@ class Protocol(threading.local):
         (None, None).
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :return: Returns (value, cas).
         :rtype: object
         """
-        logger.info('Getting key %s' % key)
+        logger.debug('Getting key %s', key)
         data = struct.pack(self.HEADER_STRUCT +
                            self.COMMANDS['get']['struct'] % (len(key)),
                            self.MAGIC['request'],
@@ -383,13 +410,12 @@ class Protocol(threading.local):
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
 
-        logger.debug('Value Length: %d. Body length: %d. Data type: %d' % (
-            extlen, bodylen, datatype))
+        logger.debug('Value Length: %d. Body length: %d. Data type: %d',
+                     extlen, bodylen, datatype)
 
         if status != self.STATUS['success']:
             if status == self.STATUS['key_not_found']:
-                logger.debug('Key not found. Message: %s'
-                             % extra_content)
+                logger.debug('Key not found. Message: %s', extra_content)
                 return None, None
 
             if status == self.STATUS['server_disconnected']:
@@ -450,26 +476,30 @@ class Protocol(threading.local):
 
         return d
 
-    def _set_add_replace(self, command, key, value, time, cas=0):
+    def _set_add_replace(self, command, key, value, time, cas=0, compress_level=-1):
         """
         Function to set/add/replace commands.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
         :param cas: The CAS value that must be matched for this operation to complete, or 0 for no CAS.
         :type cas: int
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
         time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
-        logger.info('Setting/adding/replacing key %s.' % key)
-        flags, value = self.serialize(value)
-        logger.info('Value bytes %d.' % len(value))
-        if six.PY3 and isinstance(value, str):
+        logger.debug('Setting/adding/replacing key %s.', key)
+        flags, value = self.serialize(value, compress_level=compress_level)
+        logger.debug('Value bytes %s.', len(value))
+        if isinstance(value, text_type):
             value = value.encode('utf8')
 
         self._send(struct.pack(self.HEADER_STRUCT +
@@ -493,31 +523,39 @@ class Protocol(threading.local):
 
         return True
 
-    def set(self, key, value, time):
+    def set(self, key, value, time, compress_level=-1):
         """
         Set a value for a key on server.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True in case of success and False in case of failure
         :rtype: bool
         """
-        return self._set_add_replace('set', key, value, time)
+        return self._set_add_replace('set', key, value, time, compress_level=compress_level)
 
-    def cas(self, key, value, cas, time):
+    def cas(self, key, value, cas, time, compress_level=-1):
         """
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True if key is added False if key already exists and has a different CAS
         :rtype: bool
         """
@@ -529,41 +567,49 @@ class Protocol(threading.local):
         # If we get a cas of None, interpret that as "compare against nonexistant and set",
         # which is simply Add.
         if cas is None:
-            return self._set_add_replace('add', key, value, time)
+            return self._set_add_replace('add', key, value, time, compress_level=compress_level)
         else:
-            return self._set_add_replace('set', key, value, time, cas=cas)
+            return self._set_add_replace('set', key, value, time, cas=cas, compress_level=compress_level)
 
-    def add(self, key, value, time):
+    def add(self, key, value, time, compress_level=-1):
         """
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True if key is added False if key already exists
         :rtype: bool
         """
-        return self._set_add_replace('add', key, value, time)
+        return self._set_add_replace('add', key, value, time, compress_level=compress_level)
 
-    def replace(self, key, value, time):
+    def replace(self, key, value, time, compress_level=-1):
         """
         Replace a key/value to server ony if it does exist.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True if key is replace False if key does not exists
         :rtype: bool
         """
-        return self._set_add_replace('replace', key, value, time)
+        return self._set_add_replace('replace', key, value, time, compress_level=compress_level)
 
-    def set_multi(self, mappings, time=100):
+    def set_multi(self, mappings, time=100, compress_level=-1):
         """
         Set multiple keys with its values on server.
 
@@ -574,6 +620,10 @@ class Protocol(threading.local):
         :type mappings: dict
         :param time: Time in seconds that your key will expire.
         :type time: int
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
         :return: True
         :rtype: bool
         """
@@ -593,7 +643,7 @@ class Protocol(threading.local):
             else:
                 command = 'setq'
 
-            flags, value = self.serialize(value)
+            flags, value = self.serialize(value, compress_level=compress_level)
             m = struct.pack(self.HEADER_STRUCT +
                             self.COMMANDS[command]['struct'] % (len(key), len(value)),
                             self.MAGIC['request'],
@@ -634,7 +684,7 @@ class Protocol(threading.local):
         Function which increments and decrements.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: Number to be (de|in)cremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -665,10 +715,10 @@ class Protocol(threading.local):
 
     def incr(self, key, value, default=0, time=1000000):
         """
-        Increment a key, if it exists, returns it's actual value, if it don't, return 0.
+        Increment a key, if it exists, returns its actual value, if it doesn't, return 0.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: Number to be incremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -682,11 +732,11 @@ class Protocol(threading.local):
 
     def decr(self, key, value, default=0, time=100):
         """
-        Decrement a key, if it exists, returns it's actual value, if it don't, return 0.
+        Decrement a key, if it exists, returns its actual value, if it doesn't, return 0.
         Minimum value of decrement return is 0.
 
         :param key: Key's name
-        :type key: six.string_type
+        :type key: six.string_types
         :param value: Number to be decremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -700,16 +750,16 @@ class Protocol(threading.local):
 
     def delete(self, key, cas=0):
         """
-        Delete a key/value from server. If key existed and was deleted, it returns True.
+        Delete a key/value from server. If key existed and was deleted, return True.
 
         :param key: Key's name to be deleted
-        :type key: six.string_type
+        :type key: six.string_types
         :param cas: If set, only delete the key if its CAS value matches.
         :type cas: int
         :return: True in case o success and False in case of failure.
         :rtype: bool
         """
-        logger.info('Deleting key %s' % key)
+        logger.debug('Deleting key %s', key)
         self._send(struct.pack(self.HEADER_STRUCT +
                                self.COMMANDS['delete']['struct'] % len(key),
                                self.MAGIC['request'],
@@ -724,7 +774,7 @@ class Protocol(threading.local):
         if status != self.STATUS['success'] and status not in (self.STATUS['key_not_found'], self.STATUS['key_exists']):
             raise MemcachedException('Code: %d message: %s' % (status, extra_content))
 
-        logger.debug('Key deleted %s' % key)
+        logger.debug('Key deleted %s', key)
         return status != self.STATUS['key_exists']
 
     def delete_multi(self, keys):
@@ -736,7 +786,7 @@ class Protocol(threading.local):
         :return: True in case of success and False in case of failure.
         :rtype: bool
         """
-        logger.info('Deleting keys %r' % keys)
+        logger.debug('Deleting keys %r', keys)
         if six.PY2:
             msg = ''
         else:
@@ -800,13 +850,13 @@ class Protocol(threading.local):
         Return server stats.
 
         :param key: Optional if you want status from a key.
-        :type key: six.string_type
+        :type key: six.string_types
         :return: A dict with server stats
         :rtype: dict
         """
         # TODO: Stats with key is not working.
         if key is not None:
-            if isinstance(key, str) and six.PY3:
+            if isinstance(key, text_type):
                 key = str_to_bytes(key)
             keylen = len(key)
             packed = struct.pack(
