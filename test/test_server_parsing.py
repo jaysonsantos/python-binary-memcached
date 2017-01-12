@@ -17,7 +17,8 @@ class TestServerParsing(unittest.TestCase):
         self.assertEqual(len(list(client.servers)), 1)
 
     def testAcceptIterableServer(self):
-        client = bmemcached.Client(['{}:11211'.format(os.environ['MEMCACHED_HOST']), '{}:11211'.format(os.environ['MEMCACHED_HOST'])])
+        client = bmemcached.Client(
+            ['{}:11211'.format(os.environ['MEMCACHED_HOST']), '{}:11211'.format(os.environ['MEMCACHED_HOST'])])
         self.assertEqual(len(list(client.servers)), 2)
 
     def testNoPortGiven(self):

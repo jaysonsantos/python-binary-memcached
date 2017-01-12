@@ -1,6 +1,5 @@
-import test_simple_functions
-
 import bmemcached
+import test_simple_functions
 
 
 class SocketMemcachedTests(test_simple_functions.MemcachedTests):
