@@ -1,8 +1,11 @@
-import unittest
 import bz2
-import bmemcached
+import os
+import unittest
 
 import six
+
+import bmemcached
+
 if six.PY3:
     from unittest import mock
 else:
@@ -11,7 +14,7 @@ else:
 
 class MemcachedTests(unittest.TestCase):
     def setUp(self):
-        self.server = '127.0.0.1:11211'
+        self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
         self.client = bmemcached.Client(self.server, 'user', 'password')
         self.bzclient = bmemcached.Client(self.server, 'user', 'password',
                                           compression=bz2)
@@ -35,7 +38,7 @@ class MemcachedTests(unittest.TestCase):
         self.client.set('test_key', self.data)
         self.bzclient.set('test_key2', self.data)
         self.assertEqual(self.client.get('test_key'),
-                self.bzclient.get('test_key2'))
+                         self.bzclient.get('test_key2'))
         self.assertRaises(IOError, self.bzclient.get, 'test_key')
 
     def testCompressionEnabled(self):

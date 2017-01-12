@@ -1,7 +1,11 @@
+import os
 import subprocess
+import time
 
 import pytest
-import time
+
+
+os.environ.setdefault('MEMCACHED_HOST', '127.0.0.1')
 
 
 @pytest.yield_fixture(scope='session', autouse=True)

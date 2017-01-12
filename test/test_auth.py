@@ -1,5 +1,8 @@
-import six
+import os
 import unittest
+
+import six
+
 import bmemcached
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 
@@ -17,7 +20,7 @@ class TestServerAuth(unittest.TestCase):
         authenticating, it isn't needed.
         """
         mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
-        server = bmemcached.client.Protocol('127.0.0.1')
+        server = bmemcached.client.Protocol(os.environ['MEMCACHED_HOST'])
         # can pass anything and it'll work
         self.assertTrue(server.authenticate('user', 'badpassword'))
 
@@ -27,7 +30,7 @@ class TestServerAuth(unittest.TestCase):
         Raise AuthenticationNotSupported unless we're using PLAIN auth.
         """
         mocked_response.return_value = (0, 0, 0, 0, 0, 0, 0, 0, 0, [])
-        server = bmemcached.client.Protocol('127.0.0.1')
+        server = bmemcached.client.Protocol(os.environ['MEMCACHED_HOST'])
         self.assertRaises(AuthenticationNotSupported,
                           server.authenticate, 'user', 'password')
 
@@ -37,7 +40,7 @@ class TestServerAuth(unittest.TestCase):
         Raise MemcachedException for anything unsuccessful.
         """
         mocked_response.return_value = (0, 0, 0, 0, 0, 0x01, 0, 0, 0, [b'PLAIN'])
-        server = bmemcached.client.Protocol('127.0.0.1')
+        server = bmemcached.client.Protocol(os.environ['MEMCACHED_HOST'])
         self.assertRaises(MemcachedException,
                           server.authenticate, 'user', 'password')
 
@@ -47,7 +50,7 @@ class TestServerAuth(unittest.TestCase):
         Valid logins return True.
         """
         mocked_response.return_value = (0, 0, 0, 0, 0, 0, 0, 0, 0, [b'PLAIN'])
-        server = bmemcached.client.Protocol('127.0.0.1')
+        server = bmemcached.client.Protocol(os.environ['MEMCACHED_HOST'])
         self.assertTrue(server.authenticate('user', 'password'))
 
     @mock.patch.object(bmemcached.client.Protocol, '_get_response')
@@ -56,6 +59,6 @@ class TestServerAuth(unittest.TestCase):
         Invalid logins raise InvalidCredentials
         """
         mocked_response.return_value = (0, 0, 0, 0, 0, 0x08, 0, 0, 0, [b'PLAIN'])
-        server = bmemcached.client.Protocol('127.0.0.1')
+        server = bmemcached.client.Protocol(os.environ['MEMCACHED_HOST'])
         self.assertRaises(InvalidCredentials, server.authenticate,
                           'user', 'password2')

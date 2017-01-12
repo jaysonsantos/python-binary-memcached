@@ -1,4 +1,10 @@
-import multiprocessing, select, socket, threading, time, unittest
+import multiprocessing
+import os
+import select
+import socket
+import time
+import unittest
+
 import bmemcached
 from bmemcached.protocol import Protocol
 
@@ -14,7 +20,7 @@ class _CacheProxy(multiprocessing.Process):
         listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         listen_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listen_sock.setblocking(False)
-        listen_sock.bind(('127.0.0.1', self._listen_port or 0))
+        listen_sock.bind((os.environ['MEMCACHED_HOST'], self._listen_port or 0))
         listen_sock.listen(1)
 
         # Tell our caller the (host, port) that we're listening on.
@@ -85,6 +91,7 @@ class _CacheProxy(multiprocessing.Process):
                 bytes_written = client_sock.send(data_for_client)
                 data_for_client = data_for_client[bytes_written:]
 
+
 class MemcachedTests(unittest.TestCase):
     def setUp(self):
         self._proxy_port = None
@@ -106,7 +113,7 @@ class MemcachedTests(unittest.TestCase):
         self.client.delete('test_key2')
 
     def _server_host(self):
-        return '127.0.0.1:11211'
+        return '{}:11211'.format(os.environ['MEMCACHED_HOST'])
 
     def _start_proxy(self):
         # Start the proxy.  If this isn't the first time we've started the proxy,
@@ -250,10 +257,11 @@ class MemcachedTests(unittest.TestCase):
         stats = self.client.stats()[self.server]
         self.assertEqual(stats, {})
 
+
 class SocketMemcachedTests(MemcachedTests):
     """
     Same tests as above, just make sure it works with sockets.
     """
+
     def _server_host(self):
         return '/tmp/memcached.sock'
-

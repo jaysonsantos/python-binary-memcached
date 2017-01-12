@@ -1,5 +1,9 @@
 
 import six
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle as pickle
 
 from bmemcached.protocol import Protocol
 
@@ -21,26 +25,26 @@ class Client(object):
         but you can change it to any Python module that provides
         `compress` and `decompress` functions, such as `bz2`.
     :type compression: Python module
-    :param dumps: Use this to replace the object serialization mechanism.
-        The default is JSON encoding.
-    :type dumps: function
-    :param loads: Use this to replace the object deserialization mechanism.
-        The default is JSON decoding.
-    :type dumps: function
+    :param pickler: Use this to replace the object serialization mechanism.
+    :type pickler: function
+    :param unpickler: Use this to replace the object deserialization mechanism.
+    :type unpickler: function
     :param socket_timeout: The timeout applied to memcached connections.
     :type socket_timeout: float
     """
     def __init__(self, servers=('127.0.0.1:11211',), username=None,
                  password=None, compression=None,
                  socket_timeout=_SOCKET_TIMEOUT,
-                 dumps=None,
-                 loads=None):
+                 pickle_protocol=0,
+                 pickler=pickle.Pickler,
+                 unpickler=pickle.Unpickler):
         self.username = username
         self.password = password
         self.compression = compression
         self.socket_timeout = socket_timeout
-        self.dumps = dumps
-        self.loads = loads
+        self.pickle_protocol = pickle_protocol
+        self.pickler = pickler
+        self.unpickler = unpickler
         self.set_servers(servers)
 
     @property
@@ -67,8 +71,9 @@ class Client(object):
             password=self.password,
             compression=self.compression,
             socket_timeout=self.socket_timeout,
-            dumps=self.dumps,
-            loads=self.loads,
+            pickle_protocol=self.pickle_protocol,
+            pickler=self.pickler,
+            unpickler=self.unpickler,
         ) for server in servers]
 
     def _set_retry_delay(self, value):
