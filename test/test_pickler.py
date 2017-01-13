@@ -1,9 +1,14 @@
+import json
+import os
+
+from io import BytesIO
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 import unittest
+
 import bmemcached
 
 
@@ -11,14 +16,31 @@ class PickleableThing(object):
     pass
 
 
-class PicklerTests(unittest.TestCase):
+class JsonPickler(object):
+    def __init__(self, f, protocol=0):
+        self.f = f
 
+    def dump(self, obj):
+        if isinstance(self.f, BytesIO):
+            return self.f.write(json.dumps(obj).encode())
+
+        return json.dump(obj, self.f)
+
+    def load(self):
+        if isinstance(self.f, BytesIO):
+            return json.loads(self.f.read().decode())
+
+        return json.load(self.f)
+
+
+class PicklerTests(unittest.TestCase):
     def setUp(self):
-        self.server = '127.0.0.1:11211'
-        self.json_client = bmemcached.Client(self.server, 'user', 'password')
+        self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
+        self.json_client = bmemcached.Client(self.server, 'user', 'password', pickler=JsonPickler,
+                                             unpickler=JsonPickler)
         self.pickle_client = bmemcached.Client(self.server, 'user', 'password',
-                                               dumps=pickle.dumps,
-                                               loads=pickle.loads)
+                                               pickler=pickle.Pickler,
+                                               unpickler=pickle.Unpickler)
         self.data = {'a': 'b'}
 
     def tearDown(self):

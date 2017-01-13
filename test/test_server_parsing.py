@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import six
@@ -12,26 +13,27 @@ else:
 
 class TestServerParsing(unittest.TestCase):
     def testAcceptStringServer(self):
-        client = bmemcached.Client('127.0.0.1:11211')
+        client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']))
         self.assertEqual(len(list(client.servers)), 1)
 
     def testAcceptIterableServer(self):
-        client = bmemcached.Client(['127.0.0.1:11211', '127.0.0.1:11211'])
+        client = bmemcached.Client(
+            ['{}:11211'.format(os.environ['MEMCACHED_HOST']), '{}:11211'.format(os.environ['MEMCACHED_HOST'])])
         self.assertEqual(len(list(client.servers)), 2)
 
     def testNoPortGiven(self):
-        server = bmemcached.client.Protocol('127.0.0.1')
-        self.assertEqual(server.host, '127.0.0.1')
+        server = bmemcached.client.Protocol(os.environ['MEMCACHED_HOST'])
+        self.assertEqual(server.host, os.environ['MEMCACHED_HOST'])
         self.assertEqual(server.port, 11211)
 
     def testInvalidPort(self):
         server = bmemcached.client.Protocol('127.0.0.1:blah')
-        self.assertEqual(server.host, '127.0.0.1')
+        self.assertEqual(server.host, os.environ['MEMCACHED_HOST'])
         self.assertEqual(server.port, 11211)
 
     def testNonStandardPort(self):
         server = bmemcached.client.Protocol('127.0.0.1:5000')
-        self.assertEqual(server.host, '127.0.0.1')
+        self.assertEqual(server.host, os.environ['MEMCACHED_HOST'])
         self.assertEqual(server.port, 5000)
 
     def testAcceptUnixSocket(self):
@@ -44,7 +46,7 @@ class TestServerParsing(unittest.TestCase):
         If username/password passed to Client, auto-authenticate.
         """
         mocked_response.return_value = (0, 0, 0, 0, 0, 0, 0, 0, 0, [b'PLAIN'])
-        client = bmemcached.Client('127.0.0.1:11211', username='user',
+        client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']), username='user',
                                    password='password')
         server = list(client.servers)[0]
 
@@ -57,7 +59,7 @@ class TestServerParsing(unittest.TestCase):
     @mock.patch.object(bmemcached.client.Protocol, '_get_response')
     def testNoCredentialsNoAuth(self, mocked_response):
         mocked_response.return_value = (0, 0, 0, 0, 0, 0x01, 0, 0, 0, [b'PLAIN'])
-        client = bmemcached.Client('127.0.0.1:11211')
+        client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']))
         server = list(client.servers)[0]
 
         # Force a connection.  Normally this is only done when we make a request to the

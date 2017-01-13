@@ -10,9 +10,9 @@ except ImportError:
     from urllib.parse import splitport
 
 import zlib
+from io import BytesIO
 import six
 from six import binary_type, text_type
-import json
 
 from bmemcached.compat import long
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
@@ -79,7 +79,7 @@ class Protocol(threading.local):
     COMPRESSION_THRESHOLD = 128
 
     def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None,
-                 dumps=None, loads=None):
+                 pickle_protocol=None, pickler=None, unpickler=None):
         super(Protocol, self).__init__()
         self.server = server
         self._username = username
@@ -89,8 +89,9 @@ class Protocol(threading.local):
         self.connection = None
         self.authenticated = False
         self.socket_timeout = socket_timeout
-        self.dumps = dumps
-        self.loads = loads
+        self.pickle_protocol = pickle_protocol
+        self.pickler = pickler
+        self.unpickler = unpickler
 
         self.reconnects_deferred_until = None
 
@@ -323,10 +324,10 @@ class Protocol(threading.local):
             value = str(value)
         else:
             flags |= self.FLAGS['object']
-            dumps = self.dumps
-            if dumps is None:
-                dumps = self.json_dumps
-            value = dumps(value)
+            buf = BytesIO()
+            pickler = self.pickler(buf, self.pickle_protocol)
+            pickler.dump(value)
+            value = buf.getvalue()
 
         if compress_level != 0 and len(value) > self.COMPRESSION_THRESHOLD:
             if compress_level is not None and compress_level > 0:
@@ -366,10 +367,9 @@ class Protocol(threading.local):
         elif flags & FLAGS['long']:
             return long(value)
         elif flags & FLAGS['object']:
-            loads = self.loads
-            if loads is None:
-                loads = self.json_loads
-            return loads(value)
+            buf = BytesIO(value)
+            unpickler = self.unpickler(buf)
+            return unpickler.load()
 
         if six.PY3:
             return value.decode('utf8')
@@ -382,12 +382,6 @@ class Protocol(threading.local):
             return value.decode('utf8')
         else:
             return value
-
-    def json_dumps(self, value):
-        return json.dumps(value).encode('utf8')
-
-    def json_loads(self, value):
-        return json.loads(value.decode('utf8'))
 
     def get(self, key):
         """

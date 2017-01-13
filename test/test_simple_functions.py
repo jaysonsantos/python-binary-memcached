@@ -1,8 +1,11 @@
+import os
 import unittest
+
+import six
+
 import bmemcached
 from bmemcached.compat import long, unicode
 
-import six
 if six.PY3:
     from unittest import mock
 else:
@@ -11,7 +14,7 @@ else:
 
 class MemcachedTests(unittest.TestCase):
     def setUp(self):
-        self.server = '127.0.0.1:11211'
+        self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
         self.server = '/tmp/memcached.sock'
         self.client = bmemcached.Client(self.server, 'user', 'password')
         self.reset()
@@ -77,7 +80,7 @@ class MemcachedTests(unittest.TestCase):
         value, cas = self.client.gets('test_key')
 
         # If a different CAS value is supplied, the key is not deleted.
-        self.assertFalse(self.client.delete('test_key', cas=cas+1))
+        self.assertFalse(self.client.delete('test_key', cas=cas + 1))
         self.assertEqual('test', self.client.get('test_key'))
 
         # If the correct CAS value is supplied, the key is deleted.
@@ -224,7 +227,7 @@ class MemcachedTests(unittest.TestCase):
 
 class TimeoutMemcachedTests(unittest.TestCase):
     def setUp(self):
-        self.server = '127.0.0.1:11211'
+        self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
         self.client = None
 
     def tearDown(self):
