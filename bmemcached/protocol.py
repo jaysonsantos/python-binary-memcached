@@ -425,6 +425,12 @@ class Protocol(threading.local):
         """
         Get multiple keys from server.
 
+        Since keys are converted to b'' when six.PY3 the keys need to be decoded back
+        into string . e.g key='test' is read as b'test' and then decoded back to 'test'
+        This encode/decode does not work when key is already a six.binary_type hence
+        this function remembers which keys were originally sent as str so that
+        it only decoded those keys back to string which were sent as string
+
         :param keys: A list of keys to from server.
         :type keys: list
         :return: A dict with all requested keys.
@@ -432,7 +438,8 @@ class Protocol(threading.local):
         """
         # pipeline N-1 getkq requests, followed by a regular getk to uncork the
         # server
-        keys, last = keys[:-1], keys[-1]
+        o_keys = keys
+        keys, last = keys[:-1], str_to_bytes(keys[-1])
         if six.PY2:
             msg = ''
         else:
@@ -448,7 +455,7 @@ class Protocol(threading.local):
                            self.COMMANDS['getk']['struct'] % (len(last)),
                            self.MAGIC['request'],
                            self.COMMANDS['getk']['command'],
-                           len(last), 0, 0, 0, len(last), 0, 0, last.encode())
+                           len(last), 0, 0, 0, len(last), 0, 0, last)
 
         self._send(msg)
 
@@ -462,7 +469,18 @@ class Protocol(threading.local):
                 flags, key, value = struct.unpack('!L%ds%ds' %
                                                   (keylen, bodylen - keylen - 4),
                                                   extra_content)
-                d[key.decode()] = self.deserialize(value, flags), cas
+                if six.PY2:
+                    d[key] = self.deserialize(value, flags), cas
+                else:
+                    try:
+                        decoded_key = key.decode()
+                        if decoded_key in o_keys:
+                            d[decoded_key] = self.deserialize(value, flags), cas
+                        else:
+                            d[key] = self.deserialize(value, flags), cas
+                    except UnicodeDecodeError:
+                        d[key] = self.deserialize(value, flags), cas
+
             elif status == self.STATUS['server_disconnected']:
                 break
             elif status != self.STATUS['key_not_found']:
