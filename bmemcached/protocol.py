@@ -376,10 +376,14 @@ class Protocol(threading.local):
 
         # In Python 2, mimic the behavior of the json library: return a str
         # unless the value contains unicode characters.
+        # in Python 2, if value is a binary (e.g struct.pack("<Q") then decode will fail
         try:
             value.decode('ascii')
         except UnicodeDecodeError:
-            return value.decode('utf8')
+            try:
+                return value.decode('utf8')
+            except UnicodeDecodeError:
+                return value
         else:
             return value
 
