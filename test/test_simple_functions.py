@@ -232,7 +232,8 @@ class TimeoutMemcachedTests(unittest.TestCase):
         self.client = None
 
     def tearDown(self):
-        self.client.disconnect_all()
+        if self.client:
+            self.client.disconnect_all()
         client = bmemcached.Client(self.server, 'user', 'password',
                                    socket_timeout=None)
         client.delete('timeout_key')

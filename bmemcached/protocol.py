@@ -478,12 +478,13 @@ class Protocol(threading.local):
                 else:
                     try:
                         decoded_key = key.decode()
+                    except UnicodeDecodeError:
+                        d[key] = self.deserialize(value, flags), cas
+                    else:
                         if decoded_key in o_keys:
                             d[decoded_key] = self.deserialize(value, flags), cas
                         else:
                             d[key] = self.deserialize(value, flags), cas
-                    except UnicodeDecodeError:
-                        d[key] = self.deserialize(value, flags), cas
 
             elif status == self.STATUS['server_disconnected']:
                 break
