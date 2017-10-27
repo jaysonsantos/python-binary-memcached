@@ -3,7 +3,7 @@ import six
 try:
     import cPickle as pickle
 except ImportError:
-    import pickle as pickle
+    import pickle as pickle  # type: ignore
 
 from bmemcached.protocol import Protocol
 

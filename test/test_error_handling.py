@@ -54,7 +54,6 @@ class _CacheProxy(multiprocessing.Process):
             read_sockets = [listen_sock]
             write_sockets = []
 
-            sockets = [listen_sock]
             if client_sock:
                 # Only add client_sock to read_sockets if we don't already have data
                 # from it waiting to be sent to the real server.
