@@ -186,6 +186,8 @@ class Client(object):
         :type key: six.string_types
         :param value: A value to be stored on server.
         :type value: object
+        :param cas: The CAS value previously obtained from a call to get*.
+        :type cas: int
         :param time: Time in seconds that your key will expire.
         :type time: int
         :param compress_level: How much to compress.
