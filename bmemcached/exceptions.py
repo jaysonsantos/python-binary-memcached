@@ -1,5 +1,6 @@
 class MemcachedException(Exception):
-    pass
+    def __init__(self, message, code):
+        self.code = code
 
 
 class AuthenticationNotSupported(MemcachedException):
