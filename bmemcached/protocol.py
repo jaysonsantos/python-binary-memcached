@@ -289,7 +289,7 @@ class Protocol(threading.local):
 
         if b'PLAIN' not in methods:
             raise AuthenticationNotSupported('This module only supports '
-                                             'PLAIN auth for now.')
+                                             'PLAIN auth for now.', status)
 
         method = b'PLAIN'
         auth = '\x00%s\x00%s' % (self._username, self._password)
@@ -308,10 +308,10 @@ class Protocol(threading.local):
             return False
 
         if status == self.STATUS['auth_error']:
-            raise InvalidCredentials("Incorrect username or password")
+            raise InvalidCredentials("Incorrect username or password", status)
 
         if status != self.STATUS['success']:
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
+            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
 
         logger.debug('Auth OK. Code: %d Message: %s', status, extra_content)
 
@@ -439,7 +439,7 @@ class Protocol(threading.local):
             if status == self.STATUS['server_disconnected']:
                 return None, None
 
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
+            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
 
         flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
 
@@ -509,7 +509,7 @@ class Protocol(threading.local):
             elif status == self.STATUS['server_disconnected']:
                 break
             elif status != self.STATUS['key_not_found']:
-                raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
+                raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
 
         return d
 
@@ -556,7 +556,7 @@ class Protocol(threading.local):
                 return False
             elif status == self.STATUS['server_disconnected']:
                 return False
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
+            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
 
         return True
 
@@ -744,7 +744,7 @@ class Protocol(threading.local):
          cas, extra_content) = self._get_response()
 
         if status not in (self.STATUS['success'], self.STATUS['server_disconnected']):
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content))
+            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
         if status == self.STATUS['server_disconnected']:
             return 0
 
@@ -809,7 +809,7 @@ class Protocol(threading.local):
         if status == self.STATUS['server_disconnected']:
             return False
         if status != self.STATUS['success'] and status not in (self.STATUS['key_not_found'], self.STATUS['key_exists']):
-            raise MemcachedException('Code: %d message: %s' % (status, extra_content))
+            raise MemcachedException('Code: %d message: %s' % (status, extra_content), status)
 
         logger.debug('Key deleted %s', key)
         return status != self.STATUS['key_exists']
@@ -877,7 +877,7 @@ class Protocol(threading.local):
          cas, extra_content) = self._get_response()
 
         if status not in (self.STATUS['success'], self.STATUS['server_disconnected']):
-            raise MemcachedException('Code: %d message: %s' % (status, extra_content))
+            raise MemcachedException('Code: %d message: %s' % (status, extra_content), status)
 
         logger.debug('Memcached flushed')
         return True
