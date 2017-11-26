@@ -26,7 +26,7 @@ bmemcached Package
     :show-inheritance:
 
 :mod:`protocol` Module
---------------------
+----------------------
 
 .. automodule:: bmemcached.protocol
     :members:
