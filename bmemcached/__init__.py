@@ -1,2 +1,4 @@
-__all__ = ['Client']
-from .client import Client
+__all__ = ('Client', 'ReplicatingClient', )
+
+from bmemcached.client import Client
+from bmemcached.client.replicating import ReplicatingClient

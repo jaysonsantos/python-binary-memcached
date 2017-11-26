@@ -1,19 +1,14 @@
-
 import six
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle as pickle  # type: ignore
-
+from bmemcached.compat import pickle
 from bmemcached.protocol import Protocol
+from bmemcached.client.constants import SOCKET_TIMEOUT
 
 
-_SOCKET_TIMEOUT = 3
-
-
-class Client(object):
+class ReplicatingClient(object):
     """
-    This is intended to be a client class which implement standard cache interface that common libs do.
+    This is intended to be a client class which implement standard cache interface that common libs do...
+
+    It replicates values over servers and get a response from the first one it can.
 
     :param servers: A list of servers with ip[:port] or unix socket.
     :type servers: list
@@ -34,7 +29,7 @@ class Client(object):
     """
     def __init__(self, servers=('127.0.0.1:11211',), username=None,
                  password=None, compression=None,
-                 socket_timeout=_SOCKET_TIMEOUT,
+                 socket_timeout=SOCKET_TIMEOUT,
                  pickle_protocol=0,
                  pickler=pickle.Pickler,
                  unpickler=pickle.Unpickler):

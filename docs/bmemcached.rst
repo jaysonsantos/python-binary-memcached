@@ -1,35 +1,53 @@
-bmemcached Package
+bmemcached package
 ==================
 
-:mod:`bmemcached` Package
+Subpackages
+-----------
+
+.. toctree::
+
+    bmemcached.client
+
+Submodules
+----------
+
+bmemcached\.compat module
 -------------------------
 
-.. automodule:: bmemcached.__init__
+.. automodule:: bmemcached.compat
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`client` Module
---------------------
-
-.. automodule:: bmemcached.client
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-:mod:`exceptions` Module
-------------------------
+bmemcached\.exceptions module
+-----------------------------
 
 .. automodule:: bmemcached.exceptions
     :members:
     :undoc-members:
     :show-inheritance:
 
-:mod:`protocol` Module
-----------------------
+bmemcached\.protocol module
+---------------------------
 
 .. automodule:: bmemcached.protocol
     :members:
     :undoc-members:
     :show-inheritance:
 
+bmemcached\.utils module
+------------------------
+
+.. automodule:: bmemcached.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: bmemcached
+    :members:
+    :undoc-members:
+    :show-inheritance:

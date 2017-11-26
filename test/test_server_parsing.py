@@ -22,17 +22,17 @@ class TestServerParsing(unittest.TestCase):
         self.assertEqual(len(list(client.servers)), 2)
 
     def testNoPortGiven(self):
-        server = bmemcached.client.Protocol(os.environ['MEMCACHED_HOST'])
+        server = bmemcached.protocol.Protocol(os.environ['MEMCACHED_HOST'])
         self.assertEqual(server.host, os.environ['MEMCACHED_HOST'])
         self.assertEqual(server.port, 11211)
 
     def testInvalidPort(self):
-        server = bmemcached.client.Protocol('127.0.0.1:blah')
+        server = bmemcached.protocol.Protocol('127.0.0.1:blah')
         self.assertEqual(server.host, os.environ['MEMCACHED_HOST'])
         self.assertEqual(server.port, 11211)
 
     def testNonStandardPort(self):
-        server = bmemcached.client.Protocol('127.0.0.1:5000')
+        server = bmemcached.protocol.Protocol('127.0.0.1:5000')
         self.assertEqual(server.host, os.environ['MEMCACHED_HOST'])
         self.assertEqual(server.port, 5000)
 
@@ -40,7 +40,7 @@ class TestServerParsing(unittest.TestCase):
         client = bmemcached.Client('/tmp/memcached.sock')
         self.assertEqual(len(list(client.servers)), 1)
 
-    @mock.patch.object(bmemcached.client.Protocol, '_get_response')
+    @mock.patch.object(bmemcached.protocol.Protocol, '_get_response')
     def testPassCredentials(self, mocked_response):
         """
         If username/password passed to Client, auto-authenticate.
@@ -56,7 +56,7 @@ class TestServerParsing(unittest.TestCase):
 
         self.assertTrue(server.authenticated)
 
-    @mock.patch.object(bmemcached.client.Protocol, '_get_response')
+    @mock.patch.object(bmemcached.protocol.Protocol, '_get_response')
     def testNoCredentialsNoAuth(self, mocked_response):
         mocked_response.return_value = (0, 0, 0, 0, 0, 0x01, 0, 0, 0, [b'PLAIN'])
         client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']))
