@@ -26,25 +26,25 @@ class Protocol(threading.local):
     """
     This class is used by Client class to communicate with server.
 
-    Reference https://github.com/memcached/memcached/wiki/BinaryProtocolRevamped
+    Reference https://github.com/memcached/memcached/wiki/BinaryProtocolRevamped ::
 
-    Header structure
-    Byte/     0       |       1       |       2       |       3       |
-       /              |               |               |               |
-      |0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|
-      +---------------+---------------+---------------+---------------+
-     0| Magic         | Opcode        | Key length                    |
-      +---------------+---------------+---------------+---------------+
-     4| Extras length | Data type     | vbucket id                    |
-      +---------------+---------------+---------------+---------------+
-     8| Total body length                                             |
-      +---------------+---------------+---------------+---------------+
-    12| Opaque                                                        |
-      +---------------+---------------+---------------+---------------+
-    16| CAS                                                           |
-      |                                                               |
-      +---------------+---------------+---------------+---------------+
-      Total 24 bytes
+        Header structure
+        Byte/     0       |       1       |       2       |       3       |
+           /              |               |               |               |
+          |0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|
+          +---------------+---------------+---------------+---------------+
+         0| Magic         | Opcode        | Key length                    |
+          +---------------+---------------+---------------+---------------+
+         4| Extras length | Data type     | vbucket id                    |
+          +---------------+---------------+---------------+---------------+
+         8| Total body length                                             |
+          +---------------+---------------+---------------+---------------+
+        12| Opaque                                                        |
+          +---------------+---------------+---------------+---------------+
+        16| CAS                                                           |
+          |                                                               |
+          +---------------+---------------+---------------+---------------+
+          Total 24 bytes
     """
     HEADER_STRUCT = '!BBHBBHLLQ'
     HEADER_SIZE = 24
