@@ -19,7 +19,7 @@ class TestMemcachedErrors(unittest.TestCase):
         wasn't a 'key not found' error.
         """
         client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']), 'user', 'password')
-        with mock.patch.object(bmemcached.client.Protocol, '_get_response') as mocked_response:
+        with mock.patch.object(bmemcached.protocol.Protocol, '_get_response') as mocked_response:
             mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
             self.assertRaises(MemcachedException, client.get, 'foo')
 
@@ -29,7 +29,7 @@ class TestMemcachedErrors(unittest.TestCase):
         wasn't a 'key not found' or 'key exists' error.
         """
         client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']), 'user', 'password')
-        with mock.patch.object(bmemcached.client.Protocol, '_get_response') as mocked_response:
+        with mock.patch.object(bmemcached.protocol.Protocol, '_get_response') as mocked_response:
             mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
             self.assertRaises(MemcachedException, client.set, 'foo', 'bar', 300)
 
@@ -40,7 +40,7 @@ class TestMemcachedErrors(unittest.TestCase):
         """
         client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']), 'user', 'password')
         client.set('foo', 1)
-        with mock.patch.object(bmemcached.client.Protocol, '_get_response') as mocked_response:
+        with mock.patch.object(bmemcached.protocol.Protocol, '_get_response') as mocked_response:
             mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 2)
             self.assertRaises(MemcachedException, client.incr, 'foo', 1)
             self.assertRaises(MemcachedException, client.decr, 'foo', 1)
@@ -51,7 +51,7 @@ class TestMemcachedErrors(unittest.TestCase):
         """
         client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']), 'user', 'password')
         client.flush_all()
-        with mock.patch.object(bmemcached.client.Protocol, '_get_response') as mocked_response:
+        with mock.patch.object(bmemcached.protocol.Protocol, '_get_response') as mocked_response:
             mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
             self.assertRaises(MemcachedException, client.delete, 'foo')
 
@@ -60,6 +60,6 @@ class TestMemcachedErrors(unittest.TestCase):
         Raise MemcachedException if the flush wasn't successful.
         """
         client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']), 'user', 'password')
-        with mock.patch.object(bmemcached.client.Protocol, '_get_response') as mocked_response:
+        with mock.patch.object(bmemcached.protocol.Protocol, '_get_response') as mocked_response:
             mocked_response.return_value = (0, 0, 0, 0, 0, 0x81, 0, 0, 0, 0)
             self.assertRaises(MemcachedException, client.flush_all)
