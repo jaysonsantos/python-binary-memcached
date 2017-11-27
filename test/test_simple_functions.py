@@ -1,5 +1,7 @@
 import os
 import unittest
+
+import pytest
 import six
 import struct
 import random
@@ -530,3 +532,34 @@ class BinaryMemcachedTests(unittest.TestCase):
         self.client.set(test_key, 'test')
         self.client.disconnect_all()
         self.assertEqual('test', self.client.get(test_key))
+
+
+class DistributedClient(MemcachedTests):
+    def setUp(self):
+        self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
+        self.client = bmemcached.DistributedClient(self.server, 'user', 'password')
+        self.reset()
+
+    def testDeleteMulti(self):
+        # TODO: testDeleteMulti
+        pytest.skip('Not implemented yet')
+
+    def testGetMulti(self):
+        # TODO: testGetMulti
+        pytest.skip('Not implemented yet')
+
+    def testGetMultiCas(self):
+        # TODO: testGetMultiCas
+        pytest.skip('Not implemented yet')
+
+    def testSetMulti(self):
+        # TODO: testSetMulti
+        pytest.skip('Not implemented yet')
+
+    def testSetMultiBigData(self):
+        # TODO: testSetMultiBigData
+        pytest.skip('Not implemented yet')
+
+    def testMultiCas(self):
+        # TODO: testMultiCas
+        pytest.skip('Not implemented yet')
