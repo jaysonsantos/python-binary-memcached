@@ -183,9 +183,7 @@ class Protocol(threading.local):
         Reads data from socket.
 
         :param size: Size in bytes to be read.
-        :type size: int
         :return: Data from socket
-        :rtype: six.string_types
         """
         value = b''
         while len(value) < size:
