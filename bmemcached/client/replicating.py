@@ -81,6 +81,7 @@ class ReplicatingClient(ClientMixin):
             for server in self.servers:
                 results = server.get_multi(keys)
                 if not get_cas:
+                    # Remove CAS data
                     for key, (value, cas) in results.items():
                         results[key] = value
                 d.update(results)
