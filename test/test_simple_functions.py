@@ -539,27 +539,3 @@ class DistributedClient(MemcachedTests):
         self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
         self.client = bmemcached.DistributedClient(self.server, 'user', 'password')
         self.reset()
-
-    def testDeleteMulti(self):
-        # TODO: testDeleteMulti
-        pytest.skip('Not implemented yet')
-
-    def testGetMulti(self):
-        # TODO: testGetMulti
-        pytest.skip('Not implemented yet')
-
-    def testGetMultiCas(self):
-        # TODO: testGetMultiCas
-        pytest.skip('Not implemented yet')
-
-    def testSetMulti(self):
-        # TODO: testSetMulti
-        pytest.skip('Not implemented yet')
-
-    def testSetMultiBigData(self):
-        # TODO: testSetMultiBigData
-        pytest.skip('Not implemented yet')
-
-    def testMultiCas(self):
-        # TODO: testMultiCas
-        pytest.skip('Not implemented yet')

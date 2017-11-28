@@ -1,3 +1,4 @@
+from collections import defaultdict
 from uhashring import HashRing
 
 from bmemcached.client import SOCKET_TIMEOUT
@@ -23,9 +24,25 @@ class DistributedClient(ClientMixin):
         server = self._get_server(key)
         return server.delete(key, cas)
 
+    def delete_multi(self, keys):
+        servers = defaultdict(list)
+        _ = [servers[self._get_server(key)].append(key) for key in keys]
+        return all([server.delete_multi(keys) for server, keys in servers.items()])
+
     def set(self, key, value, time=0, compress_level=-1):
         server = self._get_server(key)
         return server.set(key, value, time, compress_level)
+
+    def set_multi(self, mappings, time=0, compress_level=-1):
+        returns = []
+        if not mappings:
+            return False
+        server_mappings = defaultdict(dict)
+        _ = [server_mappings[self._get_server(key)].update([(key, value)]) for key, value in mappings.items()]
+        for server, m in server_mappings.items():
+            returns.append(server.set_multi(m, time, compress_level))
+
+        return all(returns)
 
     def add(self, key, value, time=0, compress_level=-1):
         server = self._get_server(key)
@@ -38,7 +55,6 @@ class DistributedClient(ClientMixin):
     def get(self, key, get_cas=False):
         server = self._get_server(key)
         value, cas = server.get(key)
-        # TODO: Check what is the right behavior when get_cas is True and key does not exist
         if value is not None:
             if get_cas:
                 return value, cas
@@ -46,6 +62,19 @@ class DistributedClient(ClientMixin):
 
         if get_cas:
             return None, None
+
+    def get_multi(self, keys, get_cas=False):
+        servers = defaultdict(list)
+        d = {}
+        _ = [servers[self._get_server(key)].append(key) for key in keys]
+        for server, keys in servers.items():
+            results = server.get_multi(keys)
+            if not get_cas:
+                # Remove CAS data
+                for key, (value, cas) in results.items():
+                    results[key] = value
+            d.update(results)
+        return d
 
     def gets(self, key):
         server = self._get_server(key)
