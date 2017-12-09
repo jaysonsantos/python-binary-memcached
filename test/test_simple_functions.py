@@ -1,7 +1,6 @@
 import os
 import unittest
 
-import pytest
 import six
 import struct
 import random
