@@ -3,3 +3,5 @@ exclude **/__pycache__/**
 recursive-include docs *
 recursive-include tests *
 prune docs/_build
+include README.rst
+include CHANGELOG.rst
