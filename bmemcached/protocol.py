@@ -99,7 +99,7 @@ class Protocol(threading.local):
     COMPRESSION_THRESHOLD = 128
 
     def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None,
-                 pickle_protocol=None, pickler=None, unpickler=None):
+                 pickle_protocol=None, pickler=None, unpickler=None, raw_data=False):
         super(Protocol, self).__init__()
         self.server = server
         self._username = username
@@ -121,6 +121,8 @@ class Protocol(threading.local):
         else:
             self.host = self.port = None
             self.set_retry_delay(0)
+
+        self.raw_data = raw_data
 
     @property
     def server_uses_unix_socket(self):
@@ -332,6 +334,12 @@ class Protocol(threading.local):
         :rtype: str
         """
         flags = 0
+
+        if self.raw_data:
+            if compress_level > 0:
+                raise MemcachedException("Compression is not possible when in 'raw data' mode")
+            return flags, value
+
         if isinstance(value, binary_type):
             flags |= self.FLAGS['binary']
         elif isinstance(value, text_type):
@@ -375,6 +383,9 @@ class Protocol(threading.local):
         :rtype: six.string_types|int
         """
         FLAGS = self.FLAGS
+
+        if self.raw_data:
+            return value
 
         if flags & FLAGS['compressed']:  # pragma: no branch
             value = self.compression.decompress(value)
