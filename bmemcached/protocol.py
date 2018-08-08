@@ -268,7 +268,7 @@ class Protocol(threading.local):
         if not self._username or not self._password:
             return False
 
-        logger.info('Authenticating as %s', self._username)
+        logger.debug('Authenticating as %s', self._username)
         self._send(struct.pack(self.HEADER_STRUCT,
                                self.MAGIC['request'],
                                self.COMMANDS['auth_negotiation']['command'],
