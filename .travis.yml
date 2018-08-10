@@ -4,5 +4,9 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
+  - "3.7"
+env:
+  - STEP=tests
+  - STEP=lint
 install: pip install -r requirements_test.txt && python setup.py develop
 script: ./.travis-runs-tests.sh

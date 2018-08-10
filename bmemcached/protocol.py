@@ -444,11 +444,11 @@ class Protocol(threading.local):
         flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
 
         return self.deserialize(value, flags), cas
-    
+
     def noop(self):
         """
         Send a NOOP command
-        
+
         :return: Returns the status.
         :rtype: int
         """
@@ -468,7 +468,7 @@ class Protocol(threading.local):
 
         if status != self.STATUS['success']:
             logger.debug('NOOP failed (status is %d). Message: %s' % (status, extra_content))
-        
+
         return int(status)
 
     def get_multi(self, keys):
