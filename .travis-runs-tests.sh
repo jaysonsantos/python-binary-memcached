@@ -1,5 +1,7 @@
-#!/bin/bash -e
-if [ "$STEP" -eq "tests" ]; then
+#!/bin/bash
+set -e
+set -x
+if [ "$STEP" = "tests" ]; then
     sudo service memcached stop
     py.test --version
     export PYTHONPATH=.
@@ -7,6 +9,6 @@ if [ "$STEP" -eq "tests" ]; then
     py.test --cov=bmemcached
 fi
 
-if [ "$STEP" -eq "lint" ]; then
+if [ "$STEP" = "lint" ]; then
     flake8
 fi
