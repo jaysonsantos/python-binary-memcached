@@ -1,0 +1,19 @@
+task:
+  matrix:
+    - name: lint
+      env:
+        STEP: lint
+      container:
+        image: python:latest
+    - name: test
+      env:
+        STEP: test
+      container:
+        matrix:
+          - image: python:2.7
+          - image: python:3.4
+          - image: python:3.5
+          - image: python:3.6
+          - image: python:3.7
+  install_script: pip install -r requirements_test.txt && python setup.py develop
+  script: ./.travis-runs-tests.sh
