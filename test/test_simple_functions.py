@@ -536,5 +536,5 @@ class BinaryMemcachedTests(unittest.TestCase):
 class DistributedClient(MemcachedTests):
     def setUp(self):
         self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
-        self.client = bmemcached.DistributedClient(self.server, 'user', 'password')
+        self.client = bmemcached.DistributedClient([self.server], 'user', 'password')
         self.reset()
