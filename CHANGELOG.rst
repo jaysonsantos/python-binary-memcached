@@ -1,7 +1,7 @@
 CHANGELOG
 ---------
 
-v0.17
+v0.28
 `````
 
 - moved bmemcached.Client to bmemcached.ReplicantClient *but keeps backward compatibility*
