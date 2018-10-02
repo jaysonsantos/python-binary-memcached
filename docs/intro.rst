@@ -24,8 +24,19 @@ Using
     client = bmemcached.Client(('127.0.0.1:11211', ), 'user',
                                 'password')
     client.set('key', 'value')
-    print client.get('key')
+    print(client.get('key'))
 
+
+Using it with distributed keys
+
+.. code-block:: python
+
+    import bmemcached
+    client = bmemcached.DistributedClient(
+        ('127.0.0.1:11211', ), 'user', 'password'
+    )
+    client.set('key', 'value')
+    print(client.get('key'))
 
 Running the tests
 -----------------

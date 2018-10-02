@@ -1,5 +1,6 @@
 import os
 import unittest
+
 import six
 import struct
 import random
@@ -530,3 +531,10 @@ class BinaryMemcachedTests(unittest.TestCase):
         self.client.set(test_key, 'test')
         self.client.disconnect_all()
         self.assertEqual('test', self.client.get(test_key))
+
+
+class DistributedClient(MemcachedTests):
+    def setUp(self):
+        self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
+        self.client = bmemcached.DistributedClient([self.server], 'user', 'password')
+        self.reset()
