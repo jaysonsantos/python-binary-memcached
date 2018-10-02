@@ -33,7 +33,9 @@ class DistributedClient(ClientMixin):
 
     def delete_multi(self, keys):
         servers = defaultdict(list)
-        _ = [servers[self._get_server(key)].append(key) for key in keys]
+        for key in keys:
+            server_key = self._get_server(key)
+            servers[server_key].append(key)
         return all([server.delete_multi(keys) for server, keys in servers.items()])
 
     def set(self, key, value, time=0, compress_level=-1):
@@ -75,7 +77,9 @@ class DistributedClient(ClientMixin):
         if not mappings:
             return False
         server_mappings = defaultdict(dict)
-        _ = [server_mappings[self._get_server(key)].update([(key, value)]) for key, value in mappings.items()]
+        for key, value in mappings.items():
+            server_key = self._get_server(key)
+            server_mappings[server_key].update([(key, value)])
         for server, m in server_mappings.items():
             returns.append(server.set_multi(m, time, compress_level))
 
@@ -155,7 +159,9 @@ class DistributedClient(ClientMixin):
         """
         servers = defaultdict(list)
         d = {}
-        _ = [servers[self._get_server(key)].append(key) for key in keys]
+        for key in keys:
+            server_key = self._get_server(key)
+            servers[server_key].append(key)
         for server, keys in servers.items():
             results = server.get_multi(keys)
             if not get_cas:
