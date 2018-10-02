@@ -36,7 +36,7 @@ class DistributedClient(ClientMixin):
         for key in keys:
             server_key = self._get_server(key)
             servers[server_key].append(key)
-        return all([server.delete_multi(keys) for server, keys in servers.items()])
+        return all([server.delete_multi(keys_) for server, keys_ in servers.items()])
 
     def set(self, key, value, time=0, compress_level=-1):
         """
