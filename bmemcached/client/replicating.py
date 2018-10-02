@@ -26,13 +26,16 @@ class ReplicatingClient(object):
     :type unpickler: function
     :param socket_timeout: The timeout applied to memcached connections.
     :type socket_timeout: float
+    :param raw_data: Whether this client should read and write only binary strings, rather than storing type information in the 'opaque' field. This is useful when interacting with memcached keys which already have the 'opaque value' set to something, to avoid misinterpreting data.
+    :type raw_data: bool
     """
     def __init__(self, servers=('127.0.0.1:11211',), username=None,
                  password=None, compression=None,
                  socket_timeout=SOCKET_TIMEOUT,
                  pickle_protocol=0,
                  pickler=pickle.Pickler,
-                 unpickler=pickle.Unpickler):
+                 unpickler=pickle.Unpickler,
+                 raw_data=False):
         self.username = username
         self.password = password
         self.compression = compression
@@ -40,6 +43,7 @@ class ReplicatingClient(object):
         self.pickle_protocol = pickle_protocol
         self.pickler = pickler
         self.unpickler = unpickler
+        self.raw_data = raw_data
         self.set_servers(servers)
 
     @property
@@ -69,6 +73,7 @@ class ReplicatingClient(object):
             pickle_protocol=self.pickle_protocol,
             pickler=self.pickler,
             unpickler=self.unpickler,
+            raw_data=self.raw_data,
         ) for server in servers]
 
     def _set_retry_delay(self, value):
