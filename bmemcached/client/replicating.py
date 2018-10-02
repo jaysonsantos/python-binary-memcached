@@ -1,75 +1,12 @@
-import six
-from bmemcached.compat import pickle
-from bmemcached.protocol import Protocol
-from bmemcached.client.constants import SOCKET_TIMEOUT
+from bmemcached.client.mixin import ClientMixin
 
 
-class ReplicatingClient(object):
+class ReplicatingClient(ClientMixin):
     """
     This is intended to be a client class which implement standard cache interface that common libs do...
 
     It replicates values over servers and get a response from the first one it can.
-
-    :param servers: A list of servers with ip[:port] or unix socket.
-    :type servers: list
-    :param username: If your server requires SASL authentication, provide the username.
-    :type username: six.string_types
-    :param password: If your server requires SASL authentication, provide the password.
-    :type password: six.string_types
-    :param compression: This memcached client uses zlib compression by default,
-        but you can change it to any Python module that provides
-        `compress` and `decompress` functions, such as `bz2`.
-    :type compression: Python module
-    :param pickler: Use this to replace the object serialization mechanism.
-    :type pickler: function
-    :param unpickler: Use this to replace the object deserialization mechanism.
-    :type unpickler: function
-    :param socket_timeout: The timeout applied to memcached connections.
-    :type socket_timeout: float
     """
-    def __init__(self, servers=('127.0.0.1:11211',), username=None,
-                 password=None, compression=None,
-                 socket_timeout=SOCKET_TIMEOUT,
-                 pickle_protocol=0,
-                 pickler=pickle.Pickler,
-                 unpickler=pickle.Unpickler):
-        self.username = username
-        self.password = password
-        self.compression = compression
-        self.socket_timeout = socket_timeout
-        self.pickle_protocol = pickle_protocol
-        self.pickler = pickler
-        self.unpickler = unpickler
-        self.set_servers(servers)
-
-    @property
-    def servers(self):
-        for server in self._servers:
-            yield server
-
-    def set_servers(self, servers):
-        """
-        Iter to a list of servers and instantiate Protocol class.
-
-        :param servers: A list of servers
-        :type servers: list
-        :return: Returns nothing
-        :rtype: None
-        """
-        if isinstance(servers, six.string_types):
-            servers = [servers]
-
-        assert servers, "No memcached servers supplied"
-        self._servers = [Protocol(
-            server=server,
-            username=self.username,
-            password=self.password,
-            compression=self.compression,
-            socket_timeout=self.socket_timeout,
-            pickle_protocol=self.pickle_protocol,
-            pickler=self.pickler,
-            unpickler=self.unpickler,
-        ) for server in servers]
 
     def _set_retry_delay(self, value):
         for server in self._servers:
@@ -108,6 +45,8 @@ class ReplicatingClient(object):
                     return value, cas
                 else:
                     return value
+        if get_cas:
+            return None, None
 
     def gets(self, key):
         """
@@ -142,6 +81,7 @@ class ReplicatingClient(object):
             for server in self.servers:
                 results = server.get_multi(keys)
                 if not get_cas:
+                    # Remove CAS data
                     for key, (value, cas) in results.items():
                         results[key] = value
                 d.update(results)
@@ -271,9 +211,8 @@ class ReplicatingClient(object):
         Delete a key/value from server. If key does not exist, it returns True.
 
         :param key: Key's name to be deleted
-        :type key: six.string_types
+        :param cas: CAS of the key
         :return: True in case o success and False in case of failure.
-        :rtype: bool
         """
         returns = []
         for server in self.servers:
@@ -322,45 +261,3 @@ class ReplicatingClient(object):
             returns.append(server.decr(key, value))
 
         return returns[0]
-
-    def flush_all(self, time=0):
-        """
-        Send a command to server flush|delete all keys.
-
-        :param time: Time to wait until flush in seconds.
-        :type time: int
-        :return: True in case of success, False in case of failure
-        :rtype: bool
-        """
-        returns = []
-        for server in self.servers:
-            returns.append(server.flush_all(time))
-
-        return any(returns)
-
-    def stats(self, key=None):
-        """
-        Return server stats.
-
-        :param key: Optional if you want status from a key.
-        :type key: six.string_types
-        :return: A dict with server stats
-        :rtype: dict
-        """
-        # TODO: Stats with key is not working.
-
-        returns = {}
-        for server in self.servers:
-            returns[server.server] = server.stats(key)
-
-        return returns
-
-    def disconnect_all(self):
-        """
-        Disconnect all servers.
-
-        :return: Nothing
-        :rtype: None
-        """
-        for server in self.servers:
-            server.disconnect()
