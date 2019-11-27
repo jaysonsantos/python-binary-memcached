@@ -30,7 +30,8 @@ class ClientMixin(object):
                  socket_timeout=SOCKET_TIMEOUT,
                  pickle_protocol=0,
                  pickler=pickle.Pickler,
-                 unpickler=pickle.Unpickler):
+                 unpickler=pickle.Unpickler,
+                 tls_context=None):
         self.username = username
         self.password = password
         self.compression = compression
@@ -38,6 +39,7 @@ class ClientMixin(object):
         self.pickle_protocol = pickle_protocol
         self.pickler = pickler
         self.unpickler = unpickler
+        self.tls_context = tls_context
         self.set_servers(servers)
 
     @property
@@ -67,6 +69,7 @@ class ClientMixin(object):
             pickle_protocol=self.pickle_protocol,
             pickler=self.pickler,
             unpickler=self.unpickler,
+            tls_context=self.tls_context,
         ) for server in servers]
 
     def flush_all(self, time=0):
