@@ -16,7 +16,6 @@ else:
 
 class MemcachedTests(unittest.TestCase):
     def setUp(self):
-        self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
         self.server = '/tmp/memcached.sock'
         self.client = bmemcached.Client(self.server, 'user', 'password')
         self.reset()
@@ -263,7 +262,6 @@ class TimeoutMemcachedTests(unittest.TestCase):
 
 class BinaryMemcachedTests(unittest.TestCase):
     def setUp(self):
-        self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
         self.server = '/tmp/memcached.sock'
         self.client = bmemcached.Client(self.server, 'user', 'password')
         self._inserted_keys = list()
