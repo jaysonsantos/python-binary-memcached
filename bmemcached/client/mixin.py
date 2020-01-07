@@ -1,6 +1,6 @@
 import six
 
-from bmemcached.client.constants import SOCKET_TIMEOUT
+from bmemcached.client.constants import PICKLE_PROTOCOL, SOCKET_TIMEOUT
 from bmemcached.compat import pickle
 from bmemcached.protocol import Protocol
 
@@ -18,17 +18,23 @@ class ClientMixin(object):
         but you can change it to any Python module that provides
         `compress` and `decompress` functions, such as `bz2`.
     :type compression: Python module
+    :param socket_timeout: The timeout applied to memcached connections.
+    :type socket_timeout: float
+    :param pickle_protocol: The pickling protocol to use, 0-5. See
+        https://docs.python.org/3/library/pickle.html#data-stream-format
+        default is 0 (human-readable, original format).
+    :type pickle_protocol: int
     :param pickler: Use this to replace the object serialization mechanism.
     :type pickler: function
     :param unpickler: Use this to replace the object deserialization mechanism.
     :type unpickler: function
-    :param socket_timeout: The timeout applied to memcached connections.
-    :type socket_timeout: float
     """
-    def __init__(self, servers=('127.0.0.1:11211',), username=None,
-                 password=None, compression=None,
+    def __init__(self, servers=('127.0.0.1:11211',),
+                 username=None,
+                 password=None,
+                 compression=None,
                  socket_timeout=SOCKET_TIMEOUT,
-                 pickle_protocol=0,
+                 pickle_protocol=PICKLE_PROTOCOL,
                  pickler=pickle.Pickler,
                  unpickler=pickle.Unpickler):
         self.username = username
