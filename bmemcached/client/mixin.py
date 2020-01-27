@@ -28,6 +28,9 @@ class ClientMixin(object):
     :type pickler: function
     :param unpickler: Use this to replace the object deserialization mechanism.
     :type unpickler: function
+    :param tls_context: A TLS context in order to connect to TLS enabled
+        memcached servers.
+    :type tls_context: ssl.SSLContext
     """
     def __init__(self, servers=('127.0.0.1:11211',),
                  username=None,
