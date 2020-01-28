@@ -2,7 +2,7 @@
 set -e
 set -x
 if [ "$STEP" = "tests" ]; then
-    sudo service memcached stop
+    sudo service memcached stop || true
     py.test --version
     export PYTHONPATH=.
     python setup.py develop
