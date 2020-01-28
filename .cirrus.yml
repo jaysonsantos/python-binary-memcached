@@ -5,9 +5,9 @@ task:
         STEP: lint
       container:
         image: python:latest
-    - name: test
+    - name: tests
       env:
-        STEP: test
+        STEP: tests
       container:
         matrix:
           - image: python:2.7
