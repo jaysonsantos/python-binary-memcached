@@ -38,25 +38,38 @@ Using it with distributed keys
     client.set('key', 'value')
     print(client.get('key'))
 
-Running the tests
------------------
+Testing
+-------
 
-First run memcached with:
+``python-binary-memcached`` unit tests are found in the ``test/`` directory
+and are designed to be run using `pytest`_. `pytest`_ will discover the tests
+automatically, so all you have to do is:
 
-.. code-block:: bash
+.. code-block:: console
 
-    memcached -S -vvv
-    memcached -p5000 -S -vvv
-    memcached -S -s/tmp/memcached.sock -vvv
+    $ pytest
+    ...
+    170 passed in 4.43 seconds
 
-This is to cover all tests with socket, standard port and non standard port.
+This runs the tests with the default Python interpreter.
 
-Then, run the tests.
+You can also verify that the tests pass on other supported Python interpreters.
+For this we use `tox`_, which will automatically create a `virtualenv`_ for
+each supported Python version and run the tests. For example:
 
-.. code-block:: bash
+.. code-block:: console
 
-    cd src_dir/
-    py.test
+    $ tox
+    ...
+    py27: commands succeeded
+    ERROR:  py34: InterpreterNotFound: python3.4
+    py35: commands succeeded
+    py36: commands succeeded
+    py37: commands succeeded
+    py38: commands succeeded
+
+You may not have all the required Python versions installed, in which case you
+will see one or more ``InterpreterNotFound`` errors.
 
 Using with Django
 -----------------
@@ -66,3 +79,6 @@ Tests Status
 ------------
 .. image:: https://travis-ci.org/jaysonsantos/python-binary-memcached.png?branch=master
     :target: https://travis-ci.org/jaysonsantos/python-binary-memcached
+
+.. _`pytest`: https://pypi.org/project/pytest/
+.. _`tox`: https://pypi.org/project/tox/
