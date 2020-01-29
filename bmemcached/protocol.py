@@ -99,7 +99,7 @@ class Protocol(threading.local):
     COMPRESSION_THRESHOLD = 128
 
     def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None,
-                 pickle_protocol=None, pickler=None, unpickler=None):
+                 pickle_protocol=None, pickler=None, unpickler=None, tls_context=None):
         super(Protocol, self).__init__()
         self.server = server
         self._username = username
@@ -112,6 +112,7 @@ class Protocol(threading.local):
         self.pickle_protocol = pickle_protocol
         self.pickler = pickler
         self.unpickler = unpickler
+        self.tls_context = tls_context
 
         self.reconnects_deferred_until = None
 
@@ -144,6 +145,12 @@ class Protocol(threading.local):
                 self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.connection.settimeout(self.socket_timeout)
                 self.connection.connect((self.host, self.port))
+
+                if self.tls_context:
+                    self.connection = self.tls_context.wrap_socket(
+                        self.connection,
+                        server_hostname=self.host,
+                    )
             else:
                 self.connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 self.connection.connect(self.server)

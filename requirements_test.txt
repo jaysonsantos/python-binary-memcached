@@ -3,3 +3,4 @@ pytest-cov==2.7.1
 mock==2.0.0
 flake8==3.7.7
 bumpversion==0.5.3
+trustme==0.6.0
