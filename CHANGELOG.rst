@@ -3,6 +3,7 @@ CHANGELOG
 
 v0.29
 `````
+
 - added TLS support on #211 thanks to @moisesguimaraes!
 
 v0.28

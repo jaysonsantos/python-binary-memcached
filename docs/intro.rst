@@ -54,7 +54,7 @@ automatically, so all you have to do is:
 This runs the tests with the default Python interpreter.
 
 You can also verify that the tests pass on other supported Python interpreters.
-For this we use `tox`_, which will automatically create a `virtualenv`_ for
+For this we use ``tox``, which will automatically create a ``virtualenv`` for
 each supported Python version and run the tests. For example:
 
 .. code-block:: console
