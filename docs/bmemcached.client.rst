@@ -12,10 +12,26 @@ bmemcached\.client\.constants module
     :undoc-members:
     :show-inheritance:
 
+bmemcached\.client\.mixin module
+--------------------------------
+
+.. automodule:: bmemcached.client.mixin
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 bmemcached\.client\.replicating module
 --------------------------------------
 
 .. automodule:: bmemcached.client.replicating
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+bmemcached\.client\.distributed module
+--------------------------------------
+
+.. automodule:: bmemcached.client.distributed
     :members:
     :undoc-members:
     :show-inheritance:
