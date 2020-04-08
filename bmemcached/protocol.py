@@ -4,10 +4,6 @@ import re
 import socket
 import struct
 import threading
-try:
-    from urllib import splitport  # type: ignore
-except ImportError:
-    from urllib.parse import splitport  # type: ignore
 
 import zlib
 from io import BytesIO
@@ -177,10 +173,23 @@ class Protocol(threading.local):
         >>> split_host_port('127.0.0.1')
         ('127.0.0.1', 11211)
         """
-        host, port = splitport(server)
-        if port is None:
+        try:
+            import wingdbstub
+        except ImportError:
+            pass
+
+        parts = server.split(':')
+        if len(parts) == 2:
+            host = parts[0]
+            try:
+                port = int(parts[1])
+            except (TypeError, ValueError):
+                port = 11211
+                host = server
+        else:
+            host = parts[0]
             port = 11211
-        port = int(port)
+
         if re.search(':.*$', host):
             host = re.sub(':.*$', '', host)
         return host, port
