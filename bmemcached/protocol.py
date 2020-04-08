@@ -173,11 +173,6 @@ class Protocol(threading.local):
         >>> split_host_port('127.0.0.1')
         ('127.0.0.1', 11211)
         """
-        try:
-            import wingdbstub
-        except ImportError:
-            pass
-
         parts = server.split(':')
         if len(parts) == 2:
             host = parts[0]
