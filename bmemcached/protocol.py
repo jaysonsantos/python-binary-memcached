@@ -495,11 +495,7 @@ class Protocol(threading.local):
         # server
         o_keys = keys
         keys, last = keys[:-1], str_to_bytes(keys[-1])
-        if six.PY2:
-            msg = ''
-        else:
-            msg = b''
-        msg = msg.join([
+        msg = b''.join([
             struct.pack(self.HEADER_STRUCT +
                         self.COMMANDS['getkq']['struct'] % (len(key)),
                         self.MAGIC['request'],
@@ -728,10 +724,7 @@ class Protocol(threading.local):
                         0, 0, 0, 0, 0, 0, 0)
         msg.append(m)
 
-        if six.PY2:
-            msg = ''.join(msg)
-        else:
-            msg = b''.join(msg)
+        msg = b''.join(msg)
 
         self._send(msg)
 
@@ -855,10 +848,7 @@ class Protocol(threading.local):
         :rtype: bool
         """
         logger.debug('Deleting keys %r', keys)
-        if six.PY2:
-            msg = ''
-        else:
-            msg = b''
+        msg = b''
         for key in keys:
             msg += struct.pack(
                 self.HEADER_STRUCT +
