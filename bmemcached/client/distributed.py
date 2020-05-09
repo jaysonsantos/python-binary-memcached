@@ -71,20 +71,20 @@ class DistributedClient(ClientMixin):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True in case of success and False in case of failure
-        :rtype: bool
+        :return: List of keys that failed to be set on any server.
+        :rtype: list
         """
-        returns = []
         if not mappings:
-            return False
+            return []
+        returns = set()
         server_mappings = defaultdict(dict)
         for key, value in mappings.items():
             server_key = self._get_server(key)
             server_mappings[server_key].update([(key, value)])
         for server, m in server_mappings.items():
-            returns.append(server.set_multi(m, time, compress_level))
+            returns |= set(server.set_multi(m, time, compress_level))
 
-        return all(returns)
+        return list(returns)
 
     def add(self, key, value, time=0, compress_level=-1):
         """

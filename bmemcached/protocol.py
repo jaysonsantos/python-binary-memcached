@@ -683,13 +683,13 @@ class Protocol(threading.local):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True
-        :rtype: bool
+        :return: List of keys that failed to be set.
+        :rtype: list
         """
-        mappings = mappings.items()
+        mappings = list(mappings.items())
         msg = []
 
-        for key, value in mappings:
+        for opaque, (key, value) in enumerate(mappings):
             if isinstance(key, tuple):
                 key, cas = key
             else:
@@ -709,7 +709,7 @@ class Protocol(threading.local):
                             self.MAGIC['request'],
                             self.COMMANDS[command]['command'],
                             len(keybytes),
-                            8, 0, 0, len(keybytes) + len(value) + 8, 0, cas or 0,
+                            8, 0, 0, len(keybytes) + len(value) + 8, opaque, cas or 0,
                             flags, time, keybytes, value)
             msg.append(m)
 
@@ -725,16 +725,21 @@ class Protocol(threading.local):
         self._send(msg)
 
         opcode = -1
-        retval = True
+        failed = []
         while opcode != self.COMMANDS['noop']['command']:
             (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
              cas, extra_content) = self._get_response()
-            if status != self.STATUS['success']:
-                retval = False
             if status == self.STATUS['server_disconnected']:
-                break
+                # Assume that the entire operation failed.
+                return list(key for key, value in mappings)
+            if status != self.STATUS['success']:
+                key, value = mappings[opaque]
+                if isinstance(key, tuple):
+                    failed.append((key[0], cas))
+                else:
+                    failed.append(key)
 
-        return retval
+        return failed
 
     def _incr_decr(self, command, key, value, default, time):
         """
