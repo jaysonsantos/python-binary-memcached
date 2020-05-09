@@ -488,27 +488,25 @@ class Protocol(threading.local):
         it only decoded those keys back to string which were sent as string
 
         :param keys: A list of keys to from server.
-        :type keys: list
+        :type keys: Collection
         :return: A dict with all requested keys.
         :rtype: dict
         """
         # pipeline N-1 getkq requests, followed by a regular getk to uncork the
         # server
-        o_keys = keys
-        keys, last = keys[:-1], str_to_bytes(keys[-1])
+        n = len(keys)
+        if n == 0:
+            return {}
+
         msg = b''
-        for key in keys:
+        for i, key in enumerate(keys):
             keybytes = str_to_bytes(key)
+            command = self.COMMANDS['getk' if i == n - 1 else 'getkq']
             msg += struct.pack(self.HEADER_STRUCT +
-                               self.COMMANDS['getkq']['struct'] % (len(keybytes),),
+                               command['struct'] % (len(keybytes),),
                                self.MAGIC['request'],
-                               self.COMMANDS['getkq']['command'],
+                               command['command'],
                                len(keybytes), 0, 0, 0, len(keybytes), 0, 0, keybytes)
-        msg += struct.pack(self.HEADER_STRUCT +
-                           self.COMMANDS['getk']['struct'] % (len(last)),
-                           self.MAGIC['request'],
-                           self.COMMANDS['getk']['command'],
-                           len(last), 0, 0, 0, len(last), 0, 0, last)
 
         self._send(msg)
 
@@ -530,7 +528,7 @@ class Protocol(threading.local):
                 raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
 
         ret = {}
-        for key in o_keys:
+        for key in keys:
             keybytes = str_to_bytes(key)
             if keybytes in d:
                 ret[key] = d[keybytes]
