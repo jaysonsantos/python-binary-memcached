@@ -423,11 +423,12 @@ class Protocol(threading.local):
         :rtype: object
         """
         logger.debug('Getting key %s', key)
+        keybytes = str_to_bytes(key)
         data = struct.pack(self.HEADER_STRUCT +
-                           self.COMMANDS['get']['struct'] % (len(key)),
+                           self.COMMANDS['get']['struct'] % (len(keybytes),),
                            self.MAGIC['request'],
                            self.COMMANDS['get']['command'],
-                           len(key), 0, 0, 0, len(key), 0, 0, str_to_bytes(key))
+                           len(keybytes), 0, 0, 0, len(keybytes), 0, 0, keybytes)
         self._send(data)
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
@@ -495,13 +496,14 @@ class Protocol(threading.local):
         # server
         o_keys = keys
         keys, last = keys[:-1], str_to_bytes(keys[-1])
-        msg = b''.join([
-            struct.pack(self.HEADER_STRUCT +
-                        self.COMMANDS['getkq']['struct'] % (len(key)),
-                        self.MAGIC['request'],
-                        self.COMMANDS['getkq']['command'],
-                        len(key), 0, 0, 0, len(key), 0, 0, str_to_bytes(key))
-            for key in keys])
+        msg = b''
+        for key in keys:
+            keybytes = str_to_bytes(key)
+            msg += struct.pack(self.HEADER_STRUCT +
+                               self.COMMANDS['getkq']['struct'] % (len(keybytes),),
+                               self.MAGIC['request'],
+                               self.COMMANDS['getkq']['command'],
+                               len(keybytes), 0, 0, 0, len(keybytes), 0, 0, keybytes)
         msg += struct.pack(self.HEADER_STRUCT +
                            self.COMMANDS['getk']['struct'] % (len(last)),
                            self.MAGIC['request'],
@@ -566,12 +568,13 @@ class Protocol(threading.local):
         if isinstance(value, text_type):
             value = value.encode('utf8')
 
+        keybytes = str_to_bytes(key)
         self._send(struct.pack(self.HEADER_STRUCT +
-                               self.COMMANDS[command]['struct'] % (len(key), len(value)),
+                               self.COMMANDS[command]['struct'] % (len(keybytes), len(value)),
                                self.MAGIC['request'],
                                self.COMMANDS[command]['command'],
-                               len(key), 8, 0, 0, len(key) + len(value) + 8, 0, cas, flags,
-                               time, str_to_bytes(key), value))
+                               len(keybytes), 8, 0, 0, len(keybytes) + len(value) + 8, 0, cas, flags,
+                               time, keybytes, value))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -707,14 +710,15 @@ class Protocol(threading.local):
             else:
                 command = 'setq'
 
+            keybytes = str_to_bytes(key)
             flags, value = self.serialize(value, compress_level=compress_level)
             m = struct.pack(self.HEADER_STRUCT +
-                            self.COMMANDS[command]['struct'] % (len(key), len(value)),
+                            self.COMMANDS[command]['struct'] % (len(keybytes), len(value)),
                             self.MAGIC['request'],
                             self.COMMANDS[command]['command'],
-                            len(key),
-                            8, 0, 0, len(key) + len(value) + 8, 0, cas or 0,
-                            flags, time, str_to_bytes(key), value)
+                            len(keybytes),
+                            8, 0, 0, len(keybytes) + len(value) + 8, 0, cas or 0,
+                            flags, time, keybytes, value)
             msg.append(m)
 
         m = struct.pack(self.HEADER_STRUCT +
@@ -755,14 +759,15 @@ class Protocol(threading.local):
         :return: Actual value of the key on server
         :rtype: int
         """
+        keybytes = str_to_bytes(key)
         time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
         self._send(struct.pack(self.HEADER_STRUCT +
                                self.COMMANDS[command]['struct'] % len(key),
                                self.MAGIC['request'],
                                self.COMMANDS[command]['command'],
-                               len(key),
-                               20, 0, 0, len(key) + 20, 0, 0, value,
-                               default, time, str_to_bytes(key)))
+                               len(keybytes),
+                               20, 0, 0, len(keybytes) + 20, 0, 0, value,
+                               default, time, keybytes))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -821,11 +826,12 @@ class Protocol(threading.local):
         :rtype: bool
         """
         logger.debug('Deleting key %s', key)
+        keybytes = str_to_bytes(key)
         self._send(struct.pack(self.HEADER_STRUCT +
-                               self.COMMANDS['delete']['struct'] % len(key),
+                               self.COMMANDS['delete']['struct'] % (len(keybytes),),
                                self.MAGIC['request'],
                                self.COMMANDS['delete']['command'],
-                               len(key), 0, 0, 0, len(key), 0, cas, str_to_bytes(key)))
+                               len(keybytes), 0, 0, 0, len(keybytes), 0, cas, keybytes))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -850,12 +856,13 @@ class Protocol(threading.local):
         logger.debug('Deleting keys %r', keys)
         msg = b''
         for key in keys:
+            keybytes = str_to_bytes(key)
             msg += struct.pack(
                 self.HEADER_STRUCT +
-                self.COMMANDS['delete']['struct'] % len(key),
+                self.COMMANDS['delete']['struct'] % (len(keybytes),),
                 self.MAGIC['request'],
                 self.COMMANDS['delete']['command'],
-                len(key), 0, 0, 0, len(key), 0, 0, str_to_bytes(key))
+                len(keybytes), 0, 0, 0, len(keybytes), 0, 0, keybytes)
 
         msg += struct.pack(
             self.HEADER_STRUCT +
