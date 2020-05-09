@@ -522,25 +522,19 @@ class Protocol(threading.local):
                 flags, key, value = struct.unpack('!L%ds%ds' %
                                                   (keylen, bodylen - keylen - 4),
                                                   extra_content)
-                if six.PY2:
-                    d[key] = self.deserialize(value, flags), cas
-                else:
-                    try:
-                        decoded_key = key.decode()
-                    except UnicodeDecodeError:
-                        d[key] = self.deserialize(value, flags), cas
-                    else:
-                        if decoded_key in o_keys:
-                            d[decoded_key] = self.deserialize(value, flags), cas
-                        else:
-                            d[key] = self.deserialize(value, flags), cas
+                d[key] = self.deserialize(value, flags), cas
 
             elif status == self.STATUS['server_disconnected']:
                 break
             elif status != self.STATUS['key_not_found']:
                 raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
 
-        return d
+        ret = {}
+        for key in o_keys:
+            keybytes = str_to_bytes(key)
+            if keybytes in d:
+                ret[key] = d[keybytes]
+        return ret
 
     def _set_add_replace(self, command, key, value, time, cas=0, compress_level=-1):
         """
