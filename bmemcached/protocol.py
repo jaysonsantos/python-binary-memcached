@@ -423,11 +423,12 @@ class Protocol(threading.local):
         :rtype: object
         """
         logger.debug('Getting key %s', key)
+        keybytes = str_to_bytes(key)
         data = struct.pack(self.HEADER_STRUCT +
-                           self.COMMANDS['get']['struct'] % (len(key)),
+                           self.COMMANDS['get']['struct'] % (len(keybytes),),
                            self.MAGIC['request'],
                            self.COMMANDS['get']['command'],
-                           len(key), 0, 0, 0, len(key), 0, 0, str_to_bytes(key))
+                           len(keybytes), 0, 0, 0, len(keybytes), 0, 0, keybytes)
         self._send(data)
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
@@ -487,30 +488,25 @@ class Protocol(threading.local):
         it only decoded those keys back to string which were sent as string
 
         :param keys: A list of keys to from server.
-        :type keys: list
+        :type keys: Collection
         :return: A dict with all requested keys.
         :rtype: dict
         """
         # pipeline N-1 getkq requests, followed by a regular getk to uncork the
         # server
-        o_keys = keys
-        keys, last = keys[:-1], str_to_bytes(keys[-1])
-        if six.PY2:
-            msg = ''
-        else:
-            msg = b''
-        msg = msg.join([
-            struct.pack(self.HEADER_STRUCT +
-                        self.COMMANDS['getkq']['struct'] % (len(key)),
-                        self.MAGIC['request'],
-                        self.COMMANDS['getkq']['command'],
-                        len(key), 0, 0, 0, len(key), 0, 0, str_to_bytes(key))
-            for key in keys])
-        msg += struct.pack(self.HEADER_STRUCT +
-                           self.COMMANDS['getk']['struct'] % (len(last)),
-                           self.MAGIC['request'],
-                           self.COMMANDS['getk']['command'],
-                           len(last), 0, 0, 0, len(last), 0, 0, last)
+        n = len(keys)
+        if n == 0:
+            return {}
+
+        msg = b''
+        for i, key in enumerate(keys):
+            keybytes = str_to_bytes(key)
+            command = self.COMMANDS['getk' if i == n - 1 else 'getkq']
+            msg += struct.pack(self.HEADER_STRUCT +
+                               command['struct'] % (len(keybytes),),
+                               self.MAGIC['request'],
+                               command['command'],
+                               len(keybytes), 0, 0, 0, len(keybytes), 0, 0, keybytes)
 
         self._send(msg)
 
@@ -524,25 +520,19 @@ class Protocol(threading.local):
                 flags, key, value = struct.unpack('!L%ds%ds' %
                                                   (keylen, bodylen - keylen - 4),
                                                   extra_content)
-                if six.PY2:
-                    d[key] = self.deserialize(value, flags), cas
-                else:
-                    try:
-                        decoded_key = key.decode()
-                    except UnicodeDecodeError:
-                        d[key] = self.deserialize(value, flags), cas
-                    else:
-                        if decoded_key in o_keys:
-                            d[decoded_key] = self.deserialize(value, flags), cas
-                        else:
-                            d[key] = self.deserialize(value, flags), cas
+                d[key] = self.deserialize(value, flags), cas
 
             elif status == self.STATUS['server_disconnected']:
                 break
             elif status != self.STATUS['key_not_found']:
                 raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
 
-        return d
+        ret = {}
+        for key in keys:
+            keybytes = str_to_bytes(key)
+            if keybytes in d:
+                ret[key] = d[keybytes]
+        return ret
 
     def _set_add_replace(self, command, key, value, time, cas=0, compress_level=-1):
         """
@@ -570,12 +560,13 @@ class Protocol(threading.local):
         if isinstance(value, text_type):
             value = value.encode('utf8')
 
+        keybytes = str_to_bytes(key)
         self._send(struct.pack(self.HEADER_STRUCT +
-                               self.COMMANDS[command]['struct'] % (len(key), len(value)),
+                               self.COMMANDS[command]['struct'] % (len(keybytes), len(value)),
                                self.MAGIC['request'],
                                self.COMMANDS[command]['command'],
-                               len(key), 8, 0, 0, len(key) + len(value) + 8, 0, cas, flags,
-                               time, str_to_bytes(key), value))
+                               len(keybytes), 8, 0, 0, len(keybytes) + len(value) + 8, 0, cas, flags,
+                               time, keybytes, value))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -711,14 +702,15 @@ class Protocol(threading.local):
             else:
                 command = 'setq'
 
+            keybytes = str_to_bytes(key)
             flags, value = self.serialize(value, compress_level=compress_level)
             m = struct.pack(self.HEADER_STRUCT +
-                            self.COMMANDS[command]['struct'] % (len(key), len(value)),
+                            self.COMMANDS[command]['struct'] % (len(keybytes), len(value)),
                             self.MAGIC['request'],
                             self.COMMANDS[command]['command'],
-                            len(key),
-                            8, 0, 0, len(key) + len(value) + 8, 0, cas or 0,
-                            flags, time, str_to_bytes(key), value)
+                            len(keybytes),
+                            8, 0, 0, len(keybytes) + len(value) + 8, 0, cas or 0,
+                            flags, time, keybytes, value)
             msg.append(m)
 
         m = struct.pack(self.HEADER_STRUCT +
@@ -728,10 +720,7 @@ class Protocol(threading.local):
                         0, 0, 0, 0, 0, 0, 0)
         msg.append(m)
 
-        if six.PY2:
-            msg = ''.join(msg)
-        else:
-            msg = b''.join(msg)
+        msg = b''.join(msg)
 
         self._send(msg)
 
@@ -762,14 +751,15 @@ class Protocol(threading.local):
         :return: Actual value of the key on server
         :rtype: int
         """
+        keybytes = str_to_bytes(key)
         time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
         self._send(struct.pack(self.HEADER_STRUCT +
                                self.COMMANDS[command]['struct'] % len(key),
                                self.MAGIC['request'],
                                self.COMMANDS[command]['command'],
-                               len(key),
-                               20, 0, 0, len(key) + 20, 0, 0, value,
-                               default, time, str_to_bytes(key)))
+                               len(keybytes),
+                               20, 0, 0, len(keybytes) + 20, 0, 0, value,
+                               default, time, keybytes))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -828,11 +818,12 @@ class Protocol(threading.local):
         :rtype: bool
         """
         logger.debug('Deleting key %s', key)
+        keybytes = str_to_bytes(key)
         self._send(struct.pack(self.HEADER_STRUCT +
-                               self.COMMANDS['delete']['struct'] % len(key),
+                               self.COMMANDS['delete']['struct'] % (len(keybytes),),
                                self.MAGIC['request'],
                                self.COMMANDS['delete']['command'],
-                               len(key), 0, 0, 0, len(key), 0, cas, str_to_bytes(key)))
+                               len(keybytes), 0, 0, 0, len(keybytes), 0, cas, keybytes))
 
         (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
          cas, extra_content) = self._get_response()
@@ -855,17 +846,15 @@ class Protocol(threading.local):
         :rtype: bool
         """
         logger.debug('Deleting keys %r', keys)
-        if six.PY2:
-            msg = ''
-        else:
-            msg = b''
+        msg = b''
         for key in keys:
+            keybytes = str_to_bytes(key)
             msg += struct.pack(
                 self.HEADER_STRUCT +
-                self.COMMANDS['delete']['struct'] % len(key),
+                self.COMMANDS['delete']['struct'] % (len(keybytes),),
                 self.MAGIC['request'],
                 self.COMMANDS['delete']['command'],
-                len(key), 0, 0, 0, len(key), 0, 0, str_to_bytes(key))
+                len(keybytes), 0, 0, 0, len(keybytes), 0, 0, keybytes)
 
         msg += struct.pack(
             self.HEADER_STRUCT +
