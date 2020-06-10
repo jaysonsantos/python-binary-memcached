@@ -1,6 +1,7 @@
 import multiprocessing
 import os
 import select
+import six
 import socket
 import time
 import unittest
@@ -147,15 +148,15 @@ class MemcachedTests(unittest.TestCase):
         self.assertFalse(self.client.set('test_key', 'test'))
 
     def testSetMulti(self):
-        self.assertTrue(self.client.set_multi({
+        six.assertCountEqual(self, self.client.set_multi({
             'test_key': 'value',
-            'test_key2': 'value2'}))
+            'test_key2': 'value2'}), [])
 
         self._stop_proxy()
 
-        self.assertFalse(self.client.set_multi({
+        six.assertCountEqual(self, self.client.set_multi({
             'test_key': 'value',
-            'test_key2': 'value2'}))
+            'test_key2': 'value2'}), ['test_key', 'test_key2'])
 
     def testGet(self):
         self.client.set('test_key', 'test')
@@ -210,10 +211,10 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual('test', self.client.get('test_key'))
 
     def testGetMulti(self):
-        self.assertTrue(self.client.set_multi({
+        six.assertCountEqual(self, self.client.set_multi({
             'test_key': 'value',
             'test_key2': 'value2'
-        }))
+        }), [])
         self.assertEqual({'test_key': 'value', 'test_key2': 'value2'},
                          self.client.get_multi(['test_key', 'test_key2']))
 

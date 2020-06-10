@@ -150,15 +150,15 @@ class ReplicatingClient(ClientMixin):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True in case of success and False in case of failure
-        :rtype: bool
+        :return: List of keys that failed to be set on any server.
+        :rtype: list
         """
-        returns = []
+        returns = set()
         if mappings:
             for server in self.servers:
-                returns.append(server.set_multi(mappings, time, compress_level=compress_level))
+                returns |= set(server.set_multi(mappings, time, compress_level=compress_level))
 
-        return all(returns)
+        return list(returns)
 
     def add(self, key, value, time=0, compress_level=-1):
         """
