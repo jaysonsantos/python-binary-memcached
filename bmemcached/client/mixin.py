@@ -123,7 +123,7 @@ class ClientMixin(object):
         for server in self.servers:
             server.disconnect()
 
-    def get(self, key, get_cas=False):
+    def get(self, key, default=None, get_cas=False):
         raise NotImplementedError()
 
     def gets(self, key):

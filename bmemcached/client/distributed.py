@@ -126,12 +126,13 @@ class DistributedClient(ClientMixin):
         server = self._get_server(key)
         return server.replace(key, value, time, compress_level)
 
-    def get(self, key, get_cas=False):
+    def get(self, key, default=None, get_cas=False):
         """
         Get a key from server.
 
         :param key: Key's name
         :type key: six.string_types
+        :param default: In case memcached does not find a key, return a default value
         :param get_cas: If true, return (value, cas), where cas is the new CAS value.
         :type get_cas: boolean
         :return: Returns a key data from server.
@@ -143,6 +144,11 @@ class DistributedClient(ClientMixin):
             if get_cas:
                 return value, cas
             return value
+
+        if default is not None:
+            if get_cas:
+                return default, None
+            return default
 
         if get_cas:
             return None, None
