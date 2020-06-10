@@ -27,12 +27,13 @@ class ReplicatingClient(ClientMixin):
         # add exponential falloff in the future.  _set_retry_delay is exposed for tests.
         self._set_retry_delay(5 if enable else 0)
 
-    def get(self, key, get_cas=False):
+    def get(self, key, default=None, get_cas=False):
         """
         Get a key from server.
 
         :param key: Key's name
         :type key: six.string_types
+        :param default: In case memcached does not find a key, return a default value
         :param get_cas: If true, return (value, cas), where cas is the new CAS value.
         :type get_cas: boolean
         :return: Returns a key data from server.
@@ -45,6 +46,10 @@ class ReplicatingClient(ClientMixin):
                     return value, cas
                 else:
                     return value
+        if default is not None:
+            if get_cas:
+                return default, None
+            return default
         if get_cas:
             return None, None
 

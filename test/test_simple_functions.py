@@ -44,6 +44,10 @@ class MemcachedTests(unittest.TestCase):
         self.client.set('test_key', 'test')
         self.assertEqual('test', self.client.get('test_key'))
 
+    def testGetDefault(self):
+        self.assertEqual(None, self.client.get('test_key'))
+        self.assertEqual('default_value', self.client.get('test_key', 'default_value'))
+
     def testGetBytes(self):
         # Ensure the code is 8-bit clean.
         value = b'\x01z\x7f\x00\x80\xfe\xff\x00'
