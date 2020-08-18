@@ -1,8 +1,8 @@
 CHANGELOG
 ---------
 
-```
 v0.30.0
+```````
 
 - Add ability to return default value on get but breaking get's API
 - Support an arbitrary collection of keys, not just a list
