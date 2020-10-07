@@ -2,7 +2,6 @@ import unittest
 import bmemcached
 
 
-
 class DistributedClientHashingTest(unittest.TestCase):
     def test_get_server_is_consistent(self):
         key = 'the_key'
