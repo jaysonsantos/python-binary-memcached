@@ -123,6 +123,9 @@ class Protocol(threading.local):
             self.host = self.port = None
             self.set_retry_delay(0)
 
+    def __str__(self):
+        return "{}_{}_{}".format(self.server, self._username, self._password)
+
     @property
     def server_uses_unix_socket(self):
         return self.host is None
