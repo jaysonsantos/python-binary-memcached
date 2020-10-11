@@ -1,6 +1,11 @@
 CHANGELOG
 ---------
 
+v0.31.1
+```````
+
+- Implement Protocol.__str__ for real consistent hashing + test (#237)
+
 v0.30.0
 ```````
 
