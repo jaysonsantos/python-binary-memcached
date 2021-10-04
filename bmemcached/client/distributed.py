@@ -204,7 +204,7 @@ class DistributedClient(ClientMixin):
         server = self._get_server(key)
         return server.cas(key, value, cas, time, compress_level)
 
-    def incr(self, key, value):
+    def incr(self, key, value, default=0, time=1000000):
         """
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
 
@@ -212,13 +212,17 @@ class DistributedClient(ClientMixin):
         :type key: six.string_types
         :param value: Number to be incremented
         :type value: int
+        :param default: If key not set, initialize to this value
+        :type default: int
+        :param time: Time in seconds that your key will expire.
+        :type time: int
         :return: Actual value of the key on server
         :rtype: int
         """
         server = self._get_server(key)
-        return server.incr(key, value)
+        return server.incr(key, value, default=default, time=time)
 
-    def decr(self, key, value):
+    def decr(self, key, value, default=0, time=1000000):
         """
         Decrement a key, if it exists, returns it's actual value, if it don't, return 0.
         Minimum value of decrement return is 0.
@@ -227,8 +231,12 @@ class DistributedClient(ClientMixin):
         :type key: six.string_types
         :param value: Number to be decremented
         :type value: int
+        :param default: If key not set, initialize to this value
+        :type default: int
+        :param time: Time in seconds that your key will expire.
+        :type time: int
         :return: Actual value of the key on server
         :rtype: int
         """
         server = self._get_server(key)
-        return server.decr(key, value)
+        return server.decr(key, value, default=default, time=time)
