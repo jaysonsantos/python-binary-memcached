@@ -232,7 +232,7 @@ class ReplicatingClient(ClientMixin):
 
         return all(returns)
 
-    def incr(self, key, value):
+    def incr(self, key, value, default=0, time=1000000):
         """
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
 
@@ -240,16 +240,20 @@ class ReplicatingClient(ClientMixin):
         :type key: six.string_types
         :param value: Number to be incremented
         :type value: int
+        :param default: If key not set, initialize to this value
+        :type default: int
+        :param time: Time in seconds that your key will expire.
+        :type time: int
         :return: Actual value of the key on server
         :rtype: int
         """
         returns = []
         for server in self.servers:
-            returns.append(server.incr(key, value))
+            returns.append(server.incr(key, value, default=default, time=time))
 
         return returns[0]
 
-    def decr(self, key, value):
+    def decr(self, key, value, default=0, time=1000000):
         """
         Decrement a key, if it exists, returns it's actual value, if it don't, return 0.
         Minimum value of decrement return is 0.
@@ -258,11 +262,15 @@ class ReplicatingClient(ClientMixin):
         :type key: six.string_types
         :param value: Number to be decremented
         :type value: int
+        :param default: If key not set, initialize to this value
+        :type default: int
+        :param time: Time in seconds that your key will expire.
+        :type time: int
         :return: Actual value of the key on server
         :rtype: int
         """
         returns = []
         for server in self.servers:
-            returns.append(server.decr(key, value))
+            returns.append(server.decr(key, value, default=default, time=time))
 
         return returns[0]
