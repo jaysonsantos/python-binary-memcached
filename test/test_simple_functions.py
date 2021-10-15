@@ -208,9 +208,17 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual(0, self.client.incr('test_key', 1))
         self.assertEqual(1, self.client.incr('test_key', 1))
 
+    def testIncrementInitialize(self):
+        self.assertEqual(10, self.client.incr('test_key', 1, default=10))
+        self.assertEqual(11, self.client.incr('test_key', 1, default=10))
+
     def testDecrement(self):
         self.assertEqual(0, self.client.decr('test_key', 1))
         self.assertEqual(0, self.client.decr('test_key', 1))
+
+    def testDecrementInitialize(self):
+        self.assertEqual(10, self.client.decr('test_key', 1, default=10))
+        self.assertEqual(9, self.client.decr('test_key', 1, default=10))
 
     def testFlush(self):
         self.client.set('test_key', 'test')
