@@ -195,7 +195,7 @@ class Protocol(threading.local):
         :param size: Size in bytes to be read.
         :return: Data from socket
         """
-        value = b''
+        value = bytearray()
         while len(value) < size:
             data = self.connection.recv(size - len(value))
             if not data:
@@ -206,7 +206,7 @@ class Protocol(threading.local):
         if len(value) < size:
             raise socket.error()
 
-        return value
+        return bytes(value)
 
     def _get_response(self):
         """
@@ -501,7 +501,7 @@ class Protocol(threading.local):
         if n == 0:
             return {}
 
-        msg = b''
+        msg = bytearray()
         for i, key in enumerate(keys):
             keybytes = str_to_bytes(key)
             command = self.COMMANDS['getk' if i == n - 1 else 'getkq']
@@ -690,7 +690,7 @@ class Protocol(threading.local):
         :rtype: list
         """
         mappings = list(mappings.items())
-        msg = []
+        msg = bytearray()
 
         for opaque, (key, value) in enumerate(mappings):
             if isinstance(key, tuple):
@@ -707,23 +707,19 @@ class Protocol(threading.local):
 
             keybytes = str_to_bytes(key)
             flags, value = self.serialize(value, compress_level=compress_level)
-            m = struct.pack(self.HEADER_STRUCT +
-                            self.COMMANDS[command]['struct'] % (len(keybytes), len(value)),
-                            self.MAGIC['request'],
-                            self.COMMANDS[command]['command'],
-                            len(keybytes),
-                            8, 0, 0, len(keybytes) + len(value) + 8, opaque, cas or 0,
-                            flags, time, keybytes, value)
-            msg.append(m)
+            msg += struct.pack(self.HEADER_STRUCT +
+                               self.COMMANDS[command]['struct'] % (len(keybytes), len(value)),
+                               self.MAGIC['request'],
+                               self.COMMANDS[command]['command'],
+                               len(keybytes),
+                               8, 0, 0, len(keybytes) + len(value) + 8, opaque, cas or 0,
+                               flags, time, keybytes, value)
 
-        m = struct.pack(self.HEADER_STRUCT +
-                        self.COMMANDS['noop']['struct'],
-                        self.MAGIC['request'],
-                        self.COMMANDS['noop']['command'],
-                        0, 0, 0, 0, 0, 0, 0)
-        msg.append(m)
-
-        msg = b''.join(msg)
+        msg += struct.pack(self.HEADER_STRUCT +
+                           self.COMMANDS['noop']['struct'],
+                           self.MAGIC['request'],
+                           self.COMMANDS['noop']['command'],
+                           0, 0, 0, 0, 0, 0, 0)
 
         self._send(msg)
 
@@ -854,7 +850,7 @@ class Protocol(threading.local):
         :rtype: bool
         """
         logger.debug('Deleting keys %r', keys)
-        msg = b''
+        msg = bytearray()
         for key in keys:
             keybytes = str_to_bytes(key)
             msg += struct.pack(
