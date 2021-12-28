@@ -1,27 +1,3 @@
-CHANGELOG
----------
-
-v0.31.1
-```````
-
-- Implement Protocol.__str__ for real consistent hashing + test (#237)
-
-v0.30.0
-```````
-
-- Add ability to return default value on get but breaking get's API
-- Support an arbitrary collection of keys, not just a list
-
-v0.29
-`````
-
-- added TLS support on #211 thanks to @moisesguimaraes!
-
-v0.28
-`````
-
-- moved bmemcached.Client to bmemcached.ReplicantClient *but keeps backward compatibility*
-- added DistributedClient to distribute keys over servers using consistent hashing
 ## v0.31.0 (2021-12-28)
 
 ### Refactor
@@ -36,11 +12,18 @@ v0.28
 
 ## v0.30.0 (2020-08-18)
 
+- Add ability to return default value on get but breaking get's API
+- Support an arbitrary collection of keys, not just a list
+
 ## v0.30 (2020-06-10)
 
 ## v0.29.0 (2020-01-29)
+- added TLS support on #211 thanks to @moisesguimaraes!
 
 ## v0.28.0 (2018-10-02)
+
+- moved bmemcached.Client to bmemcached.ReplicantClient *but keeps backward compatibility*
+- added DistributedClient to distribute keys over servers using consistent hashing
 
 ## v0.27.0 (2018-08-10)
 
