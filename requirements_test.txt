@@ -1,6 +1,7 @@
-pytest~=3.9
-pytest-cov~=2.7
-mock~=2.0
-flake8~=3.7
 bumpversion~=0.5.3
+flake8~=3.7
+m2r~=0.2.1
+mock~=2.0
+pytest-cov~=2.7
+pytest~=3.9
 trustme~=0.6.0
