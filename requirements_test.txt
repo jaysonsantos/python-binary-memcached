@@ -1,8 +1,7 @@
-bumpversion~=0.5.3
-flake8~=3.7
+flake8~=4.0
 m2r~=0.2.1
 mistune<2 # m2r breaks with newer versions
-mock~=2.0
-pytest-cov~=2.7
-pytest~=3.9
-trustme~=0.6.0
+mock~=4.0
+pytest-cov~=3.0
+pytest~=6.2
+trustme~=0.9.0
