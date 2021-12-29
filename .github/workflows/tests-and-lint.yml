@@ -12,7 +12,7 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, 3.10]
+        python-version: [2.7, 3.6, 3.7, 3.8, 3.9, "3.10"]
 
     steps:
       - uses: actions/checkout@v2
@@ -34,7 +34,7 @@ jobs:
       - name: Set up Python 3.10
         uses: actions/setup-python@v2
         with:
-          python-version: 3.10
+          python-version: "3.10"
       - name: Install Dependencies
         run: |
           STEP="lint" ./.ci-before-script.sh
