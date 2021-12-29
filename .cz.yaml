@@ -2,3 +2,6 @@ commitizen:
   name: cz_conventional_commits
   tag_format: v$version
   version: 0.31.0
+  version_files:
+    - setup.py
+    - docs/conf.py
