@@ -1,6 +1,7 @@
 bumpversion~=0.5.3
 flake8~=3.7
 m2r~=0.2.1
+mistune<2 # m2r breaks with newer versions
 mock~=2.0
 pytest-cov~=2.7
 pytest~=3.9
