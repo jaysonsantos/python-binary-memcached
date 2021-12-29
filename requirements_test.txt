@@ -1,4 +1,5 @@
-flake8~=4.0
+flake8~=4.0; python_version > 2
+flake8~=3.9; python_version < 3
 m2r~=0.2.1
 mistune<2 # m2r breaks with newer versions
 mock~=4.0
