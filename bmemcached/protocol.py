@@ -1,13 +1,12 @@
 from datetime import datetime, timedelta
 import logging
-import re
 import socket
 import struct
 import threading
 try:
-    from urllib import splitport  # type: ignore
+    from urlparse import SplitResult  # type: ignore[import-not-found]
 except ImportError:
-    from urllib.parse import splitport  # type: ignore
+    from urllib.parse import SplitResult  # type: ignore[import-not-found]
 
 import zlib
 from io import BytesIO
@@ -180,13 +179,8 @@ class Protocol(threading.local):
         >>> split_host_port('127.0.0.1')
         ('127.0.0.1', 11211)
         """
-        host, port = splitport(server)
-        if port is None:
-            port = 11211
-        port = int(port)
-        if re.search(':.*$', host):
-            host = re.sub(':.*$', '', host)
-        return host, port
+        u = SplitResult("", server, "", "", "")
+        return u.hostname, 11211 if u.port is None else u.port
 
     def _read_socket(self, size):
         """

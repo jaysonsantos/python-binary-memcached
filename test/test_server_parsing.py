@@ -27,9 +27,8 @@ class TestServerParsing(unittest.TestCase):
         self.assertEqual(server.port, 11211)
 
     def testInvalidPort(self):
-        server = bmemcached.protocol.Protocol('{}:blah'.format(os.environ['MEMCACHED_HOST']))
-        self.assertEqual(server.host, os.environ['MEMCACHED_HOST'])
-        self.assertEqual(server.port, 11211)
+        with self.assertRaises(ValueError):
+            bmemcached.protocol.Protocol('{}:blah'.format(os.environ['MEMCACHED_HOST']))
 
     def testNonStandardPort(self):
         server = bmemcached.protocol.Protocol('{}:5000'.format(os.environ['MEMCACHED_HOST']))
