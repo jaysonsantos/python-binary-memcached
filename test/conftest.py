@@ -41,3 +41,16 @@ def memcached_socket():
     yield p
     p.kill()
     p.wait()
+
+
+@pytest.yield_fixture(scope="session", autouse=True)
+def memcached_ipv6():
+    p = subprocess.Popen(
+        ["memcached", "-l::1"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    time.sleep(0.1)
+    yield p
+    p.kill()
+    p.wait()
