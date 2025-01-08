@@ -195,7 +195,7 @@ class Protocol(threading.local):
                 return True
             except ValueError:
                 return False
-        
+
         if is_ip_address(server):
             return server, default_port
 
