@@ -39,9 +39,9 @@ class TestServerParsing(unittest.TestCase):
         server = bmemcached.protocol.Protocol('2001:db8::2')
         self.assertEqual(server.host, '2001:db8::2')
         self.assertEqual(server.port, 11211)
-        # Since `2001:db8::2:8080` is a valid IPv6 address, 
+        # Since `2001:db8::2:8080` is a valid IPv6 address,
         # it is ambiguous whether to split it into `2001:db8::2` and `8080`
-        # or treat it as `2001:db8::2:8080`. 
+        # or treat it as `2001:db8::2:8080`.
         # Therefore, it will be treated as `2001:db8::2:8080`.
         server = bmemcached.protocol.Protocol('2001:db8::2:8080')
         self.assertEqual(server.host, '2001:db8::2:8080')
