@@ -9,6 +9,7 @@ except ImportError:
     from urllib.parse import SplitResult  # type: ignore[import-not-found]
 
 import zlib
+from ipaddress import ip_address
 from io import BytesIO
 import six
 from six import binary_type, text_type
@@ -144,9 +145,7 @@ class Protocol(threading.local):
 
         try:
             if self.host:
-                self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.connection.settimeout(self.socket_timeout)
-                self.connection.connect((self.host, self.port))
+                self.connection = socket.create_connection((self.host, self.port), self.socket_timeout)
 
                 if self.tls_context:
                     self.connection = self.tls_context.wrap_socket(
@@ -174,11 +173,38 @@ class Protocol(threading.local):
 
         Port defaults to 11211.
 
+        When using IPv6 with a specified port, the address must be enclosed in brackets.
+        If the port is not specified, brackets are optional.
+
         >>> split_host_port('127.0.0.1:11211')
         ('127.0.0.1', 11211)
         >>> split_host_port('127.0.0.1')
         ('127.0.0.1', 11211)
+        >>> split_host_port('::1')
+        ('::1', 11211)
+        >>> split_host_port('[::1]')
+        ('::1', 11211)
+        >>> split_host_port('[::1]:11211')
+        ('::1', 11211)
         """
+        default_port = 11211
+
+        def is_ip_address(address):
+            try:
+                ip_address(address)
+                return True
+            except ValueError:
+                return False
+        
+        if is_ip_address(server):
+            return server, default_port
+
+        if server.startswith('['):
+            host, _, port = server[1:].partition(']')
+            if not is_ip_address(host):
+                raise ValueError('{} is not a valid IPv6 address'.format(server))
+            return host, default_port if not port else int(port.lstrip(':'))
+
         u = SplitResult("", server, "", "", "")
         return u.hostname, 11211 if u.port is None else u.port
 

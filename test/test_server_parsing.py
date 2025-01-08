@@ -26,9 +26,38 @@ class TestServerParsing(unittest.TestCase):
         self.assertEqual(server.host, os.environ['MEMCACHED_HOST'])
         self.assertEqual(server.port, 11211)
 
+    def testIPv6(self):
+        server = bmemcached.protocol.Protocol('[::1]')
+        self.assertEqual(server.host, '::1')
+        self.assertEqual(server.port, 11211)
+        server = bmemcached.protocol.Protocol('::1')
+        self.assertEqual(server.host, '::1')
+        self.assertEqual(server.port, 11211)
+        server = bmemcached.protocol.Protocol('[2001:db8::2]')
+        self.assertEqual(server.host, '2001:db8::2')
+        self.assertEqual(server.port, 11211)
+        server = bmemcached.protocol.Protocol('2001:db8::2')
+        self.assertEqual(server.host, '2001:db8::2')
+        self.assertEqual(server.port, 11211)
+        # Since `2001:db8::2:8080` is a valid IPv6 address, 
+        # it is ambiguous whether to split it into `2001:db8::2` and `8080`
+        # or treat it as `2001:db8::2:8080`. 
+        # Therefore, it will be treated as `2001:db8::2:8080`.
+        server = bmemcached.protocol.Protocol('2001:db8::2:8080')
+        self.assertEqual(server.host, '2001:db8::2:8080')
+        self.assertEqual(server.port, 11211)
+        server = bmemcached.protocol.Protocol('[::1]:5000')
+        self.assertEqual(server.host, '::1')
+        self.assertEqual(server.port, 5000)
+        server = bmemcached.protocol.Protocol('[2001:db8::2]:5000')
+        self.assertEqual(server.host, '2001:db8::2')
+        self.assertEqual(server.port, 5000)
+
     def testInvalidPort(self):
         with self.assertRaises(ValueError):
             bmemcached.protocol.Protocol('{}:blah'.format(os.environ['MEMCACHED_HOST']))
+        with self.assertRaises(ValueError):
+            bmemcached.protocol.Protocol('[::1]:blah')
 
     def testNonStandardPort(self):
         server = bmemcached.protocol.Protocol('{}:5000'.format(os.environ['MEMCACHED_HOST']))
