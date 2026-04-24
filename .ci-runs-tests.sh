@@ -4,7 +4,7 @@ env
 if [ "$STEP" = "tests" ]; then
     py.test --version
     export PYTHONPATH=.
-    python setup.py develop
+    pip install -e .
     py.test --cov=bmemcached
     exit 0
 fi
