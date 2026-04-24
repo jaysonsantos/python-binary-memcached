@@ -90,6 +90,36 @@ class DistributedClient(ClientMixin):
 
         return list(returns)
 
+    def set_multi_cas(self, mappings, time=0, compress_level=-1):
+        """
+        Set multiple keys with their values on server, returning the new CAS
+        value for each successfully stored key.
+
+        :param mappings: A dict with keys/values. Keys may be (key, cas)
+            tuples as in set_multi.
+        :type mappings: dict
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
+        :return: A dict keyed by the string key of every input mapping. The
+            value is the new CAS int on success or None on failure.
+        :rtype: dict
+        """
+        if not mappings:
+            return {}
+        result = {}
+        server_mappings = defaultdict(dict)
+        for key, value in mappings.items():
+            str_key = key[0] if isinstance(key, tuple) else key
+            server_key = self._get_server(str_key)
+            server_mappings[server_key][key] = value
+        for server, m in server_mappings.items():
+            result.update(server.set_multi_cas(m, time, compress_level))
+        return result
+
     def add(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
         Add a key/value to server ony if it does not exist.

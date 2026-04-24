@@ -789,6 +789,72 @@ class Protocol(threading.local):
 
         return failed
 
+    def set_multi_cas(self, mappings, time=100, compress_level=-1):
+        """
+        Set multiple keys with their values on server and return the new CAS
+        value for each successfully stored key.
+
+        If a key is a (key, cas) tuple, insert as if cas(key, value, cas) had
+        been called. A cas of 0 means add-if-not-exists.
+
+        Unlike set_multi, this uses the non-quiet set/add opcodes so that the
+        server responds to every request; this costs one response per key but
+        is what allows per-key CAS values to be returned.
+
+        :param mappings: A dict with keys/values
+        :type mappings: dict
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
+        :return: A dict keyed by the string key of every input mapping. The
+            value is the new CAS int on success or None on failure.
+        :rtype: dict
+        """
+        mappings = list(mappings.items())
+        msg = bytearray()
+        result = {}
+
+        for opaque, (key, value) in enumerate(mappings):
+            if isinstance(key, tuple):
+                str_key, cas = key
+            else:
+                str_key, cas = key, None
+            result[str_key] = None
+
+            if cas == 0:
+                command = 'add'
+            else:
+                command = 'set'
+
+            keybytes = str_to_bytes(str_key)
+            flags, value = self.serialize(value, compress_level=compress_level)
+            msg += struct.pack(self.HEADER_STRUCT +
+                               self.COMMANDS[command]['struct'] % (len(keybytes), len(value)),
+                               self.MAGIC['request'],
+                               self.COMMANDS[command]['command'],
+                               len(keybytes),
+                               8, 0, 0, len(keybytes) + len(value) + 8, opaque, cas or 0,
+                               flags, time, keybytes, value)
+
+        self._send(msg)
+
+        # Non-quiet set/add return exactly one response per request, so we can
+        # read a fixed count rather than relying on a trailing noop sentinel.
+        for _ in range(len(mappings)):
+            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
+             cas, extra_content) = self._get_response()
+            if status == self.STATUS['server_disconnected']:
+                return result
+            if status == self.STATUS['success']:
+                key, value = mappings[opaque]
+                str_key = key[0] if isinstance(key, tuple) else key
+                result[str_key] = cas
+
+        return result
+
     def _incr_decr(self, command, key, value, default, time):
         """
         Function which increments and decrements.

@@ -141,6 +141,9 @@ class ClientMixin(object):
     def set_multi(self, mappings, time=0, compress_level=-1):
         raise NotImplementedError()
 
+    def set_multi_cas(self, mappings, time=0, compress_level=-1):
+        raise NotImplementedError()
+
     def add(self, key, value, time=0, compress_level=-1, get_cas=False):
         raise NotImplementedError()
 

@@ -279,6 +279,38 @@ class ReplicatingClient(ClientMixin):
 
         return list(returns)
 
+    def set_multi_cas(self, mappings, time=0, compress_level=-1):
+        """
+        Set multiple keys with their values on the server, returning the new
+        CAS value for each successfully stored key.
+
+        Only supported when the client is configured with a single server;
+        see the class docstring for why CAS and multi-server replication
+        don't mix.
+
+        :param mappings: A dict with keys/values. Keys may be (key, cas)
+            tuples as in set_multi.
+        :type mappings: dict
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
+        :return: A dict keyed by the string key of every input mapping. The
+            value is the new CAS int on success or None on failure.
+        :rtype: dict
+        :raises NotImplementedError: if more than one server is configured.
+        """
+        if len(self._servers) > 1:
+            raise NotImplementedError(
+                "set_multi_cas is not supported on ReplicatingClient with "
+                "more than one server."
+            )
+        if not mappings:
+            return {}
+        return self._servers[0].set_multi_cas(mappings, time, compress_level=compress_level)
+
     def add(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
         Add a key/value to server ony if it does not exist.
