@@ -158,7 +158,7 @@ class ReplicatingClient(ClientMixin):
                     break
         return d
 
-    def set(self, key, value, time=0, compress_level=-1):
+    def set(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
         Set a value for a key on server.
 
@@ -172,16 +172,31 @@ class ReplicatingClient(ClientMixin):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True in case of success and False in case of failure
-        :rtype: bool
+        :param get_cas: If true, return (success, cas) where cas is the new
+            CAS value on success and None on failure. Only supported when
+            the client is configured with a single server; see the class
+            docstring for why CAS and multi-server replication don't mix.
+        :type get_cas: bool
+        :return: True in case of success and False in case of failure, or a
+            (success, cas) tuple if get_cas=True.
+        :rtype: bool or tuple
+        :raises NotImplementedError: if get_cas=True and more than one
+            server is configured.
         """
+        if get_cas:
+            if len(self._servers) > 1:
+                raise NotImplementedError(
+                    "get_cas=True is not supported on ReplicatingClient with "
+                    "more than one server."
+                )
+            return self._servers[0].set(key, value, time, compress_level=compress_level, get_cas=True)
+
         returns = []
         for server in self.servers:
             returns.append(server.set(key, value, time, compress_level=compress_level))
-
         return any(returns)
 
-    def cas(self, key, value, cas, time=0, compress_level=-1):
+    def cas(self, key, value, cas, time=0, compress_level=-1, get_cas=False):
         """
         Set a value for a key on server if its CAS value matches cas.
 
@@ -203,9 +218,25 @@ class ReplicatingClient(ClientMixin):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True in case of success and False in case of failure
-        :rtype: bool
+        :param get_cas: If true, return (success, new_cas) where new_cas is
+            the item's new CAS after the operation, or None on failure. Only
+            supported when the client is configured with a single server;
+            see the class docstring.
+        :type get_cas: bool
+        :return: True in case of success and False in case of failure, or a
+            (success, new_cas) tuple if get_cas=True.
+        :rtype: bool or tuple
+        :raises NotImplementedError: if get_cas=True and more than one
+            server is configured.
         """
+        if get_cas:
+            if len(self._servers) > 1:
+                raise NotImplementedError(
+                    "get_cas=True is not supported on ReplicatingClient with "
+                    "more than one server."
+                )
+            return self._servers[0].cas(key, value, cas, time, compress_level=compress_level, get_cas=True)
+
         self._warn_multi_replica_cas(
             "cas()",
             "will silently diverge replicas: at most one server can match a given CAS",
@@ -213,7 +244,6 @@ class ReplicatingClient(ClientMixin):
         returns = []
         for server in self.servers:
             returns.append(server.cas(key, value, cas, time, compress_level=compress_level))
-
         return any(returns)
 
     def set_multi(self, mappings, time=0, compress_level=-1):
@@ -249,7 +279,7 @@ class ReplicatingClient(ClientMixin):
 
         return list(returns)
 
-    def add(self, key, value, time=0, compress_level=-1):
+    def add(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
         Add a key/value to server ony if it does not exist.
 
@@ -263,16 +293,31 @@ class ReplicatingClient(ClientMixin):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True if key is added False if key already exists
-        :rtype: bool
+        :param get_cas: If true, return (success, cas) where cas is the new
+            CAS value on success and None on failure. Only supported when
+            the client is configured with a single server; see the class
+            docstring.
+        :type get_cas: bool
+        :return: True if key is added False if key already exists, or a
+            (success, cas) tuple if get_cas=True.
+        :rtype: bool or tuple
+        :raises NotImplementedError: if get_cas=True and more than one
+            server is configured.
         """
+        if get_cas:
+            if len(self._servers) > 1:
+                raise NotImplementedError(
+                    "get_cas=True is not supported on ReplicatingClient with "
+                    "more than one server."
+                )
+            return self._servers[0].add(key, value, time, compress_level=compress_level, get_cas=True)
+
         returns = []
         for server in self.servers:
             returns.append(server.add(key, value, time, compress_level=compress_level))
-
         return any(returns)
 
-    def replace(self, key, value, time=0, compress_level=-1):
+    def replace(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
         Replace a key/value to server ony if it does exist.
 
@@ -286,13 +331,28 @@ class ReplicatingClient(ClientMixin):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True if key is replace False if key does not exists
-        :rtype: bool
+        :param get_cas: If true, return (success, cas) where cas is the new
+            CAS value on success and None on failure. Only supported when
+            the client is configured with a single server; see the class
+            docstring.
+        :type get_cas: bool
+        :return: True if key is replace False if key does not exists, or a
+            (success, cas) tuple if get_cas=True.
+        :rtype: bool or tuple
+        :raises NotImplementedError: if get_cas=True and more than one
+            server is configured.
         """
+        if get_cas:
+            if len(self._servers) > 1:
+                raise NotImplementedError(
+                    "get_cas=True is not supported on ReplicatingClient with "
+                    "more than one server."
+                )
+            return self._servers[0].replace(key, value, time, compress_level=compress_level, get_cas=True)
+
         returns = []
         for server in self.servers:
             returns.append(server.replace(key, value, time, compress_level=compress_level))
-
         return any(returns)
 
     def delete(self, key, cas=0):

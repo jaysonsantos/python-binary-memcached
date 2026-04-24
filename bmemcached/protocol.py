@@ -573,8 +573,9 @@ class Protocol(threading.local):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True in case of success and False in case of failure
-        :rtype: bool
+        :return: A (success, cas) tuple. success is True on success and False
+            on failure; cas is the new CAS value on success and None otherwise.
+        :rtype: tuple
         """
         time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
         logger.debug('Setting/adding/replacing key %s.', key)
@@ -596,16 +597,16 @@ class Protocol(threading.local):
 
         if status != self.STATUS['success']:
             if status == self.STATUS['key_exists']:
-                return False
+                return False, None
             elif status == self.STATUS['key_not_found']:
-                return False
+                return False, None
             elif status == self.STATUS['server_disconnected']:
-                return False
+                return False, None
             raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
 
-        return True
+        return True, cas
 
-    def set(self, key, value, time, compress_level=-1):
+    def set(self, key, value, time, compress_level=-1, get_cas=False):
         """
         Set a value for a key on server.
 
@@ -619,12 +620,19 @@ class Protocol(threading.local):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True in case of success and False in case of failure
-        :rtype: bool
+        :param get_cas: If true, return (success, cas) where cas is the new
+            CAS value on success and None on failure.
+        :type get_cas: bool
+        :return: True in case of success and False in case of failure, or a
+            (success, cas) tuple if get_cas=True.
+        :rtype: bool or tuple
         """
-        return self._set_add_replace('set', key, value, time, compress_level=compress_level)
+        success, cas = self._set_add_replace('set', key, value, time, compress_level=compress_level)
+        if get_cas:
+            return success, cas
+        return success
 
-    def cas(self, key, value, cas, time, compress_level=-1):
+    def cas(self, key, value, cas, time, compress_level=-1, get_cas=False):
         """
         Add a key/value to server ony if it does not exist.
 
@@ -638,8 +646,12 @@ class Protocol(threading.local):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True if key is added False if key already exists and has a different CAS
-        :rtype: bool
+        :param get_cas: If true, return (success, new_cas) where new_cas is
+            the item's new CAS after the operation, or None on failure.
+        :type get_cas: bool
+        :return: True if key is added False if key already exists and has a
+            different CAS, or a (success, new_cas) tuple if get_cas=True.
+        :rtype: bool or tuple
         """
         # The protocol CAS value 0 means "no cas".  Calling cas() with that value is
         # probably unintentional.  Don't allow it, since it would overwrite the value
@@ -649,11 +661,14 @@ class Protocol(threading.local):
         # If we get a cas of None, interpret that as "compare against nonexistant and set",
         # which is simply Add.
         if cas is None:
-            return self._set_add_replace('add', key, value, time, compress_level=compress_level)
+            success, new_cas = self._set_add_replace('add', key, value, time, compress_level=compress_level)
         else:
-            return self._set_add_replace('set', key, value, time, cas=cas, compress_level=compress_level)
+            success, new_cas = self._set_add_replace('set', key, value, time, cas=cas, compress_level=compress_level)
+        if get_cas:
+            return success, new_cas
+        return success
 
-    def add(self, key, value, time, compress_level=-1):
+    def add(self, key, value, time, compress_level=-1, get_cas=False):
         """
         Add a key/value to server ony if it does not exist.
 
@@ -667,12 +682,19 @@ class Protocol(threading.local):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True if key is added False if key already exists
-        :rtype: bool
+        :param get_cas: If true, return (success, cas) where cas is the new
+            CAS value on success and None on failure.
+        :type get_cas: bool
+        :return: True if key is added False if key already exists, or a
+            (success, cas) tuple if get_cas=True.
+        :rtype: bool or tuple
         """
-        return self._set_add_replace('add', key, value, time, compress_level=compress_level)
+        success, cas = self._set_add_replace('add', key, value, time, compress_level=compress_level)
+        if get_cas:
+            return success, cas
+        return success
 
-    def replace(self, key, value, time, compress_level=-1):
+    def replace(self, key, value, time, compress_level=-1, get_cas=False):
         """
         Replace a key/value to server ony if it does exist.
 
@@ -686,10 +708,17 @@ class Protocol(threading.local):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True if key is replace False if key does not exists
-        :rtype: bool
+        :param get_cas: If true, return (success, cas) where cas is the new
+            CAS value on success and None on failure.
+        :type get_cas: bool
+        :return: True if key is replace False if key does not exists, or a
+            (success, cas) tuple if get_cas=True.
+        :rtype: bool or tuple
         """
-        return self._set_add_replace('replace', key, value, time, compress_level=compress_level)
+        success, cas = self._set_add_replace('replace', key, value, time, compress_level=compress_level)
+        if get_cas:
+            return success, cas
+        return success
 
     def set_multi(self, mappings, time=100, compress_level=-1):
         """
