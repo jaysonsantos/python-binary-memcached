@@ -1,5 +1,6 @@
 import os
 import unittest
+import warnings
 
 import six
 import struct
@@ -132,6 +133,47 @@ class MemcachedTests(unittest.TestCase):
         values = self.client.get_multi(['test_key', 'test_key2'], get_cas=True)
         self.assertEqual(values.get('test_key')[0], 'value1')
         self.assertEqual(values.get('test_key2')[0], 'value2')
+
+    def testCasMultiReplicaWarns(self):
+        # Pre-existing CAS-touching methods on ReplicatingClient produce
+        # silently-wrong behavior when run against more than one replica
+        # (each server has its own CAS counter). Confirm each fires a
+        # UserWarning at runtime so callers have some signal that they
+        # should reconfigure.
+        client = bmemcached.Client(
+            ['/tmp/memcached.sock', '{}:11211'.format(os.environ['MEMCACHED_HOST'])],
+            'user', 'password',
+        )
+        try:
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                client.cas('test_key', 'v', None)
+                client.gets('test_key')
+                client.get('test_key', get_cas=True)
+                client.get_multi(['test_key'], get_cas=True)
+                client.set_multi({('test_key', 0): 'v'})
+            messages = [str(w.message) for w in caught
+                        if issubclass(w.category, UserWarning)]
+            self.assertEqual(len(messages), 5)
+            self.assertTrue(any('cas() on a ReplicatingClient' in m for m in messages))
+            self.assertTrue(any('gets() on a ReplicatingClient' in m for m in messages))
+            self.assertTrue(any('get(get_cas=True) on a ReplicatingClient' in m for m in messages))
+            self.assertTrue(any('get_multi(get_cas=True) on a ReplicatingClient' in m for m in messages))
+            self.assertTrue(any('set_multi() with (key, cas) tuple keys on a ReplicatingClient' in m for m in messages))
+
+            # Non-CAS calls do not warn, even on multi-replica.
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                client.set('test_key', 'v')
+                client.get('test_key')
+                client.get_multi(['test_key'])
+                client.set_multi({'test_key': 'v'})
+            user_warnings = [w for w in caught
+                             if issubclass(w.category, UserWarning)]
+            self.assertEqual(user_warnings, [])
+        finally:
+            client.delete('test_key')
+            client.disconnect_all()
 
     def testGetEmptyString(self):
         self.client.set('test_key', '')
