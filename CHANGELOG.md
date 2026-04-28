@@ -1,3 +1,9 @@
+## v0.32.0 (2026-04-28)
+
+### Docs
+
+- Add repository contribution guidelines.
+
 ## v0.31.2 (2022-12-14)
 
 ### Fix
