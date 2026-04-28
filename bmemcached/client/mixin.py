@@ -132,19 +132,22 @@ class ClientMixin(object):
     def get_multi(self, keys, get_cas=False):
         raise NotImplementedError()
 
-    def set(self, key, value, time=0, compress_level=-1):
+    def set(self, key, value, time=0, compress_level=-1, get_cas=False):
         raise NotImplementedError()
 
-    def cas(self, key, value, cas, time=0, compress_level=-1):
+    def cas(self, key, value, cas, time=0, compress_level=-1, get_cas=False):
         raise NotImplementedError()
 
     def set_multi(self, mappings, time=0, compress_level=-1):
         raise NotImplementedError()
 
-    def add(self, key, value, time=0, compress_level=-1):
+    def set_multi_cas(self, mappings, time=0, compress_level=-1):
         raise NotImplementedError()
 
-    def replace(self, key, value, time=0, compress_level=-1):
+    def add(self, key, value, time=0, compress_level=-1, get_cas=False):
+        raise NotImplementedError()
+
+    def replace(self, key, value, time=0, compress_level=-1, get_cas=False):
         raise NotImplementedError()
 
     def delete(self, key, cas=0):  # type: (six.string_types, int) -> bool

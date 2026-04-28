@@ -39,7 +39,7 @@ class DistributedClient(ClientMixin):
             servers[server_key].append(key)
         return all([server.delete_multi(keys_) for server, keys_ in servers.items()])
 
-    def set(self, key, value, time=0, compress_level=-1):
+    def set(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
         Set a value for a key on server.
 
@@ -53,11 +53,15 @@ class DistributedClient(ClientMixin):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True in case of success and False in case of failure
-        :rtype: bool
+        :param get_cas: If true, return (success, cas) where cas is the new
+            CAS value on success and None on failure.
+        :type get_cas: bool
+        :return: True in case of success and False in case of failure, or a
+            (success, cas) tuple if get_cas=True.
+        :rtype: bool or tuple
         """
         server = self._get_server(key)
-        return server.set(key, value, time, compress_level)
+        return server.set(key, value, time, compress_level, get_cas=get_cas)
 
     def set_multi(self, mappings, time=0, compress_level=-1):
         """
@@ -86,7 +90,37 @@ class DistributedClient(ClientMixin):
 
         return list(returns)
 
-    def add(self, key, value, time=0, compress_level=-1):
+    def set_multi_cas(self, mappings, time=0, compress_level=-1):
+        """
+        Set multiple keys with their values on server, returning the new CAS
+        value for each successfully stored key.
+
+        :param mappings: A dict with keys/values. Keys may be (key, cas)
+            tuples as in set_multi.
+        :type mappings: dict
+        :param time: Time in seconds that your key will expire.
+        :type time: int
+        :param compress_level: How much to compress.
+            0 = no compression, 1 = fastest, 9 = slowest but best,
+            -1 = default compression level.
+        :type compress_level: int
+        :return: A dict keyed by the string key of every input mapping. The
+            value is the new CAS int on success or None on failure.
+        :rtype: dict
+        """
+        if not mappings:
+            return {}
+        result = {}
+        server_mappings = defaultdict(dict)
+        for key, value in mappings.items():
+            str_key = key[0] if isinstance(key, tuple) else key
+            server_key = self._get_server(str_key)
+            server_mappings[server_key][key] = value
+        for server, m in server_mappings.items():
+            result.update(server.set_multi_cas(m, time, compress_level))
+        return result
+
+    def add(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
         Add a key/value to server ony if it does not exist.
 
@@ -100,13 +134,17 @@ class DistributedClient(ClientMixin):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True if key is added False if key already exists
-        :rtype: bool
+        :param get_cas: If true, return (success, cas) where cas is the new
+            CAS value on success and None on failure.
+        :type get_cas: bool
+        :return: True if key is added False if key already exists, or a
+            (success, cas) tuple if get_cas=True.
+        :rtype: bool or tuple
         """
         server = self._get_server(key)
-        return server.add(key, value, time, compress_level)
+        return server.add(key, value, time, compress_level, get_cas=get_cas)
 
-    def replace(self, key, value, time=0, compress_level=-1):
+    def replace(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
         Replace a key/value to server ony if it does exist.
 
@@ -120,11 +158,15 @@ class DistributedClient(ClientMixin):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True if key is replace False if key does not exists
-        :rtype: bool
+        :param get_cas: If true, return (success, cas) where cas is the new
+            CAS value on success and None on failure.
+        :type get_cas: bool
+        :return: True if key is replace False if key does not exists, or a
+            (success, cas) tuple if get_cas=True.
+        :rtype: bool or tuple
         """
         server = self._get_server(key)
-        return server.replace(key, value, time, compress_level)
+        return server.replace(key, value, time, compress_level, get_cas=get_cas)
 
     def get(self, key, default=None, get_cas=False):
         """
@@ -182,7 +224,7 @@ class DistributedClient(ClientMixin):
         server = self._get_server(key)
         return server.get(key)
 
-    def cas(self, key, value, cas, time=0, compress_level=-1):
+    def cas(self, key, value, cas, time=0, compress_level=-1, get_cas=False):
         """
         Set a value for a key on server if its CAS value matches cas.
 
@@ -198,11 +240,15 @@ class DistributedClient(ClientMixin):
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
         :type compress_level: int
-        :return: True in case of success and False in case of failure
-        :rtype: bool
+        :param get_cas: If true, return (success, new_cas) where new_cas is
+            the item's new CAS after the operation, or None on failure.
+        :type get_cas: bool
+        :return: True in case of success and False in case of failure, or a
+            (success, new_cas) tuple if get_cas=True.
+        :rtype: bool or tuple
         """
         server = self._get_server(key)
-        return server.cas(key, value, cas, time, compress_level)
+        return server.cas(key, value, cas, time, compress_level, get_cas=get_cas)
 
     def incr(self, key, value, default=0, time=1000000):
         """

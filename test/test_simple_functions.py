@@ -1,5 +1,6 @@
 import os
 import unittest
+import warnings
 
 import six
 import struct
@@ -27,6 +28,7 @@ class MemcachedTests(unittest.TestCase):
     def reset(self):
         self.client.delete('test_key')
         self.client.delete('test_key2')
+        self.client.delete('fresh_key')
 
     def testSet(self):
         self.assertTrue(self.client.set('test_key', 'test'))
@@ -120,6 +122,51 @@ class MemcachedTests(unittest.TestCase):
         }), [])
         self.assertEqual(self.client.get('test_key'), 'value4')
 
+    def testSetMultiCas(self):
+        # All-success plain keys: every input gets a non-None CAS, and each
+        # returned CAS matches what gets() reports afterwards.
+        result = self.client.set_multi_cas({
+            'test_key': 'value1',
+            'test_key2': 'value2',
+        })
+        self.assertEqual(set(result.keys()), {'test_key', 'test_key2'})
+        self.assertTrue(result['test_key'] is not None)
+        self.assertTrue(result['test_key2'] is not None)
+        _, cas1 = self.client.gets('test_key')
+        _, cas2 = self.client.gets('test_key2')
+        self.assertEqual(result['test_key'], cas1)
+        self.assertEqual(result['test_key2'], cas2)
+
+        # CAS failure: add-if-not-exists when the key already exists returns
+        # None for that key; unrelated keys still succeed.
+        result = self.client.set_multi_cas({
+            ('test_key', 0): 'shouldnt_store',
+            'fresh_key': 'fresh',
+        })
+        self.assertTrue(result['test_key'] is None)
+        self.assertTrue(result['fresh_key'] is not None)
+        self.assertEqual(self.client.get('test_key'), 'value1')
+        self.client.delete('fresh_key')
+
+        # Stale-CAS failure: capture cas, mutate out of band, then set_multi_cas
+        # with the stale cas must fail and leave the out-of-band value intact.
+        _, stale_cas = self.client.gets('test_key')
+        self.client.set('test_key', 'other')
+        result = self.client.set_multi_cas({
+            ('test_key', stale_cas): 'should_fail',
+        })
+        self.assertTrue(result['test_key'] is None)
+        self.assertEqual(self.client.get('test_key'), 'other')
+
+        # Returned CAS is usable directly in cas() without a gets() round-trip.
+        self.client.delete('test_key')
+        result = self.client.set_multi_cas({'test_key': 'v'})
+        self.assertTrue(self.client.cas('test_key', 'v2', result['test_key']))
+        self.assertEqual(self.client.get('test_key'), 'v2')
+
+    def testSetMultiCasEmpty(self):
+        self.assertEqual(self.client.set_multi_cas({}), {})
+
     def testGetMultiCas(self):
         self.client.set('test_key', 'value1')
         self.client.set('test_key2', 'value2')
@@ -132,6 +179,47 @@ class MemcachedTests(unittest.TestCase):
         values = self.client.get_multi(['test_key', 'test_key2'], get_cas=True)
         self.assertEqual(values.get('test_key')[0], 'value1')
         self.assertEqual(values.get('test_key2')[0], 'value2')
+
+    def testCasMultiReplicaWarns(self):
+        # Pre-existing CAS-touching methods on ReplicatingClient produce
+        # silently-wrong behavior when run against more than one replica
+        # (each server has its own CAS counter). Confirm each fires a
+        # UserWarning at runtime so callers have some signal that they
+        # should reconfigure.
+        client = bmemcached.Client(
+            ['/tmp/memcached.sock', '{}:11211'.format(os.environ['MEMCACHED_HOST'])],
+            'user', 'password',
+        )
+        try:
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                client.cas('test_key', 'v', None)
+                client.gets('test_key')
+                client.get('test_key', get_cas=True)
+                client.get_multi(['test_key'], get_cas=True)
+                client.set_multi({('test_key', 0): 'v'})
+            messages = [str(w.message) for w in caught
+                        if issubclass(w.category, UserWarning)]
+            self.assertEqual(len(messages), 5)
+            self.assertTrue(any('cas() on a ReplicatingClient' in m for m in messages))
+            self.assertTrue(any('gets() on a ReplicatingClient' in m for m in messages))
+            self.assertTrue(any('get(get_cas=True) on a ReplicatingClient' in m for m in messages))
+            self.assertTrue(any('get_multi(get_cas=True) on a ReplicatingClient' in m for m in messages))
+            self.assertTrue(any('set_multi() with (key, cas) tuple keys on a ReplicatingClient' in m for m in messages))
+
+            # Non-CAS calls do not warn, even on multi-replica.
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                client.set('test_key', 'v')
+                client.get('test_key')
+                client.get_multi(['test_key'])
+                client.set_multi({'test_key': 'v'})
+            user_warnings = [w for w in caught
+                             if issubclass(w.category, UserWarning)]
+            self.assertEqual(user_warnings, [])
+        finally:
+            client.delete('test_key')
+            client.disconnect_all()
 
     def testGetEmptyString(self):
         self.client.set('test_key', '')
@@ -196,6 +284,83 @@ class MemcachedTests(unittest.TestCase):
         self.client.add('test_key', 'value')
         self.assertFalse(self.client.add('test_key', 'test'))
 
+    def testAddCas(self):
+        success, cas = self.client.add('test_key', 'value', get_cas=True)
+        self.assertTrue(success)
+        self.assertTrue(cas is not None)
+
+        # The CAS returned by add() must equal the CAS later returned by gets().
+        _, gets_cas = self.client.gets('test_key')
+        self.assertEqual(cas, gets_cas)
+
+        # A second add of the same key fails; cas is None.
+        success2, cas2 = self.client.add('test_key', 'value2', get_cas=True)
+        self.assertFalse(success2)
+        self.assertTrue(cas2 is None)
+
+        # The CAS returned from add() can be used directly in cas() without
+        # a separate gets() round-trip.
+        self.assertTrue(self.client.cas('test_key', 'value3', cas))
+        self.assertEqual('value3', self.client.get('test_key'))
+
+        # Backward compatibility: with no get_cas kwarg, add() still returns a plain bool.
+        result = self.client.add('test_key2', 'value')
+        self.assertEqual(True, result)
+
+    def testSetCas(self):
+        # set() with get_cas=True returns (True, cas) and cas matches gets().
+        success, cas = self.client.set('test_key', 'v1', get_cas=True)
+        self.assertTrue(success)
+        self.assertTrue(cas is not None)
+        _, gets_cas = self.client.gets('test_key')
+        self.assertEqual(cas, gets_cas)
+
+        # The returned CAS is usable directly in cas() without a gets() round-trip.
+        self.assertTrue(self.client.cas('test_key', 'v2', cas))
+        self.assertEqual('v2', self.client.get('test_key'))
+
+        # Backward compatibility: no get_cas kwarg still returns a plain bool.
+        self.assertEqual(True, self.client.set('test_key2', 'v'))
+
+    def testReplaceCas(self):
+        # Replace on a nonexistent key fails; cas is None.
+        success, cas = self.client.replace('test_key', 'v', get_cas=True)
+        self.assertFalse(success)
+        self.assertTrue(cas is None)
+
+        # Replace on an existing key succeeds and returns the new CAS.
+        self.client.set('test_key', 'original')
+        success, cas = self.client.replace('test_key', 'new', get_cas=True)
+        self.assertTrue(success)
+        self.assertTrue(cas is not None)
+        _, gets_cas = self.client.gets('test_key')
+        self.assertEqual(cas, gets_cas)
+
+        # Backward compatibility: no get_cas kwarg still returns a plain bool.
+        self.assertEqual(True, self.client.replace('test_key', 'x'))
+
+    def testCasCas(self):
+        # cas() with get_cas=True, invoked as add (cas=None): returns new CAS.
+        success, cas = self.client.cas('test_key', 'v1', None, get_cas=True)
+        self.assertTrue(success)
+        self.assertTrue(cas is not None)
+
+        # Chain a second CAS using the returned value directly (no gets()).
+        success2, cas2 = self.client.cas('test_key', 'v2', cas, get_cas=True)
+        self.assertTrue(success2)
+        self.assertTrue(cas2 is not None)
+        self.assertNotEqual(cas, cas2)
+        self.assertEqual('v2', self.client.get('test_key'))
+
+        # A stale CAS fails; the returned new_cas is None.
+        success3, cas3 = self.client.cas('test_key', 'v3', cas, get_cas=True)
+        self.assertFalse(success3)
+        self.assertTrue(cas3 is None)
+        self.assertEqual('v2', self.client.get('test_key'))
+
+        # Backward compatibility: no get_cas kwarg still returns a plain bool.
+        self.assertEqual(True, self.client.cas('test_key', 'v4', cas2))
+
     def testReplacePass(self):
         self.client.add('test_key', 'value')
         self.assertTrue(self.client.replace('test_key', 'value2'))
@@ -236,6 +401,33 @@ class MemcachedTests(unittest.TestCase):
         self.client.set('test_key', 'test')
         self.client.disconnect_all()
         self.assertEqual('test', self.client.get('test_key'))
+
+    def testGetCasMultiReplicaRaises(self):
+        # A ReplicatingClient with >1 server can't safely return a per-server
+        # CAS, since each replica has its own CAS counter. Confirm every new
+        # get_cas path raises NotImplementedError rather than returning a
+        # value the caller can't use.
+        client = bmemcached.Client(
+            ['/tmp/memcached.sock', '{}:11211'.format(os.environ['MEMCACHED_HOST'])],
+            'user', 'password',
+        )
+        try:
+            with self.assertRaises(NotImplementedError):
+                client.add('test_key', 'v', get_cas=True)
+            with self.assertRaises(NotImplementedError):
+                client.set('test_key', 'v', get_cas=True)
+            with self.assertRaises(NotImplementedError):
+                client.replace('test_key', 'v', get_cas=True)
+            with self.assertRaises(NotImplementedError):
+                client.cas('test_key', 'v', None, get_cas=True)
+            with self.assertRaises(NotImplementedError):
+                client.set_multi_cas({'test_key': 'v'})
+
+            # get_cas=False (default) still works fine on multi-replica.
+            self.assertTrue(client.set('test_key', 'v'))
+        finally:
+            client.delete('test_key')
+            client.disconnect_all()
 
 
 class TimeoutMemcachedTests(unittest.TestCase):
