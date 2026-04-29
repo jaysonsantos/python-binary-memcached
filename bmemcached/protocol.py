@@ -14,7 +14,7 @@ from io import BytesIO
 import six
 from six import binary_type, text_type
 
-from bmemcached.compat import long
+from bmemcached.compat import long, pickle
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 from bmemcached.utils import str_to_bytes
 
@@ -375,10 +375,13 @@ class Protocol(threading.local):
             value = str(value).encode()
         else:
             flags |= self.FLAGS['object']
-            buf = BytesIO()
-            pickler = self.pickler(buf, self.pickle_protocol)
-            pickler.dump(value)
-            value = buf.getvalue()
+            if self.pickler is None or self.pickler is pickle.Pickler:
+                value = pickle.dumps(value, self.pickle_protocol)
+            else:
+                buf = BytesIO()
+                pickler = self.pickler(buf, self.pickle_protocol)
+                pickler.dump(value)
+                value = buf.getvalue()
 
         if compress_level != 0 and len(value) > self.COMPRESSION_THRESHOLD:
             if compress_level is not None and compress_level > 0:
@@ -418,9 +421,9 @@ class Protocol(threading.local):
         elif flags & FLAGS['long']:
             return long(value)
         elif flags & FLAGS['object']:
-            buf = BytesIO(value)
-            unpickler = self.unpickler(buf)
-            return unpickler.load()
+            if self.unpickler is None or self.unpickler is pickle.Unpickler:
+                return pickle.loads(value)
+            return self.unpickler(BytesIO(value)).load()
 
         if six.PY3:
             return value.decode('utf8')
