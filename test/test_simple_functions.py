@@ -42,6 +42,23 @@ class MemcachedTests(unittest.TestCase):
         self.client.set_multi(
             dict((unicode(k), b'value') for k in range(32767)))
 
+    def testSetMultiNumericValues(self):
+        six.assertCountEqual(self, self.client.set_multi({
+            'test_key': 42,
+            'test_key2': long(2 ** 40),
+        }), [])
+        self.assertEqual(self.client.get('test_key'), 42)
+        self.assertEqual(self.client.get('test_key2'), 2 ** 40)
+
+        result = self.client.set_multi_cas({
+            'test_key': 7,
+            'test_key2': long(2 ** 40 + 1),
+        })
+        self.assertTrue(result['test_key'] is not None)
+        self.assertTrue(result['test_key2'] is not None)
+        self.assertEqual(self.client.get('test_key'), 7)
+        self.assertEqual(self.client.get('test_key2'), 2 ** 40 + 1)
+
     def testGetSimple(self):
         self.client.set('test_key', 'test')
         self.assertEqual('test', self.client.get('test_key'))
