@@ -873,7 +873,7 @@ class Protocol(threading.local):
         keybytes = str_to_bytes(key)
         time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
         self._send(struct.pack(self.HEADER_STRUCT +
-                               self.COMMANDS[command]['struct'] % len(key),
+                               self.COMMANDS[command]['struct'] % len(keybytes),
                                self.MAGIC['request'],
                                self.COMMANDS[command]['command'],
                                len(keybytes),

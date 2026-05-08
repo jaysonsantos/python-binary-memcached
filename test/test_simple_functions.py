@@ -385,6 +385,48 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual(10, self.client.decr('test_key', 1, default=10))
         self.assertEqual(9, self.client.decr('test_key', 1, default=10))
 
+    def testNonAsciiKeySingle(self):
+        key = u'シシ'
+        try:
+            self.assertEqual(0, self.client.incr(key, 1))
+            self.assertEqual(1, self.client.incr(key, 1))
+            self.assertEqual(0, self.client.decr(key, 1))
+            self.client.delete(key)
+
+            self.assertTrue(self.client.set(key, 'v1'))
+            self.assertEqual('v1', self.client.get(key))
+
+            self.assertFalse(self.client.add(key, 'v2'))
+            self.assertTrue(self.client.replace(key, 'v3'))
+            self.assertEqual('v3', self.client.get(key))
+
+            value, cas = self.client.gets(key)
+            self.assertEqual('v3', value)
+            self.assertTrue(self.client.cas(key, 'v4', cas))
+            self.assertEqual('v4', self.client.get(key))
+
+            self.assertTrue(self.client.delete(key))
+            self.assertEqual(None, self.client.get(key))
+        finally:
+            self.client.delete(key)
+
+    def testNonAsciiKeyBulk(self):
+        keys = [u'café', u'日本語']
+        try:
+            self.assertEqual([], self.client.set_multi({k: 'v' for k in keys}))
+            self.assertEqual({k: 'v' for k in keys}, self.client.get_multi(keys))
+
+            self.client.delete_multi(keys)
+            self.assertEqual({}, self.client.get_multi(keys))
+
+            result = self.client.set_multi_cas({k: 'w' for k in keys})
+            for k in keys:
+                self.assertTrue(result[k] is not None)
+            self.assertEqual({k: 'w' for k in keys}, self.client.get_multi(keys))
+        finally:
+            for k in keys:
+                self.client.delete(k)
+
     def testFlush(self):
         self.client.set('test_key', 'test')
         self.assertTrue(self.client.flush_all())
