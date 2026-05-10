@@ -410,6 +410,11 @@ class MemcachedTests(unittest.TestCase):
         finally:
             self.client.delete(key)
 
+    def testSetLargeNumeric(self):
+        big = 10 ** 200
+        self.client.set('test_key', big)
+        self.assertEqual(big, self.client.get('test_key'))
+
     def testNonAsciiKeyBulk(self):
         keys = [u'café', u'日本語']
         try:

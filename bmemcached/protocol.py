@@ -357,7 +357,7 @@ class Protocol(threading.local):
             -1 = default compression level.
         :type compress_level: int
         :return: Serialized type
-        :rtype: str
+        :rtype: bytes
         """
         flags = 0
         if isinstance(value, binary_type):
@@ -366,10 +366,10 @@ class Protocol(threading.local):
             value = value.encode('utf8')
         elif isinstance(value, int) and isinstance(value, bool) is False:
             flags |= self.FLAGS['integer']
-            value = str(value)
+            value = str(value).encode()
         elif isinstance(value, long) and isinstance(value, bool) is False:
             flags |= self.FLAGS['long']
-            value = str(value)
+            value = str(value).encode()
         else:
             flags |= self.FLAGS['object']
             buf = BytesIO()
@@ -581,8 +581,6 @@ class Protocol(threading.local):
         logger.debug('Setting/adding/replacing key %s.', key)
         flags, value = self.serialize(value, compress_level=compress_level)
         logger.debug('Value bytes %s.', len(value))
-        if isinstance(value, text_type):
-            value = value.encode('utf8')
 
         keybytes = str_to_bytes(key)
         self._send(struct.pack(self.HEADER_STRUCT +
