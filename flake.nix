@@ -27,7 +27,6 @@
           pytest
           pytest-cov
           trustme
-          flake8
           # packaging and tooling
           pip
           setuptools
@@ -45,6 +44,7 @@
           packages = [
             pythonEnv
             memcached
+            pkgs.ruff
             pkgs.pre-commit
             pkgs.commitizen
           ];
