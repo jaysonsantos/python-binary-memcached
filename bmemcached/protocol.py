@@ -128,7 +128,9 @@ class Protocol(threading.local):
             self.set_retry_delay(0)
 
     def __str__(self):
-        return f"{self.server}_{self._username}_{self._password}"
+        # Never include the password. This string reaches log lines, the repr of
+        # a server list, and any traceback that prints a Protocol object.
+        return f"{self.server}_{self._username}"
 
     @property
     def server_uses_unix_socket(self):
@@ -252,7 +254,16 @@ class Protocol(threading.local):
                 self.HEADER_STRUCT, header
             )
 
-            assert magic == self.MAGIC["response"]
+            if magic != self.MAGIC["response"]:
+                # The header is read. The body is not. The stream is now out of
+                # sync, so the socket cannot be reused. Drop it before raising.
+                self.disconnect()
+                raise MemcachedException(
+                    "Invalid memcached response header: expected magic 0x{:02x}, got 0x{:02x}".format(
+                        self.MAGIC["response"], magic
+                    ),
+                    self.STATUS["server_disconnected"],
+                )
 
             extra_content = None
             if bodylen:
@@ -640,7 +651,8 @@ class Protocol(threading.local):
         # The protocol CAS value 0 means "no cas".  Calling cas() with that value is
         # probably unintentional.  Don't allow it, since it would overwrite the value
         # without performing CAS at all.
-        assert cas != 0, "0 is an invalid CAS value"
+        if cas == 0:
+            raise ValueError("0 is an invalid CAS value")
 
         # If we get a cas of None, interpret that as "compare against nonexistant and set",
         # which is simply Add.

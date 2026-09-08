@@ -70,7 +70,8 @@ class ClientMixin:
         if isinstance(servers, str):
             servers = [servers]
 
-        assert servers, "No memcached servers supplied"
+        if not servers:
+            raise ValueError("No memcached servers supplied")
         self._servers = [
             Protocol(
                 server=server,

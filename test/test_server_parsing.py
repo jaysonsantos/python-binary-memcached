@@ -94,6 +94,6 @@ class TestServerParsing(unittest.TestCase):
 
     def testNoServersSupplied(self):
         """
-        Raise assertion if the server list is empty.
+        Raise ValueError if the server list is empty.
         """
-        self.assertRaises(AssertionError, bmemcached.Client, [])
+        self.assertRaises(ValueError, bmemcached.Client, [])
