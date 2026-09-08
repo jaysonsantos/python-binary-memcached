@@ -39,6 +39,13 @@ packages = ["bmemcached", "bmemcached.client"]
 [tool.setuptools.dynamic]
 version = { attr = "bmemcached.__version__" }
 
+[dependency-groups]
+test = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "trustme>=0.9",
+]
+
 [tool.ruff]
 line-length = 120
 target-version = "py310"
