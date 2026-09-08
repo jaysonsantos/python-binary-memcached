@@ -1,4 +1,4 @@
-__all__ = ('str_to_bytes',)
+__all__ = ("str_to_bytes",)
 
 
 def str_to_bytes(value):

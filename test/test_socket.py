@@ -9,5 +9,5 @@ class SocketMemcachedTests(test_simple_functions.MemcachedTests):
     """
 
     def setUp(self):
-        self.server = '/tmp/memcached.sock'
-        self.client = bmemcached.Client(self.server, 'user', 'password')
+        self.server = "/tmp/memcached.sock"
+        self.client = bmemcached.Client(self.server, "user", "password")

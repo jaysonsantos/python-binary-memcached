@@ -1,4 +1,3 @@
-
 import pickle
 
 from bmemcached.client.constants import PICKLE_PROTOCOL, SOCKET_TIMEOUT
@@ -6,7 +5,7 @@ from bmemcached.protocol import Protocol
 
 
 class ClientMixin:
-    """ Client mixin with basic commands.
+    """Client mixin with basic commands.
 
     :param servers: A list of servers with ip[:port] or unix socket.
     :type servers: list
@@ -32,15 +31,19 @@ class ClientMixin:
         memcached servers.
     :type tls_context: ssl.SSLContext
     """
-    def __init__(self, servers=('127.0.0.1:11211',),
-                 username=None,
-                 password=None,
-                 compression=None,
-                 socket_timeout=SOCKET_TIMEOUT,
-                 pickle_protocol=PICKLE_PROTOCOL,
-                 pickler=pickle.Pickler,
-                 unpickler=pickle.Unpickler,
-                 tls_context=None):
+
+    def __init__(
+        self,
+        servers=("127.0.0.1:11211",),
+        username=None,
+        password=None,
+        compression=None,
+        socket_timeout=SOCKET_TIMEOUT,
+        pickle_protocol=PICKLE_PROTOCOL,
+        pickler=pickle.Pickler,
+        unpickler=pickle.Unpickler,
+        tls_context=None,
+    ):
         self.username = username
         self.password = password
         self.compression = compression
@@ -68,17 +71,20 @@ class ClientMixin:
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
-        self._servers = [Protocol(
-            server=server,
-            username=self.username,
-            password=self.password,
-            compression=self.compression,
-            socket_timeout=self.socket_timeout,
-            pickle_protocol=self.pickle_protocol,
-            pickler=self.pickler,
-            unpickler=self.unpickler,
-            tls_context=self.tls_context,
-        ) for server in servers]
+        self._servers = [
+            Protocol(
+                server=server,
+                username=self.username,
+                password=self.password,
+                compression=self.compression,
+                socket_timeout=self.socket_timeout,
+                pickle_protocol=self.pickle_protocol,
+                pickler=self.pickler,
+                unpickler=self.unpickler,
+                tls_context=self.tls_context,
+            )
+            for server in servers
+        ]
 
     def flush_all(self, time=0):
         """
