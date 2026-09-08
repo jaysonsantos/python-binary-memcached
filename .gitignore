@@ -16,3 +16,8 @@ pyvenv.cfg
 share
 _build
 dist
+
+# nix / direnv
+.direnv
+result
+result-*
