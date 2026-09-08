@@ -1,11 +1,9 @@
 import os
 import unittest
-
+from unittest import mock
 
 import bmemcached
 from bmemcached.exceptions import MemcachedException
-
-from unittest import mock
 
 
 class TestMemcachedErrors(unittest.TestCase):

@@ -1,18 +1,16 @@
-from datetime import datetime, timedelta
 import logging
+import pickle
 import socket
 import struct
 import threading
-from urllib.parse import SplitResult
-
 import zlib
-from ipaddress import ip_address
+from datetime import datetime, timedelta
 from io import BytesIO
-import pickle
+from ipaddress import ip_address
+from urllib.parse import SplitResult
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 from bmemcached.utils import str_to_bytes
-
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +120,7 @@ class Protocol(threading.local):
             self.set_retry_delay(0)
 
     def __str__(self):
-        return "{}_{}_{}".format(self.server, self._username, self._password)
+        return f"{self.server}_{self._username}_{self._password}"
 
     @property
     def server_uses_unix_socket(self):
@@ -155,7 +153,7 @@ class Protocol(threading.local):
                 self.connection.connect(self.server)
 
             self._send_authentication()
-        except socket.error:
+        except OSError:
             # If the connection attempt fails, start delaying retries.
             self.reconnects_deferred_until = datetime.now() + timedelta(seconds=self.retry_delay)
             raise
@@ -200,7 +198,7 @@ class Protocol(threading.local):
         if server.startswith('['):
             host, _, port = server[1:].partition(']')
             if not is_ip_address(host):
-                raise ValueError('{} is not a valid IPv6 address'.format(server))
+                raise ValueError(f'{server} is not a valid IPv6 address')
             return host, default_port if not port else int(port.lstrip(':'))
 
         u = SplitResult("", server, "", "", "")
@@ -222,7 +220,7 @@ class Protocol(threading.local):
 
         # If we got less data than we requested, the server disconnected.
         if len(value) < size:
-            raise socket.error()
+            raise OSError()
 
         return bytes(value)
 
@@ -239,7 +237,7 @@ class Protocol(threading.local):
                 # The connection wasn't opened, which means we're deferring a reconnection attempt.
                 # Raise a socket.error, so we'll return the same server_disconnected message as we
                 # do below.
-                raise socket.error('Delaying reconnection attempt')
+                raise OSError('Delaying reconnection attempt')
 
             header = self._read_socket(self.HEADER_SIZE)
             (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
@@ -253,7 +251,7 @@ class Protocol(threading.local):
 
             return (magic, opcode, keylen, extlen, datatype, status, bodylen,
                     opaque, cas, extra_content)
-        except socket.error as e:
+        except OSError as e:
             self._connection_error(e)
 
             # (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content)
@@ -267,7 +265,7 @@ class Protocol(threading.local):
                 return
 
             self.connection.sendall(data)
-        except socket.error as e:
+        except OSError as e:
             self._connection_error(e)
 
     def authenticate(self, username, password):
@@ -586,11 +584,7 @@ class Protocol(threading.local):
          cas, extra_content) = self._get_response()
 
         if status != self.STATUS['success']:
-            if status == self.STATUS['key_exists']:
-                return False, None
-            elif status == self.STATUS['key_not_found']:
-                return False, None
-            elif status == self.STATUS['server_disconnected']:
+            if status == self.STATUS['key_exists'] or status == self.STATUS['key_not_found'] or status == self.STATUS['server_disconnected']:
                 return False, None
             raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
 

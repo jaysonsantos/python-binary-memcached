@@ -1,9 +1,9 @@
 from bmemcached.client.constants import SOCKET_TIMEOUT
 
-from .replicating import ReplicatingClient
 from .distributed import DistributedClient
+from .replicating import ReplicatingClient
 
-__all__ = ('Client', 'ReplicatingClient', 'DistributedClient', )
+__all__ = ('Client', 'DistributedClient', 'ReplicatingClient')
 
 
 # Keep compatibility with old versions

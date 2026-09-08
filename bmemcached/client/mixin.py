@@ -1,6 +1,7 @@
 
-from bmemcached.client.constants import PICKLE_PROTOCOL, SOCKET_TIMEOUT
 import pickle
+
+from bmemcached.client.constants import PICKLE_PROTOCOL, SOCKET_TIMEOUT
 from bmemcached.protocol import Protocol
 
 

@@ -1,10 +1,8 @@
 import json
 import os
-
-from io import BytesIO
-
 import pickle
 import unittest
+from io import BytesIO
 
 import bmemcached
 

@@ -1,11 +1,9 @@
 import bz2
 import os
 import unittest
-
+from unittest import mock
 
 import bmemcached
-
-from unittest import mock
 
 
 class MemcachedTests(unittest.TestCase):

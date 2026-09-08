@@ -1,5 +1,5 @@
 __version__ = "0.32.0"
 
-__all__ = ('Client', 'ReplicatingClient', 'DistributedClient', )
+__all__ = ('Client', 'DistributedClient', 'ReplicatingClient')
 
-from bmemcached.client import Client, ReplicatingClient, DistributedClient
+from bmemcached.client import Client, DistributedClient, ReplicatingClient

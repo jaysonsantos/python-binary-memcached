@@ -4,7 +4,6 @@ import time
 
 import pytest
 
-
 os.environ.setdefault("MEMCACHED_HOST", "localhost")
 
 
