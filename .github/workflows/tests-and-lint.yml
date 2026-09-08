@@ -6,39 +6,67 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
-      max-parallel: 4
+      fail-fast: false
       matrix:
         # Keep every version quoted. Unquoted 3.10 parses as the float 3.1.
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v7
+
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Dependencies
+          cache: pip
+
+      - name: Install memcached
+        run: sudo apt-get update && sudo apt-get install -y memcached
+
+      - name: Install dependencies
         run: |
-          STEP="tests" ./.ci-before-script.sh
-      - name: Run tests or lint
-        run: |
-          STEP="tests" ./.ci-runs-tests.sh
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install --group test
+
+      - name: Run tests
+        run: pytest --cov=bmemcached --cov-report=xml --cov-report=term
+
+      - name: Upload coverage report
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
         with:
-          python-version: "3.10"
-      - name: Install Dependencies
+          python-version: "3.12"
+          cache: pip
+
+      - name: Run ruff
         run: |
-          STEP="lint" ./.ci-before-script.sh
-      - name: Run tests or lint
-        run: |
-          STEP="lint" ./.ci-runs-tests.sh
+          python -m pip install --upgrade pip
+          pip install ruff
+          ruff check .
+          ruff format --check .
