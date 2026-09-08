@@ -1,7 +1,6 @@
-import six
 
 from bmemcached.client.constants import PICKLE_PROTOCOL, SOCKET_TIMEOUT
-from bmemcached.compat import pickle
+import pickle
 from bmemcached.protocol import Protocol
 
 
@@ -11,9 +10,9 @@ class ClientMixin(object):
     :param servers: A list of servers with ip[:port] or unix socket.
     :type servers: list
     :param username: If your server requires SASL authentication, provide the username.
-    :type username: six.string_types
+    :type username: str
     :param password: If your server requires SASL authentication, provide the password.
-    :type password: six.string_types
+    :type password: str
     :param compression: This memcached client uses zlib compression by default,
         but you can change it to any Python module that provides
         `compress` and `decompress` functions, such as `bz2`.
@@ -65,7 +64,7 @@ class ClientMixin(object):
         :return: Returns nothing
         :rtype: None
         """
-        if isinstance(servers, six.string_types):
+        if isinstance(servers, str):
             servers = [servers]
 
         assert servers, "No memcached servers supplied"
@@ -101,7 +100,7 @@ class ClientMixin(object):
         Return server stats.
 
         :param key: Optional if you want status from a key.
-        :type key: six.string_types
+        :type key: str
         :return: A dict with server stats
         :rtype: dict
         """
@@ -150,7 +149,7 @@ class ClientMixin(object):
     def replace(self, key, value, time=0, compress_level=-1, get_cas=False):
         raise NotImplementedError()
 
-    def delete(self, key, cas=0):  # type: (six.string_types, int) -> bool
+    def delete(self, key, cas=0):  # type: (str, int) -> bool
         raise NotImplementedError()
 
     def delete_multi(self, keys):

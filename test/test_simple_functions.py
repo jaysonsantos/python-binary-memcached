@@ -2,17 +2,12 @@ import os
 import unittest
 import warnings
 
-import six
 import struct
 import random
 import bmemcached
 import uuid
-from bmemcached.compat import long, unicode
 
-if six.PY3:
-    from unittest import mock
-else:
-    import mock
+from unittest import mock
 
 
 class MemcachedTests(unittest.TestCase):
@@ -34,25 +29,25 @@ class MemcachedTests(unittest.TestCase):
         self.assertTrue(self.client.set('test_key', 'test'))
 
     def testSetMulti(self):
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             'test_key': 'value',
             'test_key2': 'value2'}), [])
 
     def testSetMultiBigData(self):
         self.client.set_multi(
-            dict((unicode(k), b'value') for k in range(32767)))
+            dict((str(k), b'value') for k in range(32767)))
 
     def testSetMultiNumericValues(self):
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             'test_key': 42,
-            'test_key2': long(2 ** 40),
+            'test_key2': int(2 ** 40),
         }), [])
         self.assertEqual(self.client.get('test_key'), 42)
         self.assertEqual(self.client.get('test_key2'), 2 ** 40)
 
         result = self.client.set_multi_cas({
             'test_key': 7,
-            'test_key2': long(2 ** 40 + 1),
+            'test_key2': int(2 ** 40 + 1),
         })
         self.assertTrue(result['test_key'] is not None)
         self.assertTrue(result['test_key2'] is not None)
@@ -114,7 +109,7 @@ class MemcachedTests(unittest.TestCase):
     def testMultiCas(self):
         # Set multiple values, some using CAS and some not.  True is returned, because
         # both values were stored.
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             ('test_key', 0): 'value1',
             'test_key2': 'value2',
         }), [])
@@ -124,7 +119,7 @@ class MemcachedTests(unittest.TestCase):
 
         # A CAS value of 0 means add.  The value already exists, so this won't overwrite it.
         # ['test_key'] is returned, because test_key is not stored, but test_key2 is still stored.
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             ('test_key', 0): 'value3',
             'test_key2': 'value3',
         }), [('test_key', 0)])
@@ -134,7 +129,7 @@ class MemcachedTests(unittest.TestCase):
 
         # Update with the correct CAS value.
         value, cas = self.client.gets('test_key')
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             ('test_key', cas): 'value4',
         }), [])
         self.assertEqual(self.client.get('test_key'), 'value4')
@@ -247,7 +242,7 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual(u'\xac', self.client.get('test_key'))
 
     def testGetMulti(self):
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             'test_key': 'value',
             'test_key2': 'value2'
         }), [])
@@ -257,10 +252,10 @@ class MemcachedTests(unittest.TestCase):
                          self.client.get_multi(['test_key', 'test_key2', 'nothere']))
 
     def testGetLong(self):
-        self.client.set('test_key', long(1))
+        self.client.set('test_key', int(1))
         value = self.client.get('test_key')
-        self.assertEqual(long(1), value)
-        self.assertTrue(isinstance(value, long))
+        self.assertEqual(int(1), value)
+        self.assertTrue(isinstance(value, int))
 
     def testGetInteger(self):
         self.client.set('test_key', 1)
@@ -562,7 +557,7 @@ class BinaryMemcachedTests(unittest.TestCase):
         self.assertTrue(self.client.set(self.skey(), 'test'))
 
     def testSetMulti(self):
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             self.bkey(): 'value',
             self.skey(): 'value2',
             self.bkey(): 'value3'}), [])
@@ -634,7 +629,7 @@ class BinaryMemcachedTests(unittest.TestCase):
         # both values were stored.
         test_key1 = self.bkey()
         test_key2 = self.bkey()
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             (test_key1, 0): 'value1',
             test_key2: 'value2',
         }), [])
@@ -644,7 +639,7 @@ class BinaryMemcachedTests(unittest.TestCase):
 
         # A CAS value of 0 means add.  The value already exists, so this won't overwrite it.
         # [test_key1] is returned, because test_key1 is not stored, but test_key2 is still stored.
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             (test_key1, 0): 'value3',
             test_key2: 'value3',
         }), [(test_key1, 0)])
@@ -654,7 +649,7 @@ class BinaryMemcachedTests(unittest.TestCase):
 
         # Update with the correct CAS value.
         value, cas = self.client.gets(self.bkey())
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             (test_key1, cas): 'value4',
         }), [])
         self.assertEqual(self.client.get(test_key1), 'value4')
@@ -691,7 +686,7 @@ class BinaryMemcachedTests(unittest.TestCase):
         test_key2 = self.bkey()
         test_key3 = self.skey()
         test_key4 = self.skey()
-        six.assertCountEqual(self, self.client.set_multi({
+        self.assertCountEqual(self.client.set_multi({
             test_key1: 'value',
             test_key2: 'value2',
             test_key3: 'value3',
@@ -707,10 +702,10 @@ class BinaryMemcachedTests(unittest.TestCase):
 
     def testGetLong(self):
         test_key = self.bkey()
-        self.client.set(test_key, long(1))
+        self.client.set(test_key, int(1))
         value = self.client.get(test_key)
-        self.assertEqual(long(1), value)
-        self.assertTrue(isinstance(value, long))
+        self.assertEqual(int(1), value)
+        self.assertTrue(isinstance(value, int))
 
     def testGetInteger(self):
         test_key = self.bkey()

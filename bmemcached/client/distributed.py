@@ -3,7 +3,7 @@ from uhashring import HashRing
 
 from bmemcached.client import SOCKET_TIMEOUT
 from bmemcached.client.mixin import ClientMixin
-from bmemcached.compat import pickle
+import pickle
 
 
 class DistributedClient(ClientMixin):
@@ -125,7 +125,7 @@ class DistributedClient(ClientMixin):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -149,7 +149,7 @@ class DistributedClient(ClientMixin):
         Replace a key/value to server ony if it does exist.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -173,7 +173,7 @@ class DistributedClient(ClientMixin):
         Get a key from server.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param default: In case memcached does not find a key, return a default value
         :param get_cas: If true, return (value, cas), where cas is the new CAS value.
         :type get_cas: boolean
@@ -229,7 +229,7 @@ class DistributedClient(ClientMixin):
         Set a value for a key on server if its CAS value matches cas.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param cas: The CAS value previously obtained from a call to get*.
@@ -255,7 +255,7 @@ class DistributedClient(ClientMixin):
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: Number to be incremented
         :type value: int
         :param default: If key not set, initialize to this value
@@ -274,7 +274,7 @@ class DistributedClient(ClientMixin):
         Minimum value of decrement return is 0.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: Number to be decremented
         :type value: int
         :param default: If key not set, initialize to this value

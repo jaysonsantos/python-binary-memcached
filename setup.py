@@ -29,7 +29,6 @@ setup(
         "Programming Language :: Python :: 3.14",
     ],
     install_requires=[
-        "six",
         "uhashring",
     ],
 )
