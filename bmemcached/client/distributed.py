@@ -38,7 +38,7 @@ class DistributedClient(ClientMixin):
         for key in keys:
             server_key = self._get_server(key)
             servers[server_key].append(key)
-        return all([server.delete_multi(keys_) for server, keys_ in servers.items()])
+        return all(server.delete_multi(keys_) for server, keys_ in servers.items())
 
     def set(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
@@ -216,7 +216,7 @@ class DistributedClient(ClientMixin):
             results = server.get_multi(keys)
             if not get_cas:
                 # Remove CAS data
-                for key, (value, cas) in results.items():
+                for key, (value, _cas) in results.items():
                     results[key] = value
             d.update(results)
         return d

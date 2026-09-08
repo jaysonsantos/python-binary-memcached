@@ -7,6 +7,7 @@ import zlib
 from datetime import datetime, timedelta
 from io import BytesIO
 from ipaddress import ip_address
+from typing import ClassVar
 from urllib.parse import SplitResult
 
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
@@ -42,7 +43,7 @@ class Protocol(threading.local):
     HEADER_STRUCT = '!BBHBBHLLQ'
     HEADER_SIZE = 24
 
-    MAGIC = {
+    MAGIC: ClassVar[dict] = {
         'request': 0x80,
         'response': 0x81
     }
@@ -51,7 +52,7 @@ class Protocol(threading.local):
     # fixed-size leading "extras" bytes for that command.  Variable-length
     # tails (key, value, auth payloads) are concatenated as bytes after
     # packer.pack(...).
-    COMMANDS = {
+    COMMANDS: ClassVar[dict] = {
         'get': {'command': 0x00, 'packer': struct.Struct(HEADER_STRUCT)},
         'getk': {'command': 0x0C, 'packer': struct.Struct(HEADER_STRUCT)},
         'getkq': {'command': 0x0D, 'packer': struct.Struct(HEADER_STRUCT)},
@@ -70,7 +71,7 @@ class Protocol(threading.local):
         'auth_request': {'command': 0x21, 'packer': struct.Struct(HEADER_STRUCT)},
     }
 
-    STATUS = {
+    STATUS: ClassVar[dict] = {
         'success': 0x00,
         'key_not_found': 0x01,
         'key_exists': 0x02,
@@ -82,7 +83,7 @@ class Protocol(threading.local):
         'server_disconnected': 0xFFFFFFFF,
     }
 
-    FLAGS = {
+    FLAGS: ClassVar[dict] = {
         'object': 1 << 0,
         'integer': 1 << 1,
         'long': 1 << 2,
@@ -316,7 +317,7 @@ class Protocol(threading.local):
                                              'PLAIN auth for now.', status)
 
         method = b'PLAIN'
-        auth = '\x00%s\x00%s' % (self._username, self._password)
+        auth = f'\x00{self._username}\x00{self._password}'
         if isinstance(auth, str):
             auth = auth.encode()
 
@@ -335,7 +336,7 @@ class Protocol(threading.local):
             raise InvalidCredentials("Incorrect username or password", status)
 
         if status != self.STATUS['success']:
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
+            raise MemcachedException(f'Code: {status:d} Message: {extra_content}', status)
 
         logger.debug('Auth OK. Code: %d Message: %s', status, extra_content)
 
@@ -451,9 +452,9 @@ class Protocol(threading.local):
             if status == self.STATUS['server_disconnected']:
                 return None, None
 
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
+            raise MemcachedException(f'Code: {status:d} Message: {extra_content}', status)
 
-        flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
+        flags, value = struct.unpack(f'!L{bodylen - 4}s', extra_content)
 
         return self.deserialize(value, flags), cas
 
@@ -478,7 +479,7 @@ class Protocol(threading.local):
                      extlen, bodylen, datatype)
 
         if status != self.STATUS['success']:
-            logger.debug('NOOP failed (status is %d). Message: %s' % (status, extra_content))
+            logger.debug('NOOP failed (status is %d). Message: %s', status, extra_content)
 
         return int(status)
 
@@ -530,18 +531,17 @@ class Protocol(threading.local):
              cas, extra_content) = self._get_response()
 
             if status == SUCCESS:
-                flags, key, value = struct.unpack('!L%ds%ds' %
-                                                  (keylen, bodylen - keylen - 4),
+                flags, key, value = struct.unpack(f'!L{keylen}s{bodylen - keylen - 4}s',
                                                   extra_content)
                 d[key] = self.deserialize(value, flags), cas
 
             elif status == DISCONNECTED:
                 break
             elif status != NOT_FOUND:
-                raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
+                raise MemcachedException(f'Code: {status:d} Message: {extra_content}', status)
 
         ret = {}
-        for key, keybytes in zip(keys, keybytes_list):
+        for key, keybytes in zip(keys, keybytes_list, strict=True):
             if keybytes in d:
                 ret[key] = d[keybytes]
         return ret
@@ -584,9 +584,10 @@ class Protocol(threading.local):
          cas, extra_content) = self._get_response()
 
         if status != self.STATUS['success']:
-            if status == self.STATUS['key_exists'] or status == self.STATUS['key_not_found'] or status == self.STATUS['server_disconnected']:
+            if status in (self.STATUS['key_exists'], self.STATUS['key_not_found'],
+                          self.STATUS['server_disconnected']):
                 return False, None
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
+            raise MemcachedException(f'Code: {status:d} Message: {extra_content}', status)
 
         return True, cas
 
@@ -737,12 +738,9 @@ class Protocol(threading.local):
             else:
                 cas = None
 
-            if cas == 0:
-                # Like cas(), if the cas value is 0, treat it as compare-and-set against not
-                # existing.
-                opcode = ADDQ_CMD
-            else:
-                opcode = SETQ_CMD
+            # Like cas(), if the cas value is 0, treat it as compare-and-set against not
+            # existing.
+            opcode = ADDQ_CMD if cas == 0 else SETQ_CMD
 
             keybytes = str_to_bytes(key)
             flags, value = self.serialize(value, compress_level=compress_level)
@@ -770,7 +768,7 @@ class Protocol(threading.local):
              cas, extra_content) = self._get_response()
             if status == DISCONNECTED:
                 # Assume that the entire operation failed.
-                return list(key for key, value in mappings)
+                return [key for key, _value in mappings]
             if status != SUCCESS:
                 key, value = mappings[opaque]
                 if isinstance(key, tuple):
@@ -821,10 +819,7 @@ class Protocol(threading.local):
                 str_key, cas = key, None
             result[str_key] = None
 
-            if cas == 0:
-                opcode = ADD_CMD
-            else:
-                opcode = SET_CMD
+            opcode = ADD_CMD if cas == 0 else SET_CMD
 
             keybytes = str_to_bytes(str_key)
             flags, value = self.serialize(value, compress_level=compress_level)
@@ -882,7 +877,7 @@ class Protocol(threading.local):
          cas, extra_content) = self._get_response()
 
         if status not in (self.STATUS['success'], self.STATUS['server_disconnected']):
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
+            raise MemcachedException(f'Code: {status:d} Message: {extra_content}', status)
         if status == self.STATUS['server_disconnected']:
             return 0
 
@@ -948,7 +943,7 @@ class Protocol(threading.local):
         if status == self.STATUS['server_disconnected']:
             return False
         if status != self.STATUS['success'] and status not in (self.STATUS['key_not_found'], self.STATUS['key_exists']):
-            raise MemcachedException('Code: %d message: %s' % (status, extra_content), status)
+            raise MemcachedException(f'Code: {status:d} message: {extra_content}', status)
 
         logger.debug('Key deleted %s', key)
         return status != self.STATUS['key_exists']
@@ -1011,7 +1006,7 @@ class Protocol(threading.local):
          cas, extra_content) = self._get_response()
 
         if status not in (self.STATUS['success'], self.STATUS['server_disconnected']):
-            raise MemcachedException('Code: %d message: %s' % (status, extra_content), status)
+            raise MemcachedException(f'Code: {status:d} message: {extra_content}', status)
 
         logger.debug('Memcached flushed')
         return True

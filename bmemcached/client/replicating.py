@@ -150,7 +150,7 @@ class ReplicatingClient(ClientMixin):
                 results = server.get_multi(keys)
                 if not get_cas:
                     # Remove CAS data
-                    for key, (value, cas) in results.items():
+                    for key, (value, _cas) in results.items():
                         results[key] = value
                 d.update(results)
                 keys = [_ for _ in keys if _ not in d]

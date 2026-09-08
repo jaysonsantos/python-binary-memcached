@@ -70,7 +70,7 @@ class TestServerParsing(unittest.TestCase):
         mocked_response.return_value = (0, 0, 0, 0, 0, 0, 0, 0, 0, [b'PLAIN'])
         client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']), username='user',
                                    password='password')
-        server = list(client.servers)[0]
+        server = next(iter(client.servers))
 
         # Force a connection.  Normally this is only done when we make a request to the
         # server.
@@ -82,7 +82,7 @@ class TestServerParsing(unittest.TestCase):
     def testNoCredentialsNoAuth(self, mocked_response):
         mocked_response.return_value = (0, 0, 0, 0, 0, 0x01, 0, 0, 0, [b'PLAIN'])
         client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']))
-        server = list(client.servers)[0]
+        server = next(iter(client.servers))
 
         # Force a connection.  Normally this is only done when we make a request to the
         # server.
