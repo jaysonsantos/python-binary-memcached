@@ -32,8 +32,8 @@ class ReplicatingClient(ClientMixin):
     def _warn_multi_replica_cas(self, op, hazard):
         if len(self._servers) > 1:
             warnings.warn(
-                "{} on a ReplicatingClient with more than one server {}. "
-                "See the class docstring.".format(op, hazard),
+                f"{op} on a ReplicatingClient with more than one server {hazard}. "
+                "See the class docstring.",
                 UserWarning,
                 stacklevel=3,
             )

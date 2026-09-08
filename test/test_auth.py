@@ -1,11 +1,9 @@
 import os
 import unittest
-
+from unittest import mock
 
 import bmemcached
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
-
-from unittest import mock
 
 
 class TestServerAuth(unittest.TestCase):

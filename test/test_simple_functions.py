@@ -1,13 +1,12 @@
 import os
-import unittest
-import warnings
-
-import struct
 import random
-import bmemcached
+import struct
+import unittest
 import uuid
-
+import warnings
 from unittest import mock
+
+import bmemcached
 
 
 class MemcachedTests(unittest.TestCase):
@@ -40,14 +39,14 @@ class MemcachedTests(unittest.TestCase):
     def testSetMultiNumericValues(self):
         self.assertCountEqual(self.client.set_multi({
             'test_key': 42,
-            'test_key2': int(2 ** 40),
+            'test_key2': (2 ** 40),
         }), [])
         self.assertEqual(self.client.get('test_key'), 42)
         self.assertEqual(self.client.get('test_key2'), 2 ** 40)
 
         result = self.client.set_multi_cas({
             'test_key': 7,
-            'test_key2': int(2 ** 40 + 1),
+            'test_key2': (2 ** 40 + 1),
         })
         self.assertTrue(result['test_key'] is not None)
         self.assertTrue(result['test_key2'] is not None)
@@ -252,9 +251,9 @@ class MemcachedTests(unittest.TestCase):
                          self.client.get_multi(['test_key', 'test_key2', 'nothere']))
 
     def testGetLong(self):
-        self.client.set('test_key', int(1))
+        self.client.set('test_key', 1)
         value = self.client.get('test_key')
-        self.assertEqual(int(1), value)
+        self.assertEqual(1, value)
         self.assertTrue(isinstance(value, int))
 
     def testGetInteger(self):
@@ -430,16 +429,16 @@ class MemcachedTests(unittest.TestCase):
     def testNonAsciiKeyBulk(self):
         keys = ['café', '日本語']
         try:
-            self.assertEqual([], self.client.set_multi({k: 'v' for k in keys}))
-            self.assertEqual({k: 'v' for k in keys}, self.client.get_multi(keys))
+            self.assertEqual([], self.client.set_multi(dict.fromkeys(keys, 'v')))
+            self.assertEqual(dict.fromkeys(keys, 'v'), self.client.get_multi(keys))
 
             self.client.delete_multi(keys)
             self.assertEqual({}, self.client.get_multi(keys))
 
-            result = self.client.set_multi_cas({k: 'w' for k in keys})
+            result = self.client.set_multi_cas(dict.fromkeys(keys, 'w'))
             for k in keys:
                 self.assertTrue(result[k] is not None)
-            self.assertEqual({k: 'w' for k in keys}, self.client.get_multi(keys))
+            self.assertEqual(dict.fromkeys(keys, 'w'), self.client.get_multi(keys))
         finally:
             for k in keys:
                 self.client.delete(k)
@@ -655,7 +654,7 @@ class BinaryMemcachedTests(unittest.TestCase):
         self.assertEqual(self.client.get(test_key1), 'value4')
 
     def testGetMultiCas(self):
-        for _ in range(0, 100):
+        for _ in range(100):
             test_key1 = self.bkey()
             test_key2 = self.bkey()
             test_key3 = self.skey()
@@ -702,9 +701,9 @@ class BinaryMemcachedTests(unittest.TestCase):
 
     def testGetLong(self):
         test_key = self.bkey()
-        self.client.set(test_key, int(1))
+        self.client.set(test_key, 1)
         value = self.client.get(test_key)
-        self.assertEqual(int(1), value)
+        self.assertEqual(1, value)
         self.assertTrue(isinstance(value, int))
 
     def testGetInteger(self):

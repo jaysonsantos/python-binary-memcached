@@ -1,9 +1,10 @@
+import pickle
 from collections import defaultdict
+
 from uhashring import HashRing
 
 from bmemcached.client import SOCKET_TIMEOUT
 from bmemcached.client.mixin import ClientMixin
-import pickle
 
 
 class DistributedClient(ClientMixin):
