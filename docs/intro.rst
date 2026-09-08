@@ -76,8 +76,8 @@ If you want to use it with Django, go to `django-bmemcached <https://github.com/
 
 Tests Status
 ------------
-.. image:: https://travis-ci.org/jaysonsantos/python-binary-memcached.png?branch=master
-    :target: https://travis-ci.org/jaysonsantos/python-binary-memcached
+.. image:: https://github.com/jaysonsantos/python-binary-memcached/actions/workflows/tests-and-lint.yml/badge.svg?branch=main
+    :target: https://github.com/jaysonsantos/python-binary-memcached/actions/workflows/tests-and-lint.yml
 
 .. _`pytest`: https://pypi.org/project/pytest/
 .. _`tox`: https://pypi.org/project/tox/

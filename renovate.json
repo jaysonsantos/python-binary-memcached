@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)"
+  ],
+  "timezone": "Europe/Berlin",
+  "schedule": ["before 6am on monday"],
+  "enabledManagers": [
+    "github-actions",
+    "pep621",
+    "pre-commit",
+    "nix"
+  ],
+  "pre-commit": {
+    "enabled": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Group every patch and minor update into one pull request.",
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "all non-major updates",
+      "groupSlug": "all-minor-patch"
+    },
+    {
+      "description": "Keep each major update in its own pull request.",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}
