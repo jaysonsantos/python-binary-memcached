@@ -126,7 +126,7 @@ class MemcachedTests(unittest.TestCase):
         # the port before we continue and try to connect to it.
         sockname = parent_pipe.recv()
         self._proxy_port = sockname[1]
-        self.server = '%s:%i' % sockname
+        self.server = '{}:{:d}'.format(*sockname)
 
     def _stop_proxy(self):
         if not self._proxy_thread:

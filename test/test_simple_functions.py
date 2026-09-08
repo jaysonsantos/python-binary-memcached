@@ -34,7 +34,7 @@ class MemcachedTests(unittest.TestCase):
 
     def testSetMultiBigData(self):
         self.client.set_multi(
-            dict((str(k), b'value') for k in range(32767)))
+            {str(k): b'value' for k in range(32767)})
 
     def testSetMultiNumericValues(self):
         self.assertCountEqual(self.client.set_multi({
@@ -526,7 +526,7 @@ class BinaryMemcachedTests(unittest.TestCase):
     def setUp(self):
         self.server = '/tmp/memcached.sock'
         self.client = bmemcached.Client(self.server, 'user', 'password')
-        self._inserted_keys = list()
+        self._inserted_keys = []
 
         self.reset()
 
@@ -535,10 +535,10 @@ class BinaryMemcachedTests(unittest.TestCase):
         self.client.disconnect_all()
 
     def bkey(self):
-        packed = struct.pack("<Q", int("%s%s%s%s" % (random.randint(1000, 9999),
-                                                     random.randint(1000, 9999),
-                                                     random.randint(1000, 9999),
-                                                     random.randint(1000, 9999))))
+        packed = struct.pack("<Q", int(f"{random.randint(1000, 9999)}"
+                                       f"{random.randint(1000, 9999)}"
+                                       f"{random.randint(1000, 9999)}"
+                                       f"{random.randint(1000, 9999)}"))
         self._inserted_keys.append(packed)
         return packed
 
@@ -563,9 +563,9 @@ class BinaryMemcachedTests(unittest.TestCase):
 
     def testSetMultiBigData(self):
         self.client.set_multi(
-            dict((self.bkey(), b'value') for _ in range(32767)))
+            {self.bkey(): b'value' for _ in range(32767)})
         self.client.set_multi(
-            dict((self.skey(), b'value') for _ in range(32767)))
+            {self.skey(): b'value' for _ in range(32767)})
 
     def testGetSimple(self):
         key = self.bkey()

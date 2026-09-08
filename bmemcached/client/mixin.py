@@ -53,8 +53,7 @@ class ClientMixin:
 
     @property
     def servers(self):
-        for server in self._servers:
-            yield server
+        yield from self._servers
 
     def set_servers(self, servers):
         """
