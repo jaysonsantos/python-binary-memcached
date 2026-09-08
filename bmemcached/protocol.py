@@ -16,6 +16,11 @@ from bmemcached.utils import str_to_bytes
 
 logger = logging.getLogger(__name__)
 
+# The value body of a get response starts with a 4 byte flags field. A Struct
+# for '!L%ds' would be specific to one value length, so it is not reusable.
+# Read the fixed part with this, then slice the rest. A slice compiles nothing.
+FLAGS_UNPACKER = struct.Struct('!L')
+
 
 class Protocol(threading.local):
     """
@@ -455,7 +460,8 @@ class Protocol(threading.local):
 
             raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
 
-        flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
+        flags, = FLAGS_UNPACKER.unpack_from(extra_content)
+        value = extra_content[4:]
 
         return self.deserialize(value, flags), cas
 
@@ -532,9 +538,9 @@ class Protocol(threading.local):
              cas, extra_content) = self._get_response()
 
             if status == SUCCESS:
-                flags, key, value = struct.unpack('!L%ds%ds' %
-                                                  (keylen, bodylen - keylen - 4),
-                                                  extra_content)
+                flags, = FLAGS_UNPACKER.unpack_from(extra_content)
+                key = extra_content[4:4 + keylen]
+                value = extra_content[4 + keylen:]
                 d[key] = self.deserialize(value, flags), cas
 
             elif status == DISCONNECTED:
