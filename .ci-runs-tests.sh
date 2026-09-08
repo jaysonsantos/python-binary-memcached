@@ -10,7 +10,8 @@ if [ "$STEP" = "tests" ]; then
 fi
 
 if [ "$STEP" = "lint" ]; then
-    flake8
+    ruff check .
+    ruff format --check .
     exit 0
 fi
 

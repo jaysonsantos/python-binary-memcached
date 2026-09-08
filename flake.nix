@@ -19,7 +19,8 @@
           configureFlags = (old.configureFlags or [ ]) ++ [ "--enable-tls" ];
         });
 
-        # Runtime and test dependencies from setup.py and requirements_test.txt.
+        # Runtime and test dependencies from the pyproject.toml project table
+        # and from the test dependency group.
         pythonEnv = python.withPackages (ps: with ps; [
           # runtime
           uhashring
@@ -27,11 +28,11 @@
           pytest
           pytest-cov
           trustme
-          flake8
           # packaging and tooling
           pip
           setuptools
           build
+          twine
           tox
           # docs
           sphinx
@@ -44,6 +45,7 @@
           packages = [
             pythonEnv
             memcached
+            pkgs.ruff
             pkgs.pre-commit
             pkgs.commitizen
           ];

@@ -7,16 +7,18 @@ This repository contains the `python-binary-memcached` package, a pure Python cl
 - `bmemcached/`: package source. Core protocol code is in `protocol.py`; client implementations live in `bmemcached/client/`.
 - `test/`: pytest suite. `conftest.py` starts local memcached processes on the standard port, port `5000`, a Unix socket, and IPv6.
 - `docs/`: Sphinx documentation. `README.rst` is a symlink to `docs/intro.rst`.
-- `setup.py`, `setup.cfg`, `tox.ini`: packaging, lint, and test configuration.
+- `pyproject.toml`, `tox.ini`: packaging, lint, and test configuration.
 
 Generated artifacts such as `dist/`, `*.egg-info/`, and docs build outputs should not be edited as source.
 
 ## Build, Test, and Development Commands
 
-- `python -m pip install -e . -r requirements_test.txt`: install the package in editable mode with test and lint dependencies.
+- `python -m pip install -e . && python -m pip install --group test`: install the
+  package in editable mode with the `test` dependency group from `pyproject.toml`.
 - `pytest -s`: run the test suite. Requires the `memcached` executable available on `PATH`.
-- `flake8`: run style checks with the repository's `max-line-length = 120`.
-- `tox`: run the full configured gate for Python 3.8 through 3.12.
+- `ruff check .`: run lint checks. `ruff format --check .`: check formatting. The
+  configuration lives in `pyproject.toml` with `line-length = 120`.
+- `tox`: run the full configured gate for Python 3.10 through 3.14.
 - `cd docs && make html`: build Sphinx HTML documentation into `docs/_build/html`.
 - `python -m build --sdist --wheel --outdir dist/ .`: build release artifacts when the `build` package is installed.
 
@@ -24,7 +26,7 @@ Generated artifacts such as `dist/`, `*.egg-info/`, and docs build outputs shoul
 
 Use 4-space indentation for Python and 2-space indentation for YAML, matching `.editorconfig`. Trim trailing whitespace and keep a final newline. Follow existing module naming: lowercase Python modules, `test_*.py` test files, and descriptive test functions such as `test_server_parsing_ipv6`.
 
-Prefer small changes that preserve the public client API. Keep compatibility with supported Python versions listed in `tox.ini` and `setup.py`.
+Prefer small changes that preserve the public client API. Keep compatibility with supported Python versions listed in `tox.ini` and `pyproject.toml`.
 
 ## Testing Guidelines
 

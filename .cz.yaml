@@ -4,5 +4,5 @@ commitizen:
   tag_format: v$version
   version: 0.32.0
   version_files:
-  - setup.py
+  - bmemcached/__init__.py
   - docs/conf.py

@@ -1,9 +1,10 @@
+import pickle
 from collections import defaultdict
+
 from uhashring import HashRing
 
 from bmemcached.client import SOCKET_TIMEOUT
 from bmemcached.client.mixin import ClientMixin
-import pickle
 
 
 class DistributedClient(ClientMixin):
@@ -11,11 +12,22 @@ class DistributedClient(ClientMixin):
 
     It tries to distribute keys over the specified servers using `HashRing` consistent hash.
     """
-    def __init__(self, servers=('127.0.0.1:11211',), username=None, password=None, compression=None,
-                 socket_timeout=SOCKET_TIMEOUT, pickle_protocol=0, pickler=pickle.Pickler, unpickler=pickle.Unpickler,
-                 tls_context=None):
-        super().__init__(servers, username, password, compression, socket_timeout,
-                         pickle_protocol, pickler, unpickler, tls_context)
+
+    def __init__(
+        self,
+        servers=("127.0.0.1:11211",),
+        username=None,
+        password=None,
+        compression=None,
+        socket_timeout=SOCKET_TIMEOUT,
+        pickle_protocol=0,
+        pickler=pickle.Pickler,
+        unpickler=pickle.Unpickler,
+        tls_context=None,
+    ):
+        super().__init__(
+            servers, username, password, compression, socket_timeout, pickle_protocol, pickler, unpickler, tls_context
+        )
         self._ring = HashRing(self._servers)
 
     def _get_server(self, key):
@@ -37,7 +49,7 @@ class DistributedClient(ClientMixin):
         for key in keys:
             server_key = self._get_server(key)
             servers[server_key].append(key)
-        return all([server.delete_multi(keys_) for server, keys_ in servers.items()])
+        return all(server.delete_multi(keys_) for server, keys_ in servers.items())
 
     def set(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
@@ -215,7 +227,7 @@ class DistributedClient(ClientMixin):
             results = server.get_multi(keys)
             if not get_cas:
                 # Remove CAS data
-                for key, (value, cas) in results.items():
+                for key, (value, _cas) in results.items():
                     results[key] = value
             d.update(results)
         return d

@@ -1,16 +1,16 @@
 import os
-import pytest
-import subprocess
 import ssl
+import subprocess
 import time
+
+import pytest
+import test_simple_functions
 import trustme
 
 import bmemcached
-import test_simple_functions
-
 
 ca = trustme.CA()
-server_cert = ca.issue_cert(os.environ["MEMCACHED_HOST"] + u"")
+server_cert = ca.issue_cert(os.environ["MEMCACHED_HOST"] + "")
 
 
 @pytest.yield_fixture(scope="module", autouse=True)
@@ -25,9 +25,9 @@ def memcached_tls():
                 "-p5001",
                 "-Z",
                 "-o",
-                "ssl_key={}".format(k),
+                f"ssl_key={k}",
                 "-o",
-                "ssl_chain_cert={}".format(c),
+                f"ssl_chain_cert={c}",
                 "-o",
                 "ssl_verify_mode=1",
             ],
