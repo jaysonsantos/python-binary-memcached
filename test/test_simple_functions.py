@@ -69,8 +69,8 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual(value, self.client.get('test_key'))
 
     def testGetDecodedText(self):
-        self.client.set('test_key', u'\u30b7')
-        self.assertEqual(u'\u30b7', self.client.get('test_key'))
+        self.client.set('test_key', '\u30b7')
+        self.assertEqual('\u30b7', self.client.get('test_key'))
 
     def testCas(self):
         value, cas = self.client.gets('nonexistant')
@@ -238,8 +238,8 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual('', self.client.get('test_key'))
 
     def testGetUnicodeString(self):
-        self.client.set('test_key', u'\xac')
-        self.assertEqual(u'\xac', self.client.get('test_key'))
+        self.client.set('test_key', '\xac')
+        self.assertEqual('\xac', self.client.get('test_key'))
 
     def testGetMulti(self):
         self.assertCountEqual(self.client.set_multi({
@@ -398,7 +398,7 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual(9, self.client.decr('test_key', 1, default=10))
 
     def testNonAsciiKeySingle(self):
-        key = u'シシ'
+        key = 'シシ'
         try:
             self.assertEqual(0, self.client.incr(key, 1))
             self.assertEqual(1, self.client.incr(key, 1))
@@ -428,7 +428,7 @@ class MemcachedTests(unittest.TestCase):
         self.assertEqual(big, self.client.get('test_key'))
 
     def testNonAsciiKeyBulk(self):
-        keys = [u'café', u'日本語']
+        keys = ['café', '日本語']
         try:
             self.assertEqual([], self.client.set_multi({k: 'v' for k in keys}))
             self.assertEqual({k: 'v' for k in keys}, self.client.get_multi(keys))
@@ -585,8 +585,8 @@ class BinaryMemcachedTests(unittest.TestCase):
 
     def testGetDecodedText(self):
         test_key = self.bkey()
-        self.client.set(test_key, u'\u30b7')
-        self.assertEqual(u'\u30b7', self.client.get(test_key))
+        self.client.set(test_key, '\u30b7')
+        self.assertEqual('\u30b7', self.client.get(test_key))
 
     def testCas(self):
         value, cas = self.client.gets('nonexistant')
@@ -678,8 +678,8 @@ class BinaryMemcachedTests(unittest.TestCase):
 
     def testGetUnicodeString(self):
         test_key = self.bkey()
-        self.client.set(test_key, u'\xac')
-        self.assertEqual(u'\xac', self.client.get(test_key))
+        self.client.set(test_key, '\xac')
+        self.assertEqual('\xac', self.client.get(test_key))
 
     def testGetMulti(self):
         test_key1 = self.bkey()

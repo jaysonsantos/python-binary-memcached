@@ -14,8 +14,8 @@ class DistributedClient(ClientMixin):
     def __init__(self, servers=('127.0.0.1:11211',), username=None, password=None, compression=None,
                  socket_timeout=SOCKET_TIMEOUT, pickle_protocol=0, pickler=pickle.Pickler, unpickler=pickle.Unpickler,
                  tls_context=None):
-        super(DistributedClient, self).__init__(servers, username, password, compression, socket_timeout,
-                                                pickle_protocol, pickler, unpickler, tls_context)
+        super().__init__(servers, username, password, compression, socket_timeout,
+                         pickle_protocol, pickler, unpickler, tls_context)
         self._ring = HashRing(self._servers)
 
     def _get_server(self, key):

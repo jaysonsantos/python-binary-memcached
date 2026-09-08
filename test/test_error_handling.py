@@ -11,7 +11,7 @@ from bmemcached.protocol import Protocol
 
 class _CacheProxy(multiprocessing.Process):
     def __init__(self, server, pipe, listen_port=None):
-        super(_CacheProxy, self).__init__()
+        super().__init__()
         self._listen_port = listen_port
         self.server = server
         self.pipe = pipe

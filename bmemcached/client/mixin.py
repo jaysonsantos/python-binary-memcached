@@ -4,7 +4,7 @@ import pickle
 from bmemcached.protocol import Protocol
 
 
-class ClientMixin(object):
+class ClientMixin:
     """ Client mixin with basic commands.
 
     :param servers: A list of servers with ip[:port] or unix socket.

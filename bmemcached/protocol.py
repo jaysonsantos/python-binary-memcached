@@ -3,10 +3,7 @@ import logging
 import socket
 import struct
 import threading
-try:
-    from urlparse import SplitResult  # type: ignore[import-not-found]
-except ImportError:
-    from urllib.parse import SplitResult  # type: ignore[import-not-found]
+from urllib.parse import SplitResult
 
 import zlib
 from ipaddress import ip_address
@@ -101,7 +98,7 @@ class Protocol(threading.local):
 
     def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None,
                  pickle_protocol=None, pickler=None, unpickler=None, tls_context=None):
-        super(Protocol, self).__init__()
+        super().__init__()
         self.server = server
         self._username = username
         self._password = password
