@@ -32,6 +32,7 @@
           pip
           setuptools
           build
+          twine
           tox
           # docs
           sphinx
