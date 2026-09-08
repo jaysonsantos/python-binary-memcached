@@ -1,7 +1,7 @@
 from collections import defaultdict
 from uhashring import HashRing
 
-from bmemcached.client import SOCKET_TIMEOUT
+from bmemcached.client.constants import SOCKET_TIMEOUT
 from bmemcached.client.mixin import ClientMixin
 from bmemcached.compat import pickle
 

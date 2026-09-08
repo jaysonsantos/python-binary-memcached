@@ -62,3 +62,24 @@ class TestServerAuth(unittest.TestCase):
         server = bmemcached.protocol.Protocol(os.environ['MEMCACHED_HOST'])
         self.assertRaises(InvalidCredentials, server.authenticate,
                           'user', 'password2')
+
+
+class TestProtocolStrDoesNotLeakPassword(unittest.TestCase):
+    def testStrHoldsNoPassword(self):
+        """
+        str(Protocol) reaches log lines, the repr of a server list, and any
+        traceback that prints the object. The password must not be in it.
+        """
+        password = 'a-very-secret-password'
+        server = bmemcached.protocol.Protocol('{}:11211'.format(os.environ['MEMCACHED_HOST']),
+                                              username='user', password=password)
+        rendered = str(server)
+        self.assertNotIn(password, rendered)
+        self.assertIn('user', rendered)
+
+    def testReprOfServerListHoldsNoPassword(self):
+        password = 'another-secret'
+        client = bmemcached.Client('{}:11211'.format(os.environ['MEMCACHED_HOST']),
+                                   'user', password)
+        self.assertNotIn(password, str([str(s) for s in client.servers]))
+        client.disconnect_all()
