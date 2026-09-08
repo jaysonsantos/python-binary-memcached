@@ -1,3 +1,40 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "python-binary-memcached"
+dynamic = ["version"]
+description = "A pure python module to access memcached via its binary protocol with SASL auth support"
+readme = "README.rst"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Jayson Reis", email = "santosdosreis@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "uhashring",
+]
+
+[project.urls]
+Homepage = "https://github.com/jaysonsantos/python-binary-memcached"
+Repository = "https://github.com/jaysonsantos/python-binary-memcached"
+Documentation = "https://python-binary-memcached.readthedocs.org"
+Changelog = "https://github.com/jaysonsantos/python-binary-memcached/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = ["bmemcached", "bmemcached.client"]
+
+[tool.setuptools.dynamic]
+version = { attr = "bmemcached.__version__" }

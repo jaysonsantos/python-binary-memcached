@@ -7,7 +7,7 @@ This repository contains the `python-binary-memcached` package, a pure Python cl
 - `bmemcached/`: package source. Core protocol code is in `protocol.py`; client implementations live in `bmemcached/client/`.
 - `test/`: pytest suite. `conftest.py` starts local memcached processes on the standard port, port `5000`, a Unix socket, and IPv6.
 - `docs/`: Sphinx documentation. `README.rst` is a symlink to `docs/intro.rst`.
-- `setup.py`, `setup.cfg`, `tox.ini`: packaging, lint, and test configuration.
+- `pyproject.toml`, `tox.ini`: packaging, lint, and test configuration.
 
 Generated artifacts such as `dist/`, `*.egg-info/`, and docs build outputs should not be edited as source.
 
@@ -24,7 +24,7 @@ Generated artifacts such as `dist/`, `*.egg-info/`, and docs build outputs shoul
 
 Use 4-space indentation for Python and 2-space indentation for YAML, matching `.editorconfig`. Trim trailing whitespace and keep a final newline. Follow existing module naming: lowercase Python modules, `test_*.py` test files, and descriptive test functions such as `test_server_parsing_ipv6`.
 
-Prefer small changes that preserve the public client API. Keep compatibility with supported Python versions listed in `tox.ini` and `setup.py`.
+Prefer small changes that preserve the public client API. Keep compatibility with supported Python versions listed in `tox.ini` and `pyproject.toml`.
 
 ## Testing Guidelines
 
