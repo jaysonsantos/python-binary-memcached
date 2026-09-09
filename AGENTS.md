@@ -16,7 +16,7 @@ Generated artifacts such as `dist/`, `*.egg-info/`, and docs build outputs shoul
 - `python -m pip install -e . -r requirements_test.txt`: install the package in editable mode with test and lint dependencies.
 - `pytest -s`: run the test suite. Requires the `memcached` executable available on `PATH`.
 - `flake8`: run style checks with the repository's `max-line-length = 120`.
-- `tox`: run the full configured gate for Python 3.8 through 3.12.
+- `tox`: run the full configured gate for Python 3.10 through 3.14.
 - `cd docs && make html`: build Sphinx HTML documentation into `docs/_build/html`.
 - `python -m build --sdist --wheel --outdir dist/ .`: build release artifacts when the `build` package is installed.
 

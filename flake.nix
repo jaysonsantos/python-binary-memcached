@@ -22,12 +22,10 @@
         # Runtime and test dependencies from setup.py and requirements_test.txt.
         pythonEnv = python.withPackages (ps: with ps; [
           # runtime
-          six
           uhashring
           # test and lint
           pytest
           pytest-cov
-          mock
           trustme
           flake8
           # packaging and tooling
@@ -68,7 +66,7 @@
           version = "0.32.0";
           format = "setuptools";
           src = ./.;
-          propagatedBuildInputs = with python.pkgs; [ six uhashring ];
+          propagatedBuildInputs = with python.pkgs; [ uhashring ];
           doCheck = false;
         };
 
