@@ -13,7 +13,7 @@ ca = trustme.CA()
 server_cert = ca.issue_cert(os.environ["MEMCACHED_HOST"] + u"")
 
 
-@pytest.yield_fixture(scope="module", autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def memcached_tls():
     key = server_cert.private_key_pem
     cert = server_cert.cert_chain_pems[0]
