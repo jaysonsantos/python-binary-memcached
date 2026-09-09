@@ -252,9 +252,10 @@ class MemcachedTests(unittest.TestCase):
                          self.client.get_multi(['test_key', 'test_key2', 'nothere']))
 
     def testGetLong(self):
-        self.client.set('test_key', int(1))
-        value = self.client.get('test_key')
-        self.assertEqual(int(1), value)
+        # An old client version could write a value with the legacy long flag.
+        protocol = self.client._servers[0]
+        value = protocol.deserialize(b'1', protocol.FLAGS['long'])
+        self.assertEqual(1, value)
         self.assertTrue(isinstance(value, int))
 
     def testGetInteger(self):
@@ -701,10 +702,10 @@ class BinaryMemcachedTests(unittest.TestCase):
                          self.client.get_multi([test_key1, test_key2, 'nothere']))
 
     def testGetLong(self):
-        test_key = self.bkey()
-        self.client.set(test_key, int(1))
-        value = self.client.get(test_key)
-        self.assertEqual(int(1), value)
+        # An old client version could write a value with the legacy long flag.
+        protocol = self.client._servers[0]
+        value = protocol.deserialize(b'1', protocol.FLAGS['long'])
+        self.assertEqual(1, value)
         self.assertTrue(isinstance(value, int))
 
     def testGetInteger(self):
