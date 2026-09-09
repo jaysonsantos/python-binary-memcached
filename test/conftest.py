@@ -8,7 +8,7 @@ import pytest
 os.environ.setdefault("MEMCACHED_HOST", "localhost")
 
 
-@pytest.yield_fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def memcached_standard_port():
     p = subprocess.Popen(
         ["memcached"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -19,7 +19,7 @@ def memcached_standard_port():
     p.wait()
 
 
-@pytest.yield_fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def memcached_other_port():
     p = subprocess.Popen(
         ["memcached", "-p5000"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -30,7 +30,7 @@ def memcached_other_port():
     p.wait()
 
 
-@pytest.yield_fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def memcached_socket():
     p = subprocess.Popen(
         ["memcached", "-s/tmp/memcached.sock"],
@@ -43,7 +43,7 @@ def memcached_socket():
     p.wait()
 
 
-@pytest.yield_fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def memcached_ipv6():
     p = subprocess.Popen(
         ["memcached", "-l::1"],

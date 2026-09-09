@@ -11,14 +11,6 @@ Subpackages
 Submodules
 ----------
 
-bmemcached\.compat module
--------------------------
-
-.. automodule:: bmemcached.compat
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 bmemcached\.exceptions module
 -----------------------------
 

@@ -3,20 +3,17 @@ import os
 
 from io import BytesIO
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 import unittest
 
 import bmemcached
 
 
-class PickleableThing(object):
+class PickleableThing:
     pass
 
 
-class JsonPickler(object):
+class JsonPickler:
     def __init__(self, f, protocol=0):
         self.f = f
 

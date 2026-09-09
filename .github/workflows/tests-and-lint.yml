@@ -2,9 +2,9 @@ name: Tests and Lint
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 jobs:
   tests:
@@ -12,7 +12,8 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8, 3.9, "3.10", 3.11]
+        # Keep every version quoted. Unquoted 3.10 parses as the float 3.1.
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - uses: actions/checkout@v2

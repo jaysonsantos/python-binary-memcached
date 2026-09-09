@@ -1,15 +1,11 @@
 import os
 import unittest
 
-import six
 
 import bmemcached
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 
-if six.PY3:
-    from unittest import mock
-else:
-    import mock
+from unittest import mock
 
 
 class TestServerAuth(unittest.TestCase):

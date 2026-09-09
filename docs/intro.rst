@@ -61,12 +61,11 @@ each supported Python version and run the tests. For example:
 
     $ tox
     ...
-    py27: commands succeeded
-    ERROR:  py34: InterpreterNotFound: python3.4
-    py35: commands succeeded
-    py36: commands succeeded
-    py37: commands succeeded
-    py38: commands succeeded
+    py310: commands succeeded
+    py311: commands succeeded
+    py312: commands succeeded
+    ERROR:  py313: InterpreterNotFound: python3.13
+    py314: commands succeeded
 
 You may not have all the required Python versions installed, in which case you
 will see one or more ``InterpreterNotFound`` errors.

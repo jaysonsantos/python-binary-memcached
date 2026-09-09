@@ -2,7 +2,7 @@
 set -ex
 
 python -m pip install --upgrade pip
-pip install -r requirements_test.txt && python setup.py develop
+pip install -r requirements_test.txt && pip install -e .
 
 if [ "$STEP" != "tests" ]; then
     exit 0
