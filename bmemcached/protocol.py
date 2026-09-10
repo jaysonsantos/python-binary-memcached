@@ -133,6 +133,13 @@ class Protocol(threading.local):
         return f"{self.server}_{self._username}"
 
     @property
+    def _hash_ring_node(self):
+        # DistributedClient hashes this string to put the server on its ring. It
+        # keeps the legacy "server_username_password" form, so an upgrade does not
+        # move existing keys to other servers. Do not log it.
+        return f"{self.server}_{self._username}_{self._password}"
+
+    @property
     def server_uses_unix_socket(self):
         return self.host is None
 
