@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from uhashring import HashRing
 
-from bmemcached.client import SOCKET_TIMEOUT
+from bmemcached.client.constants import SOCKET_TIMEOUT
 from bmemcached.client.mixin import ClientMixin
 
 
@@ -28,10 +28,11 @@ class DistributedClient(ClientMixin):
         super().__init__(
             servers, username, password, compression, socket_timeout, pickle_protocol, pickler, unpickler, tls_context
         )
-        self._ring = HashRing(self._servers)
+        self._servers_by_ring_node = {server._hash_ring_node: server for server in self._servers}
+        self._ring = HashRing(list(self._servers_by_ring_node))
 
     def _get_server(self, key):
-        return self._ring.get_node(key)
+        return self._servers_by_ring_node[self._ring.get_node(key)]
 
     def delete(self, key, cas=0):
         """

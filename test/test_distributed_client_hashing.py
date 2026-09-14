@@ -1,6 +1,8 @@
 import unittest
 from unittest import mock
 
+from uhashring import HashRing
+
 import bmemcached
 
 
@@ -24,3 +26,20 @@ class DistributedClientHashingTest(unittest.TestCase):
             self.assertFalse(client.delete_multi(keys))
 
         self.assertEqual({call.args[0] for call in delete_multi.call_args_list}, set(client._servers))
+
+    def test_get_server_keeps_legacy_key_placement(self):
+        """
+        The ring used "server_username_password" as the node identity. A new
+        identity moves existing keys to other servers after an upgrade.
+        """
+        servers = ["localhost:11211", "localhost:11212", "localhost:11213"]
+
+        for username, password in [(None, None), ("user", "password")]:
+            with self.subTest(username=username):
+                legacy_ring = HashRing([f"{s}_{username}_{password}" for s in servers])
+                client = bmemcached.DistributedClient(servers, username, password)
+
+                for i in range(1000):
+                    key = f"key_{i}"
+                    server = client._get_server(key)
+                    self.assertEqual(f"{server.server}_{username}_{password}", legacy_ring.get_node(key))
