@@ -66,9 +66,11 @@
         packages.default = python.pkgs.buildPythonPackage {
           pname = "python-binary-memcached";
           version = "0.32.0";
-          format = "setuptools";
+          pyproject = true;
           src = ./.;
-          propagatedBuildInputs = with python.pkgs; [ uhashring ];
+          build-system = with python.pkgs; [ setuptools ];
+          dependencies = with python.pkgs; [ uhashring ];
+          pythonImportsCheck = [ "bmemcached" ];
           doCheck = false;
         };
 
