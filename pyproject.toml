@@ -45,6 +45,10 @@ test = [
     "pytest-cov>=7.1",
     "trustme>=1.2",
 ]
+# Keep this pin equal to the ruff-pre-commit rev in .pre-commit-config.yaml.
+lint = [
+    "ruff==0.16.5",
+]
 
 [tool.ruff]
 line-length = 120

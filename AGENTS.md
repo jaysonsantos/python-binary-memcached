@@ -13,8 +13,8 @@ Generated artifacts such as `dist/`, `*.egg-info/`, and docs build outputs shoul
 
 ## Build, Test, and Development Commands
 
-- `python -m pip install -e . && python -m pip install --group test`: install the
-  package in editable mode with the `test` dependency group from `pyproject.toml`.
+- `python -m pip install -e . && python -m pip install --group test --group lint`: install the
+  package in editable mode with the `test` and `lint` dependency groups from `pyproject.toml`.
 - `pytest -s`: run the test suite. Requires the `memcached` executable available on `PATH`.
 - `ruff check .`: run lint checks. `ruff format --check .`: check formatting. The
   configuration lives in `pyproject.toml` with `line-length = 120`.
