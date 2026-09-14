@@ -129,8 +129,9 @@ class Protocol(threading.local):
 
     def __str__(self):
         # Never include the password. This string reaches log lines, the repr of
-        # a server list, and any traceback that prints a Protocol object.
-        return f"{self.server}_{self._username}"
+        # a server list, and any traceback that prints a Protocol object. Show
+        # only whether a password is set.
+        return f"{self.server}_{self._username}_password={'set' if self._password else 'unset'}"
 
     @property
     def _hash_ring_node(self):

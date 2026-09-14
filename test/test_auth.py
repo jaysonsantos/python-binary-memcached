@@ -68,6 +68,11 @@ class TestProtocolStrDoesNotLeakPassword(unittest.TestCase):
         rendered = str(server)
         self.assertNotIn(password, rendered)
         self.assertIn("user", rendered)
+        self.assertIn("password=set", rendered)
+
+    def testStrShowsUnsetPassword(self):
+        server = bmemcached.protocol.Protocol("{}:11211".format(os.environ["MEMCACHED_HOST"]))
+        self.assertIn("password=unset", str(server))
 
     def testReprOfServerListHoldsNoPassword(self):
         password = "another-secret"
