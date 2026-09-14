@@ -32,8 +32,7 @@ class ReplicatingClient(ClientMixin):
     def _warn_multi_replica_cas(self, op, hazard):
         if len(self._servers) > 1:
             warnings.warn(
-                "{} on a ReplicatingClient with more than one server {}. "
-                "See the class docstring.".format(op, hazard),
+                f"{op} on a ReplicatingClient with more than one server {hazard}. See the class docstring.",
                 UserWarning,
                 stacklevel=3,
             )
@@ -150,7 +149,7 @@ class ReplicatingClient(ClientMixin):
                 results = server.get_multi(keys)
                 if not get_cas:
                     # Remove CAS data
-                    for key, (value, cas) in results.items():
+                    for key, (value, _cas) in results.items():
                         results[key] = value
                 d.update(results)
                 keys = [_ for _ in keys if _ not in d]
@@ -186,8 +185,7 @@ class ReplicatingClient(ClientMixin):
         if get_cas:
             if len(self._servers) > 1:
                 raise NotImplementedError(
-                    "get_cas=True is not supported on ReplicatingClient with "
-                    "more than one server."
+                    "get_cas=True is not supported on ReplicatingClient with more than one server."
                 )
             return self._servers[0].set(key, value, time, compress_level=compress_level, get_cas=True)
 
@@ -232,8 +230,7 @@ class ReplicatingClient(ClientMixin):
         if get_cas:
             if len(self._servers) > 1:
                 raise NotImplementedError(
-                    "get_cas=True is not supported on ReplicatingClient with "
-                    "more than one server."
+                    "get_cas=True is not supported on ReplicatingClient with more than one server."
                 )
             return self._servers[0].cas(key, value, cas, time, compress_level=compress_level, get_cas=True)
 
@@ -303,10 +300,7 @@ class ReplicatingClient(ClientMixin):
         :raises NotImplementedError: if more than one server is configured.
         """
         if len(self._servers) > 1:
-            raise NotImplementedError(
-                "set_multi_cas is not supported on ReplicatingClient with "
-                "more than one server."
-            )
+            raise NotImplementedError("set_multi_cas is not supported on ReplicatingClient with more than one server.")
         if not mappings:
             return {}
         return self._servers[0].set_multi_cas(mappings, time, compress_level=compress_level)
@@ -339,8 +333,7 @@ class ReplicatingClient(ClientMixin):
         if get_cas:
             if len(self._servers) > 1:
                 raise NotImplementedError(
-                    "get_cas=True is not supported on ReplicatingClient with "
-                    "more than one server."
+                    "get_cas=True is not supported on ReplicatingClient with more than one server."
                 )
             return self._servers[0].add(key, value, time, compress_level=compress_level, get_cas=True)
 
@@ -377,8 +370,7 @@ class ReplicatingClient(ClientMixin):
         if get_cas:
             if len(self._servers) > 1:
                 raise NotImplementedError(
-                    "get_cas=True is not supported on ReplicatingClient with "
-                    "more than one server."
+                    "get_cas=True is not supported on ReplicatingClient with more than one server."
                 )
             return self._servers[0].replace(key, value, time, compress_level=compress_level, get_cas=True)
 
