@@ -9,7 +9,7 @@ jobs:
       - name: Set up Python 3.10
         uses: actions/setup-python@v3
         with:
-          python-version: "3.10"
+          python-version: "3.14"
       - name: Setup pandoc for changelog conversion
         run: sudo apt update && sudo apt install -y pandoc
       - name: Write pypi's readme
