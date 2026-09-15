@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://python-binary-memcached.readthedocs.org
+    about: Read the API reference and the usage guide before you open an issue.
+  - name: Question or usage help
+    url: https://github.com/jaysonsantos/python-binary-memcached#readme
+    about: Read the README for installation, configuration, and test instructions.
+  - name: Security vulnerability
+    url: https://github.com/jaysonsantos/python-binary-memcached/security/advisories/new
+    about: Report a vulnerability in private here. Do not open a public issue for it.
