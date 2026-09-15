@@ -1,0 +1,145 @@
+name: Bug report
+description: Report a defect in python-binary-memcached.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the report. Fill in the fields below.
+        Exact versions and a small reproduction help us to find the cause.
+        Do not report a security vulnerability here. Use the
+        [security advisory form](https://github.com/jaysonsantos/python-binary-memcached/security/advisories/new).
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the defect in one or two sentences.
+      placeholder: Client.get returns None after a successful Client.set.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: |
+        List the steps in order. Add a small code example.
+        Remove passwords and host names that you keep private.
+      placeholder: |
+        1. Start memcached with `memcached -p 11211`.
+        2. Run this code:
+
+        ```python
+        import bmemcached
+
+        client = bmemcached.Client(("127.0.0.1:11211",))
+        client.set("key", "value")
+        print(client.get("key"))
+        ```
+        3. Read the output.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe the result that you expect.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Describe the result that you get.
+    validations:
+      required: true
+
+  - type: input
+    id: bmemcached-version
+    attributes:
+      label: python-binary-memcached version
+      description: Run `python -c "import bmemcached; print(bmemcached.__version__)"`.
+      placeholder: 0.32.0
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      description: Run `python --version`.
+      placeholder: 3.13.2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: server-type
+    attributes:
+      label: Server type
+      description: Select the server that you connect to.
+      options:
+        - memcached (self-hosted)
+        - AWS ElastiCache for Memcached
+        - Google Cloud Memorystore for Memcached
+        - Another managed service
+        - Another server or a proxy
+    validations:
+      required: true
+
+  - type: input
+    id: server-version
+    attributes:
+      label: Server version
+      description: |
+        Run `memcached --version`, or read the version in the console of the service.
+        Write `unknown` if the service hides the version.
+      placeholder: memcached 1.6.38
+    validations:
+      required: true
+
+  - type: input
+    id: operating-system
+    attributes:
+      label: Operating system
+      description: Give the name and the version of the client operating system.
+      placeholder: Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: dropdown
+    id: features
+    attributes:
+      label: Features in use
+      description: Select each feature that the client uses. Select nothing if you use none of them.
+      multiple: true
+      options:
+        - SASL authentication
+        - TLS
+        - Compression
+        - DistributedClient (consistent hashing)
+        - ReplicatingClient
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and traceback
+      description: |
+        Paste the full traceback and the relevant log lines.
+        Remove passwords and other secrets first.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: More context
+      description: Add any other detail that helps. This field is optional.
+    validations:
+      required: false
