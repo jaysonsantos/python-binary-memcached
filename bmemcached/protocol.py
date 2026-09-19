@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # The value body of a get response starts with a 4 byte flags field. A Struct
 # for '!L%ds' would be specific to one value length, so it is not reusable.
 # Read the fixed part with this, then slice the rest. A slice compiles nothing.
-FLAGS_UNPACKER = struct.Struct('!L')
+FLAGS_UNPACKER = struct.Struct("!L")
 
 
 class Protocol(threading.local):
@@ -480,7 +480,7 @@ class Protocol(threading.local):
 
             raise MemcachedException(f"Code: {status:d} Message: {extra_content}", status)
 
-        flags, = FLAGS_UNPACKER.unpack_from(extra_content)
+        (flags,) = FLAGS_UNPACKER.unpack_from(extra_content)
         value = extra_content[4:]
 
         return self.deserialize(value, flags), cas
@@ -555,9 +555,9 @@ class Protocol(threading.local):
             )
 
             if status == SUCCESS:
-                flags, = FLAGS_UNPACKER.unpack_from(extra_content)
-                key = extra_content[4:4 + keylen]
-                value = extra_content[4 + keylen:]
+                (flags,) = FLAGS_UNPACKER.unpack_from(extra_content)
+                key = extra_content[4 : 4 + keylen]
+                value = extra_content[4 + keylen :]
                 d[key] = self.deserialize(value, flags), cas
 
             elif status == DISCONNECTED:
