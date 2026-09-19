@@ -5,7 +5,6 @@ from uhashring import HashRing
 
 import bmemcached
 
-
 THREE_SERVERS = ["localhost:11211", "localhost:11212", "localhost:11213"]
 
 
@@ -69,7 +68,7 @@ class DistributedClientHashingTest(unittest.TestCase):
         servers that were both already in the ring.
         """
         added_port = 11214
-        larger = THREE_SERVERS + [f"localhost:{added_port}"]
+        larger = [*THREE_SERVERS, f"localhost:{added_port}"]
 
         before = bmemcached.DistributedClient(THREE_SERVERS)
         after = bmemcached.DistributedClient(larger)
