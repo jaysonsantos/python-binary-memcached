@@ -120,11 +120,35 @@ def memcached_other_port():
     _stop(process)
 
 
+def _unix_socket_is_active(path):
+    if not os.path.exists(path):
+        return False
+    try:
+        sock = _unix(path)()
+    except OSError:
+        return False
+    sock.close()
+    return True
+
+
+def _remove_stale_socket_file():
+    # Unlink leftover files from a previous run that died before teardown.
+    # Do not unlink a live socket owned by another session or user process.
+    if _unix_socket_is_active(SOCKET_PATH):
+        return
+    try:
+        os.unlink(SOCKET_PATH)
+    except FileNotFoundError:
+        pass
+
+
 @pytest.fixture(scope="session", autouse=True)
 def memcached_socket():
-    # A previous run that died before teardown leaves the socket file behind.
-    # memcached then fails to bind.
-    _remove_socket_file()
+    if _unix_socket_is_active(SOCKET_PATH):
+        yield None
+        return
+
+    _remove_stale_socket_file()
 
     process = _start(
         ["memcached", "-s" + SOCKET_PATH],
@@ -133,17 +157,10 @@ def memcached_socket():
     )
     yield process
     _stop(process)
-    _remove_socket_file()
+    _remove_stale_socket_file()
 
 
-def _remove_socket_file():
-    try:
-        os.unlink(SOCKET_PATH)
-    except FileNotFoundError:
-        pass
-
-
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def memcached_ipv6():
     # This server needs its own port. On Linux a plain memcached binds both
     # INADDR_ANY and IN6ADDR_ANY, so port 11211 is already taken here.
