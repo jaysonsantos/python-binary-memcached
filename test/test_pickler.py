@@ -1,22 +1,17 @@
 import json
 import os
-
-from io import BytesIO
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 import unittest
+from io import BytesIO
 
 import bmemcached
 
 
-class PickleableThing(object):
+class PickleableThing:
     pass
 
 
-class JsonPickler(object):
+class JsonPickler:
     def __init__(self, f, protocol=0):
         self.f = f
 
@@ -35,34 +30,35 @@ class JsonPickler(object):
 
 class PicklerTests(unittest.TestCase):
     def setUp(self):
-        self.server = '{}:11211'.format(os.environ['MEMCACHED_HOST'])
-        self.json_client = bmemcached.Client(self.server, 'user', 'password', pickler=JsonPickler,
-                                             unpickler=JsonPickler)
-        self.pickle_client = bmemcached.Client(self.server, 'user', 'password',
-                                               pickler=pickle.Pickler,
-                                               unpickler=pickle.Unpickler)
-        self.data = {'a': 'b'}
+        self.server = "{}:11211".format(os.environ["MEMCACHED_HOST"])
+        self.json_client = bmemcached.Client(
+            self.server, "user", "password", pickler=JsonPickler, unpickler=JsonPickler
+        )
+        self.pickle_client = bmemcached.Client(
+            self.server, "user", "password", pickler=pickle.Pickler, unpickler=pickle.Unpickler
+        )
+        self.data = {"a": "b"}
 
     def tearDown(self):
-        self.json_client.delete('test_key')
+        self.json_client.delete("test_key")
         self.json_client.disconnect_all()
         self.pickle_client.disconnect_all()
 
     def testPickleDict(self):
-        self.pickle_client.set('test_key', self.data)
-        self.assertEqual(self.data, self.pickle_client.get('test_key'))
+        self.pickle_client.set("test_key", self.data)
+        self.assertEqual(self.data, self.pickle_client.get("test_key"))
 
     def testPickleClassInstance(self):
         to_pickle = PickleableThing()
-        self.pickle_client.set('test_key', to_pickle)
-        unpickled = self.pickle_client.get('test_key')
+        self.pickle_client.set("test_key", to_pickle)
+        unpickled = self.pickle_client.get("test_key")
         self.assertEqual(type(unpickled), PickleableThing)
         self.assertFalse(unpickled is to_pickle)
 
     def testPickleVsJson(self):
-        self.pickle_client.set('test_key', self.data)
-        self.assertRaises(ValueError, self.json_client.get, 'test_key')
+        self.pickle_client.set("test_key", self.data)
+        self.assertRaises(ValueError, self.json_client.get, "test_key")
 
     def testJsonVsPickle(self):
-        self.json_client.set('test_key', self.data)
-        self.assertRaises(pickle.UnpicklingError, self.pickle_client.get, 'test_key')
+        self.json_client.set("test_key", self.data)
+        self.assertRaises(pickle.UnpicklingError, self.pickle_client.get, "test_key")

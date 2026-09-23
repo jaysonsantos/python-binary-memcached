@@ -13,27 +13,27 @@
 
         python = pkgs.python312;
 
-        # The default package has no TLS, so test/test_tls.py skips.
+        # The default package has no TLS and no SASL, so test/test_tls.py and the
+        # SASL integration test both skip.
         memcached = pkgs.memcached.overrideAttrs (old: {
-          buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.openssl ];
-          configureFlags = (old.configureFlags or [ ]) ++ [ "--enable-tls" ];
+          buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.openssl pkgs.cyrus_sasl ];
+          configureFlags = (old.configureFlags or [ ]) ++ [ "--enable-tls" "--enable-sasl" "--enable-sasl-pwdb" ];
         });
 
-        # Runtime and test dependencies from setup.py and requirements_test.txt.
+        # Runtime and test dependencies from the pyproject.toml project table
+        # and from the test dependency group.
         pythonEnv = python.withPackages (ps: with ps; [
           # runtime
-          six
           uhashring
           # test and lint
           pytest
           pytest-cov
-          mock
           trustme
-          flake8
           # packaging and tooling
           pip
           setuptools
           build
+          twine
           tox
           # docs
           sphinx
@@ -46,6 +46,8 @@
           packages = [
             pythonEnv
             memcached
+            pkgs.cyrus_sasl.bin
+            pkgs.ruff
             pkgs.pre-commit
             pkgs.commitizen
           ];
@@ -66,9 +68,11 @@
         packages.default = python.pkgs.buildPythonPackage {
           pname = "python-binary-memcached";
           version = "0.32.0";
-          format = "setuptools";
+          pyproject = true;
           src = ./.;
-          propagatedBuildInputs = with python.pkgs; [ six uhashring ];
+          build-system = with python.pkgs; [ setuptools ];
+          dependencies = with python.pkgs; [ uhashring ];
+          pythonImportsCheck = [ "bmemcached" ];
           doCheck = false;
         };
 

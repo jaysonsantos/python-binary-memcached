@@ -1,25 +1,24 @@
-from datetime import datetime, timedelta
 import logging
+import pickle
 import socket
 import struct
 import threading
-try:
-    from urlparse import SplitResult  # type: ignore[import-not-found]
-except ImportError:
-    from urllib.parse import SplitResult  # type: ignore[import-not-found]
-
 import zlib
-from ipaddress import ip_address
+from datetime import datetime, timedelta
 from io import BytesIO
-import six
-from six import binary_type, text_type
+from ipaddress import ip_address
+from typing import ClassVar
+from urllib.parse import SplitResult
 
-from bmemcached.compat import long, pickle
 from bmemcached.exceptions import AuthenticationNotSupported, InvalidCredentials, MemcachedException
 from bmemcached.utils import str_to_bytes
 
-
 logger = logging.getLogger(__name__)
+
+# The value body of a get response starts with a 4 byte flags field. A Struct
+# for '!L%ds' would be specific to one value length, so it is not reusable.
+# Read the fixed part with this, then slice the rest. A slice compiles nothing.
+FLAGS_UNPACKER = struct.Struct("!L")
 
 
 class Protocol(threading.local):
@@ -46,64 +45,71 @@ class Protocol(threading.local):
           +---------------+---------------+---------------+---------------+
           Total 24 bytes
     """
-    HEADER_STRUCT = '!BBHBBHLLQ'
+
+    HEADER_STRUCT = "!BBHBBHLLQ"
     HEADER_SIZE = 24
 
-    MAGIC = {
-        'request': 0x80,
-        'response': 0x81
-    }
+    MAGIC: ClassVar[dict] = {"request": 0x80, "response": 0x81}
 
     # 'packer' is a struct.Struct compiled from HEADER_STRUCT plus the
     # fixed-size leading "extras" bytes for that command.  Variable-length
     # tails (key, value, auth payloads) are concatenated as bytes after
     # packer.pack(...).
-    COMMANDS = {
-        'get': {'command': 0x00, 'packer': struct.Struct(HEADER_STRUCT)},
-        'getk': {'command': 0x0C, 'packer': struct.Struct(HEADER_STRUCT)},
-        'getkq': {'command': 0x0D, 'packer': struct.Struct(HEADER_STRUCT)},
-        'set': {'command': 0x01, 'packer': struct.Struct(HEADER_STRUCT + 'LL')},
-        'setq': {'command': 0x11, 'packer': struct.Struct(HEADER_STRUCT + 'LL')},
-        'add': {'command': 0x02, 'packer': struct.Struct(HEADER_STRUCT + 'LL')},
-        'addq': {'command': 0x12, 'packer': struct.Struct(HEADER_STRUCT + 'LL')},
-        'replace': {'command': 0x03, 'packer': struct.Struct(HEADER_STRUCT + 'LL')},
-        'delete': {'command': 0x04, 'packer': struct.Struct(HEADER_STRUCT)},
-        'incr': {'command': 0x05, 'packer': struct.Struct(HEADER_STRUCT + 'QQL')},
-        'decr': {'command': 0x06, 'packer': struct.Struct(HEADER_STRUCT + 'QQL')},
-        'flush': {'command': 0x08, 'packer': struct.Struct(HEADER_STRUCT + 'I')},
-        'noop': {'command': 0x0a, 'packer': struct.Struct(HEADER_STRUCT)},
-        'stat': {'command': 0x10, 'packer': struct.Struct(HEADER_STRUCT)},
-        'auth_negotiation': {'command': 0x20, 'packer': struct.Struct(HEADER_STRUCT)},
-        'auth_request': {'command': 0x21, 'packer': struct.Struct(HEADER_STRUCT)},
+    COMMANDS: ClassVar[dict] = {
+        "get": {"command": 0x00, "packer": struct.Struct(HEADER_STRUCT)},
+        "getk": {"command": 0x0C, "packer": struct.Struct(HEADER_STRUCT)},
+        "getkq": {"command": 0x0D, "packer": struct.Struct(HEADER_STRUCT)},
+        "set": {"command": 0x01, "packer": struct.Struct(HEADER_STRUCT + "LL")},
+        "setq": {"command": 0x11, "packer": struct.Struct(HEADER_STRUCT + "LL")},
+        "add": {"command": 0x02, "packer": struct.Struct(HEADER_STRUCT + "LL")},
+        "addq": {"command": 0x12, "packer": struct.Struct(HEADER_STRUCT + "LL")},
+        "replace": {"command": 0x03, "packer": struct.Struct(HEADER_STRUCT + "LL")},
+        "delete": {"command": 0x04, "packer": struct.Struct(HEADER_STRUCT)},
+        "incr": {"command": 0x05, "packer": struct.Struct(HEADER_STRUCT + "QQL")},
+        "decr": {"command": 0x06, "packer": struct.Struct(HEADER_STRUCT + "QQL")},
+        "flush": {"command": 0x08, "packer": struct.Struct(HEADER_STRUCT + "I")},
+        "noop": {"command": 0x0A, "packer": struct.Struct(HEADER_STRUCT)},
+        "stat": {"command": 0x10, "packer": struct.Struct(HEADER_STRUCT)},
+        "auth_negotiation": {"command": 0x20, "packer": struct.Struct(HEADER_STRUCT)},
+        "auth_request": {"command": 0x21, "packer": struct.Struct(HEADER_STRUCT)},
     }
 
-    STATUS = {
-        'success': 0x00,
-        'key_not_found': 0x01,
-        'key_exists': 0x02,
-        'auth_error': 0x08,
-        'unknown_command': 0x81,
-
+    STATUS: ClassVar[dict] = {
+        "success": 0x00,
+        "key_not_found": 0x01,
+        "key_exists": 0x02,
+        "auth_error": 0x08,
+        "unknown_command": 0x81,
         # This is used internally, and is never returned by the server.  (The server returns a 16-bit
         # value, so it's not capable of returning this value.)
-        'server_disconnected': 0xFFFFFFFF,
+        "server_disconnected": 0xFFFFFFFF,
     }
 
-    FLAGS = {
-        'object': 1 << 0,
-        'integer': 1 << 1,
-        'long': 1 << 2,
-        'compressed': 1 << 3,
-        'binary': 1 << 4,
+    FLAGS: ClassVar[dict] = {
+        "object": 1 << 0,
+        "integer": 1 << 1,
+        "long": 1 << 2,
+        "compressed": 1 << 3,
+        "binary": 1 << 4,
     }
 
-    MAXIMUM_EXPIRE_TIME = 0xfffffffe
+    MAXIMUM_EXPIRE_TIME = 0xFFFFFFFE
 
     COMPRESSION_THRESHOLD = 128
 
-    def __init__(self, server, username=None, password=None, compression=None, socket_timeout=None,
-                 pickle_protocol=None, pickler=None, unpickler=None, tls_context=None):
-        super(Protocol, self).__init__()
+    def __init__(
+        self,
+        server,
+        username=None,
+        password=None,
+        compression=None,
+        socket_timeout=None,
+        pickle_protocol=None,
+        pickler=None,
+        unpickler=None,
+        tls_context=None,
+    ):
+        super().__init__()
         self.server = server
         self._username = username
         self._password = password
@@ -119,7 +125,7 @@ class Protocol(threading.local):
 
         self.reconnects_deferred_until = None
 
-        if not server.startswith('/'):
+        if not server.startswith("/"):
             self.host, self.port = self.split_host_port(self.server)
             self.set_retry_delay(5)
         else:
@@ -127,7 +133,17 @@ class Protocol(threading.local):
             self.set_retry_delay(0)
 
     def __str__(self):
-        return "{}_{}_{}".format(self.server, self._username, self._password)
+        # Never include the password. This string reaches log lines, the repr of
+        # a server list, and any traceback that prints a Protocol object. Show
+        # only whether a password is set.
+        return f"{self.server}_{self._username}_password={'set' if self._password else 'unset'}"
+
+    @property
+    def _hash_ring_node(self):
+        # DistributedClient hashes this string to put the server on its ring. It
+        # keeps the legacy "server_username_password" form, so an upgrade does not
+        # move existing keys to other servers. Do not log it.
+        return f"{self.server}_{self._username}_{self._password}"
 
     @property
     def server_uses_unix_socket(self):
@@ -160,7 +176,7 @@ class Protocol(threading.local):
                 self.connection.connect(self.server)
 
             self._send_authentication()
-        except socket.error:
+        except OSError:
             # If the connection attempt fails, start delaying retries.
             self.reconnects_deferred_until = datetime.now() + timedelta(seconds=self.retry_delay)
             raise
@@ -202,11 +218,11 @@ class Protocol(threading.local):
         if is_ip_address(server):
             return server, default_port
 
-        if server.startswith('['):
-            host, _, port = server[1:].partition(']')
+        if server.startswith("["):
+            host, _, port = server[1:].partition("]")
             if not is_ip_address(host):
-                raise ValueError('{} is not a valid IPv6 address'.format(server))
-            return host, default_port if not port else int(port.lstrip(':'))
+                raise ValueError(f"{server} is not a valid IPv6 address")
+            return host, default_port if not port else int(port.lstrip(":"))
 
         u = SplitResult("", server, "", "", "")
         return u.hostname, 11211 if u.port is None else u.port
@@ -227,7 +243,7 @@ class Protocol(threading.local):
 
         # If we got less data than we requested, the server disconnected.
         if len(value) < size:
-            raise socket.error()
+            raise OSError()
 
         return bytes(value)
 
@@ -244,26 +260,35 @@ class Protocol(threading.local):
                 # The connection wasn't opened, which means we're deferring a reconnection attempt.
                 # Raise a socket.error, so we'll return the same server_disconnected message as we
                 # do below.
-                raise socket.error('Delaying reconnection attempt')
+                raise OSError("Delaying reconnection attempt")
 
             header = self._read_socket(self.HEADER_SIZE)
-            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-             cas) = struct.unpack(self.HEADER_STRUCT, header)
+            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas) = struct.unpack(
+                self.HEADER_STRUCT, header
+            )
 
-            assert magic == self.MAGIC['response']
+            if magic != self.MAGIC["response"]:
+                # The header is read. The body is not. The stream is now out of
+                # sync, so the socket cannot be reused. Drop it before raising.
+                self.disconnect()
+                raise MemcachedException(
+                    "Invalid memcached response header: expected magic 0x{:02x}, got 0x{:02x}".format(
+                        self.MAGIC["response"], magic
+                    ),
+                    self.STATUS["server_disconnected"],
+                )
 
             extra_content = None
             if bodylen:
                 extra_content = self._read_socket(bodylen)
 
-            return (magic, opcode, keylen, extlen, datatype, status, bodylen,
-                    opaque, cas, extra_content)
-        except socket.error as e:
+            return (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content)
+        except OSError as e:
             self._connection_error(e)
 
             # (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content)
             message = str(e)
-            return (self.MAGIC['response'], -1, 0, 0, 0, self.STATUS['server_disconnected'], 0, 0, 0, message)
+            return (self.MAGIC["response"], -1, 0, 0, 0, self.STATUS["server_disconnected"], 0, 0, 0, message)
 
     def _send(self, data):
         try:
@@ -272,7 +297,7 @@ class Protocol(threading.local):
                 return
 
             self.connection.sendall(data)
-        except socket.error as e:
+        except OSError as e:
             self._connection_error(e)
 
     def authenticate(self, username, password):
@@ -280,9 +305,9 @@ class Protocol(threading.local):
         Authenticate user on server.
 
         :param username: Username used to be authenticated.
-        :type username: six.string_types
+        :type username: str
         :param password: Password used to be authenticated.
-        :type password: six.string_types
+        :type password: str
         :return: True if successful.
         :raises: InvalidCredentials, AuthenticationNotSupported, MemcachedException
         :rtype: bool
@@ -299,52 +324,51 @@ class Protocol(threading.local):
         if not self._username or not self._password:
             return False
 
-        logger.debug('Authenticating as %s', self._username)
-        cmd = self.COMMANDS['auth_negotiation']
-        self._send(cmd['packer'].pack(
-            self.MAGIC['request'], cmd['command'],
-            0, 0, 0, 0, 0, 0, 0))
+        logger.debug("Authenticating as %s", self._username)
+        cmd = self.COMMANDS["auth_negotiation"]
+        self._send(cmd["packer"].pack(self.MAGIC["request"], cmd["command"], 0, 0, 0, 0, 0, 0, 0))
 
-        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-         cas, extra_content) = self._get_response()
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = self._get_response()
 
-        if status == self.STATUS['server_disconnected']:
+        if status == self.STATUS["server_disconnected"]:
             return False
 
-        if status == self.STATUS['unknown_command']:
-            logger.debug('Server does not requires authentication.')
+        if status == self.STATUS["unknown_command"]:
+            logger.debug("Server does not requires authentication.")
             self.authenticated = True
             return True
 
         methods = extra_content
 
-        if b'PLAIN' not in methods:
-            raise AuthenticationNotSupported('This module only supports '
-                                             'PLAIN auth for now.', status)
+        if b"PLAIN" not in methods:
+            raise AuthenticationNotSupported("This module only supports PLAIN auth for now.", status)
 
-        method = b'PLAIN'
-        auth = '\x00%s\x00%s' % (self._username, self._password)
-        if isinstance(auth, text_type):
+        method = b"PLAIN"
+        auth = f"\x00{self._username}\x00{self._password}"
+        if isinstance(auth, str):
             auth = auth.encode()
 
-        cmd = self.COMMANDS['auth_request']
-        self._send(cmd['packer'].pack(
-            self.MAGIC['request'], cmd['command'],
-            len(method), 0, 0, 0, len(method) + len(auth), 0, 0) + method + auth)
+        cmd = self.COMMANDS["auth_request"]
+        self._send(
+            cmd["packer"].pack(
+                self.MAGIC["request"], cmd["command"], len(method), 0, 0, 0, len(method) + len(auth), 0, 0
+            )
+            + method
+            + auth
+        )
 
-        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-         cas, extra_content) = self._get_response()
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = self._get_response()
 
-        if status == self.STATUS['server_disconnected']:
+        if status == self.STATUS["server_disconnected"]:
             return False
 
-        if status == self.STATUS['auth_error']:
+        if status == self.STATUS["auth_error"]:
             raise InvalidCredentials("Incorrect username or password", status)
 
-        if status != self.STATUS['success']:
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
+        if status != self.STATUS["success"]:
+            raise MemcachedException(f"Code: {status:d} Message: {extra_content}", status)
 
-        logger.debug('Auth OK. Code: %d Message: %s', status, extra_content)
+        logger.debug("Auth OK. Code: %d Message: %s", status, extra_content)
 
         self.authenticated = True
         return True
@@ -354,7 +378,7 @@ class Protocol(threading.local):
         Serializes a value based on its type.
 
         :param value: Something to be serialized
-        :type value: six.string_types, int, long, object
+        :type value: str, int, object
         :param compress_level: How much to compress.
             0 = no compression, 1 = fastest, 9 = slowest but best,
             -1 = default compression level.
@@ -363,18 +387,15 @@ class Protocol(threading.local):
         :rtype: bytes
         """
         flags = 0
-        if isinstance(value, binary_type):
-            flags |= self.FLAGS['binary']
-        elif isinstance(value, text_type):
-            value = value.encode('utf8')
+        if isinstance(value, bytes):
+            flags |= self.FLAGS["binary"]
+        elif isinstance(value, str):
+            value = value.encode("utf8")
         elif isinstance(value, int) and isinstance(value, bool) is False:
-            flags |= self.FLAGS['integer']
-            value = str(value).encode()
-        elif isinstance(value, long) and isinstance(value, bool) is False:
-            flags |= self.FLAGS['long']
+            flags |= self.FLAGS["integer"]
             value = str(value).encode()
         else:
-            flags |= self.FLAGS['object']
+            flags |= self.FLAGS["object"]
             if self.pickler is None or self.pickler is pickle.Pickler:
                 value = pickle.dumps(value, self.pickle_protocol)
             else:
@@ -393,7 +414,7 @@ class Protocol(threading.local):
             # Use the compressed value only if it is actually smaller.
             if compressed_value and len(compressed_value) < len(value):
                 value = compressed_value
-                flags |= self.FLAGS['compressed']
+                flags |= self.FLAGS["compressed"]
 
         return flags, value
 
@@ -402,44 +423,31 @@ class Protocol(threading.local):
         Deserialized values based on flags or just return it if it is not serialized.
 
         :param value: Serialized or not value.
-        :type value: six.string_types, int
+        :type value: str, int
         :param flags: Value flags
         :type flags: int
         :return: Deserialized value
-        :rtype: six.string_types|int
+        :rtype: str|int
         """
         FLAGS = self.FLAGS
 
-        if flags & FLAGS['compressed']:  # pragma: no branch
+        if flags & FLAGS["compressed"]:  # pragma: no branch
             value = self.compression.decompress(value)
 
-        if flags & FLAGS['binary']:
+        if flags & FLAGS["binary"]:
             return value
 
-        if flags & FLAGS['integer']:
+        if flags & FLAGS["integer"]:
             return int(value)
-        elif flags & FLAGS['long']:
-            return long(value)
-        elif flags & FLAGS['object']:
+        elif flags & FLAGS["long"]:
+            # An old client version can have written a value with this flag.
+            return int(value)
+        elif flags & FLAGS["object"]:
             if self.unpickler is None or self.unpickler is pickle.Unpickler:
                 return pickle.loads(value)
             return self.unpickler(BytesIO(value)).load()
 
-        if six.PY3:
-            return value.decode('utf8')
-
-        # In Python 2, mimic the behavior of the json library: return a str
-        # unless the value contains unicode characters.
-        # in Python 2, if value is a binary (e.g struct.pack("<Q") then decode will fail
-        try:
-            value.decode('ascii')
-        except UnicodeDecodeError:
-            try:
-                return value.decode('utf8')
-            except UnicodeDecodeError:
-                return value
-        else:
-            return value
+        return value.decode("utf8")
 
     def get(self, key):
         """
@@ -447,36 +455,33 @@ class Protocol(threading.local):
         (None, None).
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :return: Returns (value, cas).
         :rtype: object
         """
-        logger.debug('Getting key %s', key)
+        logger.debug("Getting key %s", key)
         keybytes = str_to_bytes(key)
-        cmd = self.COMMANDS['get']
+        cmd = self.COMMANDS["get"]
         klen = len(keybytes)
-        data = cmd['packer'].pack(
-            self.MAGIC['request'], cmd['command'],
-            klen, 0, 0, 0, klen, 0, 0) + keybytes
+        data = cmd["packer"].pack(self.MAGIC["request"], cmd["command"], klen, 0, 0, 0, klen, 0, 0) + keybytes
         self._send(data)
 
-        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-         cas, extra_content) = self._get_response()
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = self._get_response()
 
-        logger.debug('Value Length: %d. Body length: %d. Data type: %d',
-                     extlen, bodylen, datatype)
+        logger.debug("Value Length: %d. Body length: %d. Data type: %d", extlen, bodylen, datatype)
 
-        if status != self.STATUS['success']:
-            if status == self.STATUS['key_not_found']:
-                logger.debug('Key not found. Message: %s', extra_content)
+        if status != self.STATUS["success"]:
+            if status == self.STATUS["key_not_found"]:
+                logger.debug("Key not found. Message: %s", extra_content)
                 return None, None
 
-            if status == self.STATUS['server_disconnected']:
+            if status == self.STATUS["server_disconnected"]:
                 return None, None
 
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
+            raise MemcachedException(f"Code: {status:d} Message: {extra_content}", status)
 
-        flags, value = struct.unpack('!L%ds' % (bodylen - 4, ), extra_content)
+        (flags,) = FLAGS_UNPACKER.unpack_from(extra_content)
+        value = extra_content[4:]
 
         return self.deserialize(value, flags), cas
 
@@ -487,21 +492,17 @@ class Protocol(threading.local):
         :return: Returns the status.
         :rtype: int
         """
-        logger.debug('Sending NOOP')
-        cmd = self.COMMANDS['noop']
-        data = cmd['packer'].pack(
-            self.MAGIC['request'], cmd['command'],
-            0, 0, 0, 0, 0, 0, 0)
+        logger.debug("Sending NOOP")
+        cmd = self.COMMANDS["noop"]
+        data = cmd["packer"].pack(self.MAGIC["request"], cmd["command"], 0, 0, 0, 0, 0, 0, 0)
         self._send(data)
 
-        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-         cas, extra_content) = self._get_response()
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = self._get_response()
 
-        logger.debug('Value Length: %d. Body length: %d. Data type: %d',
-                     extlen, bodylen, datatype)
+        logger.debug("Value Length: %d. Body length: %d. Data type: %d", extlen, bodylen, datatype)
 
-        if status != self.STATUS['success']:
-            logger.debug('NOOP failed (status is %d). Message: %s' % (status, extra_content))
+        if status != self.STATUS["success"]:
+            logger.debug("NOOP failed (status is %d). Message: %s", status, extra_content)
 
         return int(status)
 
@@ -509,9 +510,9 @@ class Protocol(threading.local):
         """
         Get multiple keys from server.
 
-        Since keys are converted to b'' when six.PY3 the keys need to be decoded back
+        Since keys are converted to b'' the keys need to be decoded back
         into string . e.g key='test' is read as b'test' and then decoded back to 'test'
-        This encode/decode does not work when key is already a six.binary_type hence
+        This encode/decode does not work when key is already a bytes hence
         this function remembers which keys were originally sent as str so that
         it only decoded those keys back to string which were sent as string
 
@@ -526,11 +527,11 @@ class Protocol(threading.local):
         if n == 0:
             return {}
 
-        MAGIC_REQ = self.MAGIC['request']
-        getkq = self.COMMANDS['getkq']
-        GETKQ_CMD = getkq['command']
-        pack_header = getkq['packer'].pack  # same packer for getk and getkq
-        GETK_CMD = self.COMMANDS['getk']['command']
+        MAGIC_REQ = self.MAGIC["request"]
+        getkq = self.COMMANDS["getkq"]
+        GETKQ_CMD = getkq["command"]
+        pack_header = getkq["packer"].pack  # same packer for getk and getkq
+        GETK_CMD = self.COMMANDS["getk"]["command"]
 
         msg = bytearray()
         keybytes_list = [str_to_bytes(k) for k in keys]
@@ -544,27 +545,28 @@ class Protocol(threading.local):
         self._send(msg)
 
         d = {}
-        SUCCESS = self.STATUS['success']
-        DISCONNECTED = self.STATUS['server_disconnected']
-        NOT_FOUND = self.STATUS['key_not_found']
+        SUCCESS = self.STATUS["success"]
+        DISCONNECTED = self.STATUS["server_disconnected"]
+        NOT_FOUND = self.STATUS["key_not_found"]
         opcode = -1
         while opcode != GETK_CMD:
-            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-             cas, extra_content) = self._get_response()
+            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = (
+                self._get_response()
+            )
 
             if status == SUCCESS:
-                flags, key, value = struct.unpack('!L%ds%ds' %
-                                                  (keylen, bodylen - keylen - 4),
-                                                  extra_content)
+                (flags,) = FLAGS_UNPACKER.unpack_from(extra_content)
+                key = extra_content[4 : 4 + keylen]
+                value = extra_content[4 + keylen :]
                 d[key] = self.deserialize(value, flags), cas
 
             elif status == DISCONNECTED:
                 break
             elif status != NOT_FOUND:
-                raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
+                raise MemcachedException(f"Code: {status:d} Message: {extra_content}", status)
 
         ret = {}
-        for key, keybytes in zip(keys, keybytes_list):
+        for key, keybytes in zip(keys, keybytes_list, strict=True):
             if keybytes in d:
                 ret[key] = d[keybytes]
         return ret
@@ -574,7 +576,7 @@ class Protocol(threading.local):
         Function to set/add/replace commands.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -590,30 +592,28 @@ class Protocol(threading.local):
         :rtype: tuple
         """
         time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
-        logger.debug('Setting/adding/replacing key %s.', key)
+        logger.debug("Setting/adding/replacing key %s.", key)
         flags, value = self.serialize(value, compress_level=compress_level)
-        logger.debug('Value bytes %s.', len(value))
+        logger.debug("Value bytes %s.", len(value))
 
         keybytes = str_to_bytes(key)
         cmd = self.COMMANDS[command]
         klen = len(keybytes)
         vlen = len(value)
-        self._send(cmd['packer'].pack(
-            self.MAGIC['request'], cmd['command'],
-            klen, 8, 0, 0, klen + vlen + 8, 0, cas,
-            flags, time) + keybytes + value)
+        self._send(
+            cmd["packer"].pack(
+                self.MAGIC["request"], cmd["command"], klen, 8, 0, 0, klen + vlen + 8, 0, cas, flags, time
+            )
+            + keybytes
+            + value
+        )
 
-        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-         cas, extra_content) = self._get_response()
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = self._get_response()
 
-        if status != self.STATUS['success']:
-            if status == self.STATUS['key_exists']:
+        if status != self.STATUS["success"]:
+            if status in (self.STATUS["key_exists"], self.STATUS["key_not_found"], self.STATUS["server_disconnected"]):
                 return False, None
-            elif status == self.STATUS['key_not_found']:
-                return False, None
-            elif status == self.STATUS['server_disconnected']:
-                return False, None
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
+            raise MemcachedException(f"Code: {status:d} Message: {extra_content}", status)
 
         return True, cas
 
@@ -622,7 +622,7 @@ class Protocol(threading.local):
         Set a value for a key on server.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -638,7 +638,7 @@ class Protocol(threading.local):
             (success, cas) tuple if get_cas=True.
         :rtype: bool or tuple
         """
-        success, cas = self._set_add_replace('set', key, value, time, compress_level=compress_level)
+        success, cas = self._set_add_replace("set", key, value, time, compress_level=compress_level)
         if get_cas:
             return success, cas
         return success
@@ -648,7 +648,7 @@ class Protocol(threading.local):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -667,14 +667,15 @@ class Protocol(threading.local):
         # The protocol CAS value 0 means "no cas".  Calling cas() with that value is
         # probably unintentional.  Don't allow it, since it would overwrite the value
         # without performing CAS at all.
-        assert cas != 0, '0 is an invalid CAS value'
+        if cas == 0:
+            raise ValueError("0 is an invalid CAS value")
 
         # If we get a cas of None, interpret that as "compare against nonexistant and set",
         # which is simply Add.
         if cas is None:
-            success, new_cas = self._set_add_replace('add', key, value, time, compress_level=compress_level)
+            success, new_cas = self._set_add_replace("add", key, value, time, compress_level=compress_level)
         else:
-            success, new_cas = self._set_add_replace('set', key, value, time, cas=cas, compress_level=compress_level)
+            success, new_cas = self._set_add_replace("set", key, value, time, cas=cas, compress_level=compress_level)
         if get_cas:
             return success, new_cas
         return success
@@ -684,7 +685,7 @@ class Protocol(threading.local):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -700,7 +701,7 @@ class Protocol(threading.local):
             (success, cas) tuple if get_cas=True.
         :rtype: bool or tuple
         """
-        success, cas = self._set_add_replace('add', key, value, time, compress_level=compress_level)
+        success, cas = self._set_add_replace("add", key, value, time, compress_level=compress_level)
         if get_cas:
             return success, cas
         return success
@@ -710,7 +711,7 @@ class Protocol(threading.local):
         Replace a key/value to server ony if it does exist.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -726,7 +727,7 @@ class Protocol(threading.local):
             (success, cas) tuple if get_cas=True.
         :rtype: bool or tuple
         """
-        success, cas = self._set_add_replace('replace', key, value, time, compress_level=compress_level)
+        success, cas = self._set_add_replace("replace", key, value, time, compress_level=compress_level)
         if get_cas:
             return success, cas
         return success
@@ -752,11 +753,11 @@ class Protocol(threading.local):
         mappings = list(mappings.items())
         msg = bytearray()
 
-        MAGIC_REQ = self.MAGIC['request']
-        addq = self.COMMANDS['addq']
-        ADDQ_CMD = addq['command']
-        pack_set_prefix = addq['packer'].pack  # same packer for setq/addq
-        SETQ_CMD = self.COMMANDS['setq']['command']
+        MAGIC_REQ = self.MAGIC["request"]
+        addq = self.COMMANDS["addq"]
+        ADDQ_CMD = addq["command"]
+        pack_set_prefix = addq["packer"].pack  # same packer for setq/addq
+        SETQ_CMD = self.COMMANDS["setq"]["command"]
 
         for opaque, (key, value) in enumerate(mappings):
             if isinstance(key, tuple):
@@ -764,40 +765,35 @@ class Protocol(threading.local):
             else:
                 cas = None
 
-            if cas == 0:
-                # Like cas(), if the cas value is 0, treat it as compare-and-set against not
-                # existing.
-                opcode = ADDQ_CMD
-            else:
-                opcode = SETQ_CMD
+            # Like cas(), if the cas value is 0, treat it as compare-and-set against not
+            # existing.
+            opcode = ADDQ_CMD if cas == 0 else SETQ_CMD
 
             keybytes = str_to_bytes(key)
             flags, value = self.serialize(value, compress_level=compress_level)
             klen = len(keybytes)
             vlen = len(value)
-            msg += pack_set_prefix(MAGIC_REQ, opcode, klen,
-                                   8, 0, 0, klen + vlen + 8, opaque, cas or 0,
-                                   flags, time)
+            msg += pack_set_prefix(MAGIC_REQ, opcode, klen, 8, 0, 0, klen + vlen + 8, opaque, cas or 0, flags, time)
             msg += keybytes
             msg += value
 
-        noop = self.COMMANDS['noop']
-        NOOP_CMD = noop['command']
-        msg += noop['packer'].pack(MAGIC_REQ, NOOP_CMD,
-                                   0, 0, 0, 0, 0, 0, 0)
+        noop = self.COMMANDS["noop"]
+        NOOP_CMD = noop["command"]
+        msg += noop["packer"].pack(MAGIC_REQ, NOOP_CMD, 0, 0, 0, 0, 0, 0, 0)
 
         self._send(msg)
 
         opcode = -1
         failed = []
-        DISCONNECTED = self.STATUS['server_disconnected']
-        SUCCESS = self.STATUS['success']
+        DISCONNECTED = self.STATUS["server_disconnected"]
+        SUCCESS = self.STATUS["success"]
         while opcode != NOOP_CMD:
-            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-             cas, extra_content) = self._get_response()
+            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = (
+                self._get_response()
+            )
             if status == DISCONNECTED:
                 # Assume that the entire operation failed.
-                return list(key for key, value in mappings)
+                return [key for key, _value in mappings]
             if status != SUCCESS:
                 key, value = mappings[opaque]
                 if isinstance(key, tuple):
@@ -835,11 +831,11 @@ class Protocol(threading.local):
         msg = bytearray()
         result = {}
 
-        MAGIC_REQ = self.MAGIC['request']
-        add = self.COMMANDS['add']
-        ADD_CMD = add['command']
-        pack_set_prefix = add['packer'].pack  # same packer for set/add
-        SET_CMD = self.COMMANDS['set']['command']
+        MAGIC_REQ = self.MAGIC["request"]
+        add = self.COMMANDS["add"]
+        ADD_CMD = add["command"]
+        pack_set_prefix = add["packer"].pack  # same packer for set/add
+        SET_CMD = self.COMMANDS["set"]["command"]
 
         for opaque, (key, value) in enumerate(mappings):
             if isinstance(key, tuple):
@@ -848,18 +844,13 @@ class Protocol(threading.local):
                 str_key, cas = key, None
             result[str_key] = None
 
-            if cas == 0:
-                opcode = ADD_CMD
-            else:
-                opcode = SET_CMD
+            opcode = ADD_CMD if cas == 0 else SET_CMD
 
             keybytes = str_to_bytes(str_key)
             flags, value = self.serialize(value, compress_level=compress_level)
             klen = len(keybytes)
             vlen = len(value)
-            msg += pack_set_prefix(MAGIC_REQ, opcode, klen,
-                                   8, 0, 0, klen + vlen + 8, opaque, cas or 0,
-                                   flags, time)
+            msg += pack_set_prefix(MAGIC_REQ, opcode, klen, 8, 0, 0, klen + vlen + 8, opaque, cas or 0, flags, time)
             msg += keybytes
             msg += value
 
@@ -867,11 +858,12 @@ class Protocol(threading.local):
 
         # Non-quiet set/add return exactly one response per request, so we can
         # read a fixed count rather than relying on a trailing noop sentinel.
-        DISCONNECTED = self.STATUS['server_disconnected']
-        SUCCESS = self.STATUS['success']
+        DISCONNECTED = self.STATUS["server_disconnected"]
+        SUCCESS = self.STATUS["success"]
         for _ in range(len(mappings)):
-            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-             cas, extra_content) = self._get_response()
+            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = (
+                self._get_response()
+            )
             if status == DISCONNECTED:
                 return result
             if status == SUCCESS:
@@ -886,7 +878,7 @@ class Protocol(threading.local):
         Function which increments and decrements.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: Number to be (de|in)cremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -900,27 +892,28 @@ class Protocol(threading.local):
         time = time if time >= 0 else self.MAXIMUM_EXPIRE_TIME
         cmd = self.COMMANDS[command]
         klen = len(keybytes)
-        self._send(cmd['packer'].pack(
-            self.MAGIC['request'], cmd['command'],
-            klen, 20, 0, 0, klen + 20, 0, 0,
-            value, default, time) + keybytes)
+        self._send(
+            cmd["packer"].pack(
+                self.MAGIC["request"], cmd["command"], klen, 20, 0, 0, klen + 20, 0, 0, value, default, time
+            )
+            + keybytes
+        )
 
-        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-         cas, extra_content) = self._get_response()
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = self._get_response()
 
-        if status not in (self.STATUS['success'], self.STATUS['server_disconnected']):
-            raise MemcachedException('Code: %d Message: %s' % (status, extra_content), status)
-        if status == self.STATUS['server_disconnected']:
+        if status not in (self.STATUS["success"], self.STATUS["server_disconnected"]):
+            raise MemcachedException(f"Code: {status:d} Message: {extra_content}", status)
+        if status == self.STATUS["server_disconnected"]:
             return 0
 
-        return struct.unpack('!Q', extra_content)[0]
+        return struct.unpack("!Q", extra_content)[0]
 
     def incr(self, key, value, default=0, time=1000000):
         """
         Increment a key, if it exists, returns its actual value, if it doesn't, return 0.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: Number to be incremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -930,7 +923,7 @@ class Protocol(threading.local):
         :return: Actual value of the key on server
         :rtype: int
         """
-        return self._incr_decr('incr', key, value, default, time)
+        return self._incr_decr("incr", key, value, default, time)
 
     def decr(self, key, value, default=0, time=100):
         """
@@ -938,7 +931,7 @@ class Protocol(threading.local):
         Minimum value of decrement return is 0.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: Number to be decremented
         :type value: int
         :param default: Default value if key does not exist.
@@ -948,37 +941,34 @@ class Protocol(threading.local):
         :return: Actual value of the key on server
         :rtype: int
         """
-        return self._incr_decr('decr', key, value, default, time)
+        return self._incr_decr("decr", key, value, default, time)
 
     def delete(self, key, cas=0):
         """
         Delete a key/value from server. If key existed and was deleted, return True.
 
         :param key: Key's name to be deleted
-        :type key: six.string_types
+        :type key: str
         :param cas: If set, only delete the key if its CAS value matches.
         :type cas: int
         :return: True in case o success and False in case of failure.
         :rtype: bool
         """
-        logger.debug('Deleting key %s', key)
+        logger.debug("Deleting key %s", key)
         keybytes = str_to_bytes(key)
-        cmd = self.COMMANDS['delete']
+        cmd = self.COMMANDS["delete"]
         klen = len(keybytes)
-        self._send(cmd['packer'].pack(
-            self.MAGIC['request'], cmd['command'],
-            klen, 0, 0, 0, klen, 0, cas) + keybytes)
+        self._send(cmd["packer"].pack(self.MAGIC["request"], cmd["command"], klen, 0, 0, 0, klen, 0, cas) + keybytes)
 
-        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-         cas, extra_content) = self._get_response()
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = self._get_response()
 
-        if status == self.STATUS['server_disconnected']:
+        if status == self.STATUS["server_disconnected"]:
             return False
-        if status != self.STATUS['success'] and status not in (self.STATUS['key_not_found'], self.STATUS['key_exists']):
-            raise MemcachedException('Code: %d message: %s' % (status, extra_content), status)
+        if status != self.STATUS["success"] and status not in (self.STATUS["key_not_found"], self.STATUS["key_exists"]):
+            raise MemcachedException(f"Code: {status:d} message: {extra_content}", status)
 
-        logger.debug('Key deleted %s', key)
-        return status != self.STATUS['key_exists']
+        logger.debug("Key deleted %s", key)
+        return status != self.STATUS["key_exists"]
 
     def delete_multi(self, keys):
         """
@@ -989,32 +979,33 @@ class Protocol(threading.local):
         :return: True in case of success and False in case of failure.
         :rtype: bool
         """
-        logger.debug('Deleting keys %r', keys)
+        logger.debug("Deleting keys %r", keys)
         msg = bytearray()
-        delete = self.COMMANDS['delete']
-        DELETE_CMD = delete['command']
-        pack_header = delete['packer'].pack  # same packer as noop
-        MAGIC_REQ = self.MAGIC['request']
+        delete = self.COMMANDS["delete"]
+        DELETE_CMD = delete["command"]
+        pack_header = delete["packer"].pack  # same packer as noop
+        MAGIC_REQ = self.MAGIC["request"]
         for key in keys:
             keybytes = str_to_bytes(key)
             klen = len(keybytes)
             msg += pack_header(MAGIC_REQ, DELETE_CMD, klen, 0, 0, 0, klen, 0, 0)
             msg += keybytes
 
-        noop = self.COMMANDS['noop']
-        NOOP_CMD = noop['command']
-        msg += noop['packer'].pack(MAGIC_REQ, NOOP_CMD, 0, 0, 0, 0, 0, 0, 0)
+        noop = self.COMMANDS["noop"]
+        NOOP_CMD = noop["command"]
+        msg += noop["packer"].pack(MAGIC_REQ, NOOP_CMD, 0, 0, 0, 0, 0, 0, 0)
 
         self._send(msg)
 
         opcode = -1
         retval = True
         while opcode != NOOP_CMD:
-            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-             cas, extra_content) = self._get_response()
-            if status != self.STATUS['success']:
+            (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = (
+                self._get_response()
+            )
+            if status != self.STATUS["success"]:
                 retval = False
-            if status == self.STATUS['server_disconnected']:
+            if status == self.STATUS["server_disconnected"]:
                 break
 
         return retval
@@ -1028,19 +1019,16 @@ class Protocol(threading.local):
         :return: True in case of success, False in case of failure
         :rtype: bool
         """
-        logger.info('Flushing memcached')
-        cmd = self.COMMANDS['flush']
-        self._send(cmd['packer'].pack(
-            self.MAGIC['request'], cmd['command'],
-            0, 4, 0, 0, 4, 0, 0, time))
+        logger.info("Flushing memcached")
+        cmd = self.COMMANDS["flush"]
+        self._send(cmd["packer"].pack(self.MAGIC["request"], cmd["command"], 0, 4, 0, 0, 4, 0, 0, time))
 
-        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque,
-         cas, extra_content) = self._get_response()
+        (magic, opcode, keylen, extlen, datatype, status, bodylen, opaque, cas, extra_content) = self._get_response()
 
-        if status not in (self.STATUS['success'], self.STATUS['server_disconnected']):
-            raise MemcachedException('Code: %d message: %s' % (status, extra_content), status)
+        if status not in (self.STATUS["success"], self.STATUS["server_disconnected"]):
+            raise MemcachedException(f"Code: {status:d} message: {extra_content}", status)
 
-        logger.debug('Memcached flushed')
+        logger.debug("Memcached flushed")
         return True
 
     def stats(self, key=None):
@@ -1048,23 +1036,19 @@ class Protocol(threading.local):
         Return server stats.
 
         :param key: Optional if you want status from a key.
-        :type key: six.string_types
+        :type key: str
         :return: A dict with server stats
         :rtype: dict
         """
         # TODO: Stats with key is not working.
-        cmd = self.COMMANDS['stat']
+        cmd = self.COMMANDS["stat"]
         if key is not None:
-            if isinstance(key, text_type):
+            if isinstance(key, str):
                 key = str_to_bytes(key)
             keylen = len(key)
-            packed = cmd['packer'].pack(
-                self.MAGIC['request'], cmd['command'],
-                keylen, 0, 0, 0, keylen, 0, 0) + key
+            packed = cmd["packer"].pack(self.MAGIC["request"], cmd["command"], keylen, 0, 0, 0, keylen, 0, 0) + key
         else:
-            packed = cmd['packer'].pack(
-                self.MAGIC['request'], cmd['command'],
-                0, 0, 0, 0, 0, 0, 0)
+            packed = cmd["packer"].pack(self.MAGIC["request"], cmd["command"], 0, 0, 0, 0, 0, 0, 0)
 
         self._send(packed)
 
@@ -1074,7 +1058,7 @@ class Protocol(threading.local):
             response = self._get_response()
 
             status = response[5]
-            if status == self.STATUS['server_disconnected']:
+            if status == self.STATUS["server_disconnected"]:
                 break
 
             keylen = response[2]

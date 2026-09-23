@@ -1,0 +1,23 @@
+# Mergify merge queue. Docs: https://docs.mergify.com/merge-queue/
+#
+# Branch protection on `main` stays the source of truth for the merge
+# requirements (`lint` and `tests (3.12)` green). Mergify injects those
+# conditions into the queue, so this file does not repeat them.
+
+queue_rules:
+  - name: default
+    # Keep every commit. A squash breaks the conventional-commit history that
+    # the release automation reads.
+    merge_method: merge
+    update_method: rebase
+    # Stack up to 20 pull requests on one temporary branch and run the test
+    # suite once for the whole batch.
+    batch_size: 20
+    batch_max_wait_time: 5 min
+    checks_timeout: 30 min
+
+merge_protections_settings:
+  # `main` requires 0 approvals, so an explicit label is the merge gate.
+  # Without it, any green pull request from any contributor merges itself.
+  auto_merge_conditions:
+    - label = ready-to-merge

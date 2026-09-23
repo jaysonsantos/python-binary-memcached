@@ -1,0 +1,67 @@
+name: Feature request
+description: Suggest a new feature or a change in behavior.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the suggestion. Fill in the fields below.
+        A clear problem statement helps us to compare the options.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: |
+        Describe the problem that you have today.
+        Give the use case and the limit that you hit.
+      placeholder: I connect to a server that needs a client certificate. The client has no option for it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: |
+        Describe the behavior that you want.
+        Add an example of the public API if you can.
+      placeholder: |
+        ```python
+        import bmemcached
+
+        client = bmemcached.Client(("127.0.0.1:11211",), tls_client_cert="/path/to/cert.pem")
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: |
+        List the other options that you tested or considered.
+        Explain why each option does not work for you.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: pull-request
+    attributes:
+      label: Pull request
+      description: Tell us if you can send the change yourself.
+      options:
+        - "Yes, I can send a pull request"
+        - "Yes, but I need guidance first"
+        - "No, I request that a maintainer does the work"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: More context
+      description: Add links, references, or any other detail. This field is optional.
+    validations:
+      required: false

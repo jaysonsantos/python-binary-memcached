@@ -1,9 +1,10 @@
+import pickle
 from collections import defaultdict
+
 from uhashring import HashRing
 
-from bmemcached.client import SOCKET_TIMEOUT
+from bmemcached.client.constants import SOCKET_TIMEOUT
 from bmemcached.client.mixin import ClientMixin
-from bmemcached.compat import pickle
 
 
 class DistributedClient(ClientMixin):
@@ -11,15 +12,27 @@ class DistributedClient(ClientMixin):
 
     It tries to distribute keys over the specified servers using `HashRing` consistent hash.
     """
-    def __init__(self, servers=('127.0.0.1:11211',), username=None, password=None, compression=None,
-                 socket_timeout=SOCKET_TIMEOUT, pickle_protocol=0, pickler=pickle.Pickler, unpickler=pickle.Unpickler,
-                 tls_context=None):
-        super(DistributedClient, self).__init__(servers, username, password, compression, socket_timeout,
-                                                pickle_protocol, pickler, unpickler, tls_context)
-        self._ring = HashRing(self._servers)
+
+    def __init__(
+        self,
+        servers=("127.0.0.1:11211",),
+        username=None,
+        password=None,
+        compression=None,
+        socket_timeout=SOCKET_TIMEOUT,
+        pickle_protocol=0,
+        pickler=pickle.Pickler,
+        unpickler=pickle.Unpickler,
+        tls_context=None,
+    ):
+        super().__init__(
+            servers, username, password, compression, socket_timeout, pickle_protocol, pickler, unpickler, tls_context
+        )
+        self._servers_by_ring_node = {server._hash_ring_node: server for server in self._servers}
+        self._ring = HashRing(list(self._servers_by_ring_node))
 
     def _get_server(self, key):
-        return self._ring.get_node(key)
+        return self._servers_by_ring_node[self._ring.get_node(key)]
 
     def delete(self, key, cas=0):
         """
@@ -37,7 +50,9 @@ class DistributedClient(ClientMixin):
         for key in keys:
             server_key = self._get_server(key)
             servers[server_key].append(key)
-        return all([server.delete_multi(keys_) for server, keys_ in servers.items()])
+        # Call every server before all() aggregates, so one failure does not skip the rest.
+        returns = [server.delete_multi(keys_) for server, keys_ in servers.items()]
+        return all(returns)
 
     def set(self, key, value, time=0, compress_level=-1, get_cas=False):
         """
@@ -125,7 +140,7 @@ class DistributedClient(ClientMixin):
         Add a key/value to server ony if it does not exist.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -149,7 +164,7 @@ class DistributedClient(ClientMixin):
         Replace a key/value to server ony if it does exist.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param time: Time in seconds that your key will expire.
@@ -173,7 +188,7 @@ class DistributedClient(ClientMixin):
         Get a key from server.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param default: In case memcached does not find a key, return a default value
         :param get_cas: If true, return (value, cas), where cas is the new CAS value.
         :type get_cas: boolean
@@ -215,7 +230,7 @@ class DistributedClient(ClientMixin):
             results = server.get_multi(keys)
             if not get_cas:
                 # Remove CAS data
-                for key, (value, cas) in results.items():
+                for key, (value, _cas) in results.items():
                     results[key] = value
             d.update(results)
         return d
@@ -229,7 +244,7 @@ class DistributedClient(ClientMixin):
         Set a value for a key on server if its CAS value matches cas.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: A value to be stored on server.
         :type value: object
         :param cas: The CAS value previously obtained from a call to get*.
@@ -255,7 +270,7 @@ class DistributedClient(ClientMixin):
         Increment a key, if it exists, returns it's actual value, if it don't, return 0.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: Number to be incremented
         :type value: int
         :param default: If key not set, initialize to this value
@@ -274,7 +289,7 @@ class DistributedClient(ClientMixin):
         Minimum value of decrement return is 0.
 
         :param key: Key's name
-        :type key: six.string_types
+        :type key: str
         :param value: Number to be decremented
         :type value: int
         :param default: If key not set, initialize to this value

@@ -61,12 +61,11 @@ each supported Python version and run the tests. For example:
 
     $ tox
     ...
-    py27: commands succeeded
-    ERROR:  py34: InterpreterNotFound: python3.4
-    py35: commands succeeded
-    py36: commands succeeded
-    py37: commands succeeded
-    py38: commands succeeded
+    py310: commands succeeded
+    py311: commands succeeded
+    py312: commands succeeded
+    ERROR:  py313: InterpreterNotFound: python3.13
+    py314: commands succeeded
 
 You may not have all the required Python versions installed, in which case you
 will see one or more ``InterpreterNotFound`` errors.
@@ -77,8 +76,8 @@ If you want to use it with Django, go to `django-bmemcached <https://github.com/
 
 Tests Status
 ------------
-.. image:: https://travis-ci.org/jaysonsantos/python-binary-memcached.png?branch=master
-    :target: https://travis-ci.org/jaysonsantos/python-binary-memcached
+.. image:: https://github.com/jaysonsantos/python-binary-memcached/actions/workflows/tests-and-lint.yml/badge.svg?branch=main
+    :target: https://github.com/jaysonsantos/python-binary-memcached/actions/workflows/tests-and-lint.yml
 
 .. _`pytest`: https://pypi.org/project/pytest/
 .. _`tox`: https://pypi.org/project/tox/
