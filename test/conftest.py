@@ -1,51 +1,259 @@
+import contextlib
 import os
+import shutil
+import socket
 import subprocess
+import tempfile
 import time
 
 import pytest
 
 os.environ.setdefault("MEMCACHED_HOST", "localhost")
 
+# How long to wait for a memcached process to accept a connection.
+START_TIMEOUT = 10.0
+POLL_INTERVAL = 0.02
+
+SOCKET_PATH = "/tmp/memcached.sock"
+IPV6_PORT = 5002
+SASL_PORT = 5003
+
+
+def _fail_reason(process, description):
+    """
+    Return a skip message when the process is not usable, else None.
+    """
+    if process.poll() is None:
+        return None
+
+    stderr = b""
+    with contextlib.suppress(subprocess.TimeoutExpired):  # pragma: no cover - defensive
+        stderr = process.communicate(timeout=1)[1] or b""
+
+    return f"{description} exited with code {process.returncode}. {stderr.decode('utf8', 'replace').strip()}"
+
+
+def _give_up(reason, required):
+    """
+    Fail for a required server, and skip for an optional one.
+
+    The required servers are autouse. A skip there skips the full suite, and
+    pytest then exits with success although no test ran.
+    """
+    if required:
+        pytest.fail(reason)
+    pytest.skip(reason)
+
+
+def _wait_until_accepting(process, description, connect, required=False):
+    """
+    Wait until ``connect`` succeeds, or give up with a clear reason.
+
+    A fixed sleep is not enough. A slow start makes it flaky, and a memcached
+    that never started at all gives an opaque ConnectionRefusedError in every
+    test instead of one clear message.
+    """
+    deadline = time.time() + START_TIMEOUT
+    last_error = None
+
+    while time.time() < deadline:
+        reason = _fail_reason(process, description)
+        if reason is not None:
+            _give_up(reason, required)
+
+        try:
+            connect().close()
+        except OSError as error:
+            last_error = error
+            time.sleep(POLL_INTERVAL)
+            continue
+
+        # The endpoint was free before the start, but confirm that the child
+        # did not exit on a bind failure while another process took it.
+        reason = _fail_reason(process, description)
+        if reason is not None:
+            _give_up(reason, required)
+        return process
+
+    process.kill()
+    process.wait()
+    _give_up(
+        f"{description} did not accept a connection within {START_TIMEOUT:.0f}s. Last error: {last_error}",
+        required,
+    )
+
+
+def _reject_occupied_endpoint(description, connect):
+    """
+    Fail when another process already listens on the fixture endpoint.
+
+    The readiness check only proves that something accepts a connection. If a
+    stray memcached or an unrelated service owns the fixed endpoint, the tests
+    would silently talk to it instead of the process this fixture starts.
+    """
+    try:
+        sock = connect()
+    except OSError:
+        return
+    sock.close()
+    pytest.fail(f"Cannot start {description}: another process already listens there. Stop it and run again.")
+
+
+def _start(args, description, connect, required=True):
+    """
+    Start a memcached process and wait for it to accept a connection.
+    """
+    _reject_occupied_endpoint(description, connect)
+    try:
+        process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except OSError as error:
+        _give_up(f"Cannot run {args[0]}: {error}. Is memcached on PATH?", required)
+
+    return _wait_until_accepting(process, description, connect, required)
+
+
+def _stop(process):
+    process.kill()
+    process.wait()
+
+
+def _tcp(host, port, family=socket.AF_INET):
+    def connect():
+        sock = socket.socket(family, socket.SOCK_STREAM)
+        sock.settimeout(POLL_INTERVAL * 10)
+        sock.connect((host, port))
+        return sock
+
+    return connect
+
+
+def _unix(path):
+    def connect():
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(POLL_INTERVAL * 10)
+        sock.connect(path)
+        return sock
+
+    return connect
+
 
 @pytest.fixture(scope="session", autouse=True)
 def memcached_standard_port():
-    p = subprocess.Popen(["memcached"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    time.sleep(0.1)
-    yield p
-    p.kill()
-    p.wait()
+    process = _start(["memcached"], "memcached on port 11211", _tcp("127.0.0.1", 11211))
+    yield process
+    _stop(process)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def memcached_other_port():
-    p = subprocess.Popen(["memcached", "-p5000"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    time.sleep(0.1)
-    yield p
-    p.kill()
-    p.wait()
+    process = _start(["memcached", "-p5000"], "memcached on port 5000", _tcp("127.0.0.1", 5000))
+    yield process
+    _stop(process)
+
+
+def _unix_socket_is_active(path):
+    if not os.path.exists(path):
+        return False
+    try:
+        sock = _unix(path)()
+    except OSError:
+        return False
+    sock.close()
+    return True
+
+
+def _remove_stale_socket_file():
+    # Unlink leftover files from a previous run that died before teardown.
+    # Do not unlink a live socket owned by another session or user process.
+    if _unix_socket_is_active(SOCKET_PATH):
+        return
+    with contextlib.suppress(FileNotFoundError):
+        os.unlink(SOCKET_PATH)
 
 
 @pytest.fixture(scope="session", autouse=True)
 def memcached_socket():
-    p = subprocess.Popen(
-        ["memcached", "-s/tmp/memcached.sock"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+    # _start fails on an active socket. This fixture cannot prove that it owns
+    # the process behind it, or that the process uses the expected configuration.
+    _remove_stale_socket_file()
+
+    process = _start(
+        ["memcached", "-s" + SOCKET_PATH],
+        f"memcached on unix socket {SOCKET_PATH}",
+        _unix(SOCKET_PATH),
     )
-    time.sleep(0.1)
-    yield p
-    p.kill()
-    p.wait()
+    yield process
+    _stop(process)
+    _remove_stale_socket_file()
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="session")
 def memcached_ipv6():
-    p = subprocess.Popen(
-        ["memcached", "-l::1"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+    # This server needs its own port. On Linux a plain memcached binds both
+    # INADDR_ANY and IN6ADDR_ANY, so port 11211 is already taken here.
+    process = _start(
+        ["memcached", "-l::1", f"-p{IPV6_PORT}"],
+        f"memcached on [::1]:{IPV6_PORT}",
+        _tcp("::1", IPV6_PORT, socket.AF_INET6),
+        required=False,
     )
-    time.sleep(0.1)
-    yield p
-    p.kill()
-    p.wait()
+    yield process
+    _stop(process)
+
+
+@pytest.fixture(scope="session")
+def memcached_sasl():
+    """
+    Start a memcached with SASL authentication enabled.
+
+    This fixture yields (port, username, password). It skips when memcached is
+    not built with SASL support, or when saslpasswd2 is absent from PATH.
+    Cyrus SASL needs a real user database, and saslpasswd2 is the tool that
+    writes one.
+    """
+    if shutil.which("saslpasswd2") is None:
+        pytest.skip("saslpasswd2 is not on PATH. Cannot build a SASL user database.")
+
+    description = f"memcached with SASL on port {SASL_PORT}"
+    connect = _tcp("127.0.0.1", SASL_PORT)
+    _reject_occupied_endpoint(description, connect)
+
+    username = "bmemcached_test_user"
+    password = "bmemcached_test_password"
+    # Cyrus SASL stores the user under a realm. memcached looks it up under the
+    # local hostname, so both sides must agree.
+    realm = socket.gethostname()
+
+    conf_dir = tempfile.mkdtemp(prefix="bmemcached-sasl-")
+    sasldb_path = os.path.join(conf_dir, "sasldb2")
+
+    with open(os.path.join(conf_dir, "memcached.conf"), "w") as conf:
+        conf.write(f"mech_list: PLAIN\npwcheck_method: auxprop\nauxprop_plugin: sasldb\nsasldb_path: {sasldb_path}\n")
+
+    written = subprocess.run(
+        ["saslpasswd2", "-p", "-c", "-f", sasldb_path, "-a", "memcached", "-u", realm, username],
+        input=password.encode(),
+        capture_output=True,
+    )
+    if written.returncode != 0:
+        shutil.rmtree(conf_dir, ignore_errors=True)
+        pytest.skip(f"saslpasswd2 failed: {written.stderr.decode('utf8', 'replace').strip()}")
+
+    environment = dict(os.environ, SASL_CONF_PATH=conf_dir)
+    try:
+        process = subprocess.Popen(
+            ["memcached", f"-p{SASL_PORT}", "-S"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=environment,
+        )
+    except OSError as error:
+        shutil.rmtree(conf_dir, ignore_errors=True)
+        pytest.skip(f"Cannot run memcached: {error}. Is memcached on PATH?")
+
+    try:
+        _wait_until_accepting(process, description, connect)
+        yield SASL_PORT, username, password
+    finally:
+        _stop(process)
+        shutil.rmtree(conf_dir, ignore_errors=True)
