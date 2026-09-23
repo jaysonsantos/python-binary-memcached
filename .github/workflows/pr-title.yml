@@ -1,0 +1,37 @@
+name: PR Title
+
+# Mergify squashes each pull request into one commit, and the commit title is
+# the pull request title. Commitizen builds the changelog from these titles, so
+# every title must be a conventional commit.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, reopened, synchronize]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Check the title with commitizen
+        # Pass the title through the environment. A direct expression in the
+        # script lets a crafted title inject shell commands.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          python -m pip install commitizen==4.19.0
+          cz check --message "$PR_TITLE"

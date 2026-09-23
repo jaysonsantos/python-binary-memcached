@@ -38,4 +38,6 @@ Run `pytest -s` for focused local validation and `tox` before submitting cross-v
 
 Commits follow Commitizen conventional commits, enforced by the pre-commit `commit-msg` hook. Use forms like `fix: handle IPv6 server parsing`, `feat: add CAS return flag`, or `bump: version 0.31.3 -> 0.31.4`.
 
+Pull request titles must also be conventional commits. The `pr-title` workflow checks them. Mergify squashes each pull request into one commit with the title as the message, and Commitizen builds the changelog from these commits.
+
 Pull requests should describe the behavior change, list test commands run, and link related issues when applicable. Include documentation updates for public API or usage changes.

@@ -6,12 +6,17 @@
 
 queue_rules:
   - name: default
-    # Keep every commit. A squash breaks the conventional-commit history that
-    # the release automation reads.
-    merge_method: merge
+    # The repository allows only squash merges. Mergify squashes each pull
+    # request into one commit, and the commit title is the pull request title.
+    # Commitizen builds the changelog from these titles, so the `pr-title`
+    # check makes sure that each title is a conventional commit.
+    merge_method: squash
     update_method: rebase
+    queue_conditions:
+      - check-success = pr-title
     # Stack up to 20 pull requests on one temporary branch and run the test
-    # suite once for the whole batch.
+    # suite once for the whole batch. Mergify then merges each pull request
+    # as its own commit.
     batch_size: 20
     batch_max_wait_time: 5 min
     checks_timeout: 30 min

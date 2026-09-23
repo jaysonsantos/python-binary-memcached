@@ -89,6 +89,9 @@ Open the pull request against the `main` branch. A good pull request has these
 properties:
 
 - It makes one change. Split unrelated work into separate pull requests.
+- Its title is a conventional commit, such as `fix: handle IPv6 server parsing`.
+  The `pr-title` check makes sure of this. The merge squashes the pull request
+  into one commit with this title, and the changelog uses that commit.
 - It keeps the public client API compatible.
 - It adds or updates tests in `test/` for every behavior change.
 - It passes `pytest -s`, `ruff check .`, and `ruff format --check .`.
