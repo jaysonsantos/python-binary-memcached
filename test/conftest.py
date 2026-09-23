@@ -33,13 +33,25 @@ def _fail_reason(process, description):
     return f"{description} exited with code {process.returncode}. {stderr.decode('utf8', 'replace').strip()}"
 
 
-def _wait_until_accepting(process, description, connect):
+def _give_up(reason, required):
     """
-    Wait until ``connect`` succeeds, or skip with a clear reason.
+    Fail for a required server, and skip for an optional one.
+
+    The required servers are autouse. A skip there skips the full suite, and
+    pytest then exits with success although no test ran.
+    """
+    if required:
+        pytest.fail(reason)
+    pytest.skip(reason)
+
+
+def _wait_until_accepting(process, description, connect, required=False):
+    """
+    Wait until ``connect`` succeeds, or give up with a clear reason.
 
     A fixed sleep is not enough. A slow start makes it flaky, and a memcached
     that never started at all gives an opaque ConnectionRefusedError in every
-    test instead of one clear skip.
+    test instead of one clear message.
     """
     deadline = time.time() + START_TIMEOUT
     last_error = None
@@ -47,7 +59,7 @@ def _wait_until_accepting(process, description, connect):
     while time.time() < deadline:
         reason = _fail_reason(process, description)
         if reason is not None:
-            pytest.skip(reason)
+            _give_up(reason, required)
 
         try:
             connect().close()
@@ -60,12 +72,15 @@ def _wait_until_accepting(process, description, connect):
         # did not exit on a bind failure while another process took it.
         reason = _fail_reason(process, description)
         if reason is not None:
-            pytest.skip(reason)
+            _give_up(reason, required)
         return process
 
     process.kill()
     process.wait()
-    pytest.skip(f"{description} did not accept a connection within {START_TIMEOUT:.0f}s. Last error: {last_error}")
+    _give_up(
+        f"{description} did not accept a connection within {START_TIMEOUT:.0f}s. Last error: {last_error}",
+        required,
+    )
 
 
 def _reject_occupied_endpoint(description, connect):
@@ -84,7 +99,7 @@ def _reject_occupied_endpoint(description, connect):
     pytest.fail(f"Cannot start {description}: another process already listens there. Stop it and run again.")
 
 
-def _start(args, description, connect):
+def _start(args, description, connect, required=True):
     """
     Start a memcached process and wait for it to accept a connection.
     """
@@ -92,9 +107,9 @@ def _start(args, description, connect):
     try:
         process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError as error:
-        pytest.skip(f"Cannot run {args[0]}: {error}. Is memcached on PATH?")
+        _give_up(f"Cannot run {args[0]}: {error}. Is memcached on PATH?", required)
 
-    return _wait_until_accepting(process, description, connect)
+    return _wait_until_accepting(process, description, connect, required)
 
 
 def _stop(process):
@@ -180,6 +195,7 @@ def memcached_ipv6():
         ["memcached", "-l::1", f"-p{IPV6_PORT}"],
         f"memcached on [::1]:{IPV6_PORT}",
         _tcp("::1", IPV6_PORT, socket.AF_INET6),
+        required=False,
     )
     yield process
     _stop(process)

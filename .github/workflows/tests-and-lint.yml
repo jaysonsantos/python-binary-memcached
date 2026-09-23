@@ -32,7 +32,11 @@ jobs:
           cache: pip
 
       - name: Install memcached
-        run: sudo apt-get update && sudo apt-get install -y memcached
+        # The package starts a system memcached on port 11211. Stop it, because
+        # the test fixtures start their own servers on that port.
+        run: |
+          sudo apt-get update && sudo apt-get install -y memcached
+          sudo systemctl stop memcached
 
       - name: Install dependencies
         run: |
