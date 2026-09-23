@@ -51,20 +51,44 @@ def _wait_until_accepting(process, description, connect):
 
         try:
             connect().close()
-            return process
         except OSError as error:
             last_error = error
             time.sleep(POLL_INTERVAL)
+            continue
+
+        # The endpoint was free before the start, but confirm that the child
+        # did not exit on a bind failure while another process took it.
+        reason = _fail_reason(process, description)
+        if reason is not None:
+            pytest.skip(reason)
+        return process
 
     process.kill()
     process.wait()
     pytest.skip(f"{description} did not accept a connection within {START_TIMEOUT:.0f}s. Last error: {last_error}")
 
 
+def _reject_occupied_endpoint(description, connect):
+    """
+    Fail when another process already listens on the fixture endpoint.
+
+    The readiness check only proves that something accepts a connection. If a
+    stray memcached or an unrelated service owns the fixed endpoint, the tests
+    would silently talk to it instead of the process this fixture starts.
+    """
+    try:
+        sock = connect()
+    except OSError:
+        return
+    sock.close()
+    pytest.fail(f"Cannot start {description}: another process already listens there. Stop it and run again.")
+
+
 def _start(args, description, connect):
     """
     Start a memcached process and wait for it to accept a connection.
     """
+    _reject_occupied_endpoint(description, connect)
     try:
         process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError as error:
@@ -134,10 +158,8 @@ def _remove_stale_socket_file():
 
 @pytest.fixture(scope="session", autouse=True)
 def memcached_socket():
-    if _unix_socket_is_active(SOCKET_PATH):
-        yield None
-        return
-
+    # _start fails on an active socket. This fixture cannot prove that it owns
+    # the process behind it, or that the process uses the expected configuration.
     _remove_stale_socket_file()
 
     process = _start(
@@ -176,6 +198,10 @@ def memcached_sasl():
     if shutil.which("saslpasswd2") is None:
         pytest.skip("saslpasswd2 is not on PATH. Cannot build a SASL user database.")
 
+    description = f"memcached with SASL on port {SASL_PORT}"
+    connect = _tcp("127.0.0.1", SASL_PORT)
+    _reject_occupied_endpoint(description, connect)
+
     username = "bmemcached_test_user"
     password = "bmemcached_test_password"
     # Cyrus SASL stores the user under a realm. memcached looks it up under the
@@ -210,11 +236,7 @@ def memcached_sasl():
         pytest.skip(f"Cannot run memcached: {error}. Is memcached on PATH?")
 
     try:
-        _wait_until_accepting(
-            process,
-            f"memcached with SASL on port {SASL_PORT}",
-            _tcp("127.0.0.1", SASL_PORT),
-        )
+        _wait_until_accepting(process, description, connect)
         yield SASL_PORT, username, password
     finally:
         _stop(process)
