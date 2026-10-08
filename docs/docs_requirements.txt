@@ -1,2 +1,2 @@
 Sphinx==9.1.0
-Pygments==2.20.0
+Pygments==2.21.0
