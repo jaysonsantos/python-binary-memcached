@@ -1,7 +1,6 @@
-exclude *.pyc *.pyo
-exclude **/__pycache__/**
 recursive-include docs *
-recursive-include tests *
+recursive-include test *
 prune docs/_build
 include README.rst
 include CHANGELOG.md
+global-exclude *.py[cod]
