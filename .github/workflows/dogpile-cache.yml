@@ -1,0 +1,95 @@
+name: Dogpile Cache
+
+# dogpile.cache has a `dogpile.cache.bmemcached` backend that uses this package.
+# This workflow runs the bmemcached tests of dogpile.cache against the code in
+# this repository, so a change that breaks the backend fails before a release.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # The dogpile.cache release to test. Use a tag from
+  # https://github.com/sqlalchemy/dogpile.cache/tags.
+  # The TLS test certificate in rel_1_5_0 expires on 2027-09-27. Move to a
+  # newer release before that date, or the TLS tests fail.
+  DOGPILE_CACHE_REF: rel_1_5_0
+  # The dogpile.cache tests read these ports. Because the variables are set, a
+  # server that does not answer fails the tests. Without them, the tests skip.
+  DOGPILE_MEMCACHED_PORT: "11234"
+  DOGPILE_TLS_MEMCACHED_PORT: "11212"
+
+jobs:
+  dogpile-cache:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # This job runs code from another repository. Do not keep the token in
+      # the git configuration of either checkout.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Download dogpile.cache
+        uses: actions/checkout@v7
+        with:
+          repository: sqlalchemy/dogpile.cache
+          ref: ${{ env.DOGPILE_CACHE_REF }}
+          path: dogpile.cache
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install memcached
+        # The package starts a system memcached on port 11211. Stop it, so the
+        # tests can only reach the servers that this job starts.
+        run: |
+          sudo apt-get update && sudo apt-get install -y memcached
+          sudo systemctl stop memcached
+
+      - name: Install dependencies
+        # Install this package last. The dogpile.cache tests must use the code
+        # in this checkout, not a python-binary-memcached release from PyPI.
+        run: |
+          python -m pip install --upgrade pip
+          pip install ./dogpile.cache --group dogpile.cache/pyproject.toml:tests
+          pip install -e .
+
+      - name: Start the memcached servers
+        # The TLS server uses the test certificates of dogpile.cache.
+        working-directory: dogpile.cache
+        run: |
+          memcached -d -p "$DOGPILE_MEMCACHED_PORT"
+          memcached -d -p "$DOGPILE_TLS_MEMCACHED_PORT" -Z \
+            -o "ssl_chain_cert=$PWD/tests/tls/server_chain.pem" \
+            -o "ssl_key=$PWD/tests/tls/server.key"
+
+          for port in "$DOGPILE_MEMCACHED_PORT" "$DOGPILE_TLS_MEMCACHED_PORT"; do
+            if ! timeout 10 bash -c "until (echo > /dev/tcp/127.0.0.1/$port) 2>/dev/null; do sleep 0.1; done"; then
+              echo "::error::memcached did not accept a connection on port $port"
+              exit 1
+            fi
+          done
+
+      - name: Run the dogpile.cache bmemcached tests
+        # The tests open `tests/tls/ca-root.crt` by a relative path, so run
+        # them from the dogpile.cache checkout.
+        working-directory: dogpile.cache
+        run: |
+          python -c "import bmemcached; print('bmemcached', bmemcached.__version__, 'from', bmemcached.__file__)"
+          python -m pytest tests/cache/test_memcached_backend.py -k BMemcached -rs
