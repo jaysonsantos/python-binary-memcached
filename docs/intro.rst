@@ -38,6 +38,35 @@ Using it with distributed keys
     client.set('key', 'value')
     print(client.get('key'))
 
+Using it with raw data
+
+By default, the client keeps the type of each value in the memcached flags field.
+Some applications already use the flags field for their own data, and a default
+client then fails to read their keys. Set ``raw_data=True`` to read and write
+those keys.
+
+.. code-block:: python
+
+    import bmemcached
+    client = bmemcached.Client(('127.0.0.1:11211', ), raw_data=True)
+    client.set('key', b'value')
+    print(client.get('key'))  # b'value'
+
+In raw data mode:
+
+- A read returns the stored ``bytes`` value. The client ignores the flags field.
+- A write accepts only ``bytes`` values. Other types raise ``TypeError``.
+- The client does not compress values. The default ``compress_level=-1`` means
+  no compression, and a ``compress_level`` greater than 0 raises
+  ``MemcachedException``.
+
+``DistributedClient`` accepts the same ``raw_data`` argument.
+
+.. warning::
+
+    A write in raw data mode sets the flags field of the key to 0. This
+    overwrites the flags that another application set on the key.
+
 Testing
 -------
 

@@ -24,9 +24,19 @@ class DistributedClient(ClientMixin):
         pickler=pickle.Pickler,
         unpickler=pickle.Unpickler,
         tls_context=None,
+        raw_data=False,
     ):
         super().__init__(
-            servers, username, password, compression, socket_timeout, pickle_protocol, pickler, unpickler, tls_context
+            servers,
+            username,
+            password,
+            compression,
+            socket_timeout,
+            pickle_protocol,
+            pickler,
+            unpickler,
+            tls_context,
+            raw_data,
         )
         self._servers_by_ring_node = {server._hash_ring_node: server for server in self._servers}
         self._ring = HashRing(list(self._servers_by_ring_node))

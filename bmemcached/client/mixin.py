@@ -30,6 +30,16 @@ class ClientMixin:
     :param tls_context: A TLS context in order to connect to TLS enabled
         memcached servers.
     :type tls_context: ssl.SSLContext
+    :param raw_data: If true, the client reads and writes only bytes values
+        and does not use the memcached flags field for type information.
+        Use this for keys where another application already stores its own
+        data in the flags field. A read ignores the flags and returns the
+        stored bytes. A write accepts only bytes and raises ``TypeError`` for
+        other types. A write sends flags 0, so it overwrites the flags that
+        the other application set on the key. The client does not compress
+        values. The default ``compress_level=-1`` means no compression, and a
+        ``compress_level`` greater than 0 raises ``MemcachedException``.
+    :type raw_data: bool
     """
 
     def __init__(
@@ -43,6 +53,7 @@ class ClientMixin:
         pickler=pickle.Pickler,
         unpickler=pickle.Unpickler,
         tls_context=None,
+        raw_data=False,
     ):
         self.username = username
         self.password = password
@@ -52,6 +63,7 @@ class ClientMixin:
         self.pickler = pickler
         self.unpickler = unpickler
         self.tls_context = tls_context
+        self.raw_data = raw_data
         self.set_servers(servers)
 
     @property
@@ -83,6 +95,7 @@ class ClientMixin:
                 pickler=self.pickler,
                 unpickler=self.unpickler,
                 tls_context=self.tls_context,
+                raw_data=self.raw_data,
             )
             for server in servers
         ]
