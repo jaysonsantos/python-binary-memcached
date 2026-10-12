@@ -108,6 +108,7 @@ class Protocol(threading.local):
         pickler=None,
         unpickler=None,
         tls_context=None,
+        raw_data=False,
     ):
         super().__init__()
         self.server = server
@@ -122,6 +123,7 @@ class Protocol(threading.local):
         self.pickler = pickler
         self.unpickler = unpickler
         self.tls_context = tls_context
+        self.raw_data = raw_data
 
         self.reconnects_deferred_until = None
 
@@ -377,6 +379,9 @@ class Protocol(threading.local):
         """
         Serializes a value based on its type.
 
+        In raw data mode the value must be bytes. The client returns it unchanged
+        with flags 0. The default compress_level of -1 then means no compression.
+
         :param value: Something to be serialized
         :type value: str, int, object
         :param compress_level: How much to compress.
@@ -385,7 +390,18 @@ class Protocol(threading.local):
         :type compress_level: int
         :return: Serialized type
         :rtype: bytes
+        :raises MemcachedException: in raw data mode, if compress_level is greater than 0.
+        :raises TypeError: in raw data mode, if value is not bytes.
         """
+        if self.raw_data:
+            # The flags field belongs to the application in raw data mode, so
+            # there is no bit left to mark a value as compressed.
+            if compress_level is not None and compress_level > 0:
+                raise MemcachedException("Compression is not possible in raw data mode", None)
+            if not isinstance(value, bytes):
+                raise TypeError(f"raw data mode stores only bytes values, got {type(value).__name__}")
+            return 0, value
+
         flags = 0
         if isinstance(value, bytes):
             flags |= self.FLAGS["binary"]
@@ -422,6 +438,8 @@ class Protocol(threading.local):
         """
         Deserialized values based on flags or just return it if it is not serialized.
 
+        In raw data mode the client ignores the flags and returns the stored bytes.
+
         :param value: Serialized or not value.
         :type value: str, int
         :param flags: Value flags
@@ -429,6 +447,9 @@ class Protocol(threading.local):
         :return: Deserialized value
         :rtype: str|int
         """
+        if self.raw_data:
+            return value
+
         FLAGS = self.FLAGS
 
         if flags & FLAGS["compressed"]:  # pragma: no branch
