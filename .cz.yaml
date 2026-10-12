@@ -2,7 +2,7 @@
 commitizen:
   name: cz_conventional_commits
   tag_format: v$version
-  version: 0.32.0
+  version: 0.33.0
   version_files:
   - bmemcached/__init__.py
   - docs/conf.py

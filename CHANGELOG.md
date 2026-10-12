@@ -1,3 +1,18 @@
+## v0.33.0 (2026-10-12)
+
+### Feat
+
+- add raw_data mode to skip value serialization (#315)
+- set the Python 3.10 floor and remove the Python 2 support layer (#278)
+
+### Fix
+
+- remove the per-call struct format strings from the response parse path (#286)
+- show the password state in Protocol.__str__
+- keep distributed hash ring placement
+- replace assert guards, add an exception message, and stop a password leak
+- Minor performance improvements in hot paths (#263)
+
 ## v0.32.0 (2026-04-28)
 
 ### Docs
