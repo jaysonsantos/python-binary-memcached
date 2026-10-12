@@ -12,7 +12,8 @@
     "pep621",
     "pip_requirements",
     "pre-commit",
-    "nix"
+    "nix",
+    "custom.regex"
   ],
   "pre-commit": {
     "enabled": true
@@ -20,6 +21,17 @@
   "lockFileMaintenance": {
     "enabled": true
   },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update the dogpile.cache release tag in the Dogpile Cache workflow. The tags have the form rel_1_5_0.",
+      "managerFilePatterns": ["/^\\.github/workflows/dogpile-cache\\.yml$/"],
+      "matchStrings": ["DOGPILE_CACHE_REF:\\s*(?<currentValue>rel_\\d+_\\d+_\\d+)"],
+      "depNameTemplate": "sqlalchemy/dogpile.cache",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "regex:^rel_(?<major>\\d+)_(?<minor>\\d+)_(?<patch>\\d+)$"
+    }
+  ],
   "packageRules": [
     {
       "description": "Group every patch and minor update into one pull request.",

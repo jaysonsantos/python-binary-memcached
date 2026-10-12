@@ -19,10 +19,11 @@ permissions:
   contents: read
 
 env:
-  # The dogpile.cache release to test. Use a tag from
-  # https://github.com/sqlalchemy/dogpile.cache/tags.
-  # The TLS test certificate in rel_1_5_0 expires on 2027-09-27. Move to a
-  # newer release before that date, or the TLS tests fail.
+  # The dogpile.cache release to test. Renovate updates this tag. See
+  # `customManagers` in renovate.json.
+  # dogpile.cache keeps TLS test certificates in its repository, and they
+  # expire. If the TLS tests fail on an expired certificate, look for a newer
+  # release.
   DOGPILE_CACHE_REF: rel_1_5_0
   # The dogpile.cache tests read these ports. Because the variables are set, a
   # server that does not answer fails the tests. Without them, the tests skip.
