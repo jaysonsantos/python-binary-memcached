@@ -6,3 +6,4 @@ commitizen:
   version_files:
   - bmemcached/__init__.py
   - docs/conf.py
+  - flake.nix

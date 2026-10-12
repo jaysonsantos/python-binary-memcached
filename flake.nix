@@ -67,7 +67,7 @@
 
         packages.default = python.pkgs.buildPythonPackage {
           pname = "python-binary-memcached";
-          version = "0.32.0";
+          version = "0.33.0";
           pyproject = true;
           src = ./.;
           build-system = with python.pkgs; [ setuptools ];
