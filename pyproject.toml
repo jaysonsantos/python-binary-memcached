@@ -46,7 +46,7 @@ test = [
 ]
 # Keep this pin equal to the ruff-pre-commit rev in .pre-commit-config.yaml.
 lint = [
-    "ruff==0.16.10",
+    "ruff==0.17.0",
 ]
 
 [tool.ruff]
