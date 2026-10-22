@@ -60,3 +60,9 @@ The maintainer keeps you informed about the progress of your report.
 This policy covers the code in this repository.
 It does not cover the memcached server, the operating system, or other packages.
 Report a problem in the memcached server to the memcached project.
+
+The client unpickles object values from the cache by default. This is by design:
+the client is for private caches that hold trusted data. Thus a report is out of
+scope if it shows code execution only through a pickled value that an attacker
+wrote to the cache. The "Security" section of the README explains the risk and
+the options for a cache with data that you do not trust.

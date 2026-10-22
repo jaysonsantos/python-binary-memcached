@@ -26,7 +26,11 @@ class ClientMixin:
     :param pickler: Use this to replace the object serialization mechanism.
     :type pickler: function
     :param unpickler: Use this to replace the object deserialization mechanism.
-    :type unpickler: function
+        The client calls ``unpickler(file).load()`` for each object value. The
+        default ``pickle.Unpickler`` runs code that the cached data defines, so
+        use it only with a trusted cache. The "Security" section of the README
+        shows a restricted unpickler.
+    :type unpickler: pickle.Unpickler subclass
     :param tls_context: A TLS context in order to connect to TLS enabled
         memcached servers.
     :type tls_context: ssl.SSLContext
