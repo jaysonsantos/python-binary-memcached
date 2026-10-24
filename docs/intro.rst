@@ -67,6 +67,76 @@ In raw data mode:
     A write in raw data mode sets the flags field of the key to 0. This
     overwrites the flags that another application set on the key.
 
+Security
+--------
+
+The client uses ``pickle`` to store Python objects. This is a deliberate
+choice. The client is for private caches that hold trusted data. Other Python
+memcached clients, for example pylibmc and python-memcached, also unpickle
+values by default.
+
+Each item keeps its type in the memcached flags field. On a read, the client
+uses this field to select the decoder. If the object flag is set, the client
+unpickles the value.
+
+.. warning::
+
+    Unpickling runs code that the data defines. A person who can write to your
+    memcached servers can run code in every process that reads from them. Use
+    the default settings only when your own applications are the only writers
+    to the cache.
+
+To protect the cache:
+
+- Do not expose memcached to the internet or to a network that you do not
+  trust.
+- Turn on SASL authentication on the server. Then give the ``username`` and the
+  ``password`` to the client.
+- Use TLS on a network that you do not control. Without TLS, SASL PLAIN sends
+  the password as clear text. Give an ``ssl.SSLContext`` to the client in
+  ``tls_context``.
+- Do not share a memcached server with applications that you do not trust.
+
+If the cache can contain data that you do not trust, use one of these options:
+
+- Set ``raw_data=True``. The client then reads and writes only ``bytes``, and it
+  never unpickles a value. See "Using it with raw data" above.
+- Give the client an ``unpickler`` that accepts only the classes that you
+  expect. The client calls ``unpickler(file).load()`` for each object value.
+
+.. code-block:: python
+
+    import pickle
+
+    import bmemcached
+
+
+    class RestrictedUnpickler(pickle.Unpickler):
+        ALLOWED = {
+            ("builtins", "set"),
+            ("datetime", "datetime"),
+            # Pickle protocols 0 to 2 store bytes, for example the state of a
+            # datetime, through this function.
+            ("_codecs", "encode"),
+        }
+
+        def find_class(self, module, name):
+            # Pickle protocols 0 to 2 write the Python 2 module name.
+            if module == "__builtin__":
+                module = "builtins"
+            if (module, name) not in self.ALLOWED:
+                raise pickle.UnpicklingError(f"{module}.{name} is not allowed")
+            return super().find_class(module, name)
+
+
+    client = bmemcached.Client(('127.0.0.1:11211', ), unpickler=RestrictedUnpickler)
+
+The values ``dict``, ``list``, ``tuple``, ``str``, ``int``, ``float``, ``bool``
+and ``None`` need no entry in the list. With the default pickle protocol 0,
+``bytes`` inside an object needs the ``_codecs.encode`` entry. Add only data
+classes to the list. A class with side effects in its constructor gives an
+attacker a way to run code.
+
 Testing
 -------
 
